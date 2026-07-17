@@ -2,7 +2,7 @@
 
 An adaptive, high-performance OSINT agent for verifying username presence across platforms with advanced evasion, validation, and device inference capabilities.
 
-## Version: 2.0.1
+## Version: 2.1.0
 
 ## Architecture Overview
 
@@ -11,12 +11,15 @@ OSINT Nexus has been refactored to a modular facade-based architecture, decoupli
 ### Core Components
 - `OSINTAgent` (Facade): The primary entry point, orchestrating the scan lifecycle via injected subsystems.
 - `ScanOrchestrator`: Manages concurrent provider scanning, health tracking, and persistence.
-- `HealthTracker`: Implements platform health monitoring with failure decay.
+- `HealthTracker`: Implements platform health monitoring with failure decay, circuit breaking, and auto-healing.
 - `ReportGenerator`: Handles telemetry collection and scan summary generation.
 - `DeviceInferenceService`: Provides intelligent device context (MAC OUI, port heuristics).
 - `DatabaseManager`: Ensures thread-safe/async-safe persistence of scan results.
 
 ## Key Improvements
+- **Health Monitoring & Circuit Breaking**: Implemented robust failure tracking with configurable thresholds and auto-healing recovery periods to improve resilience.
+- **Safety Valve**: Added developer-friendly debugging flag (`DEBUG_PROVIDERS`) for graceful error handling in production.
+- **CLI Health Management**: Added `health` command for monitoring provider status.
 - **Concurrency Fixes**: Resolved database persistence race conditions in `run_scan`.
 - **Modular Design**: Extracted logic into independent subsystems, significantly improving maintainability and testability.
 - **Dependency Injection**: Subsystems are explicitly injected, simplifying isolated component testing.
@@ -33,6 +36,17 @@ async for intel in agent.run_scan("target_user"):
     # intel is an IntelligenceObject
     print(f"Found on {intel.platform}: {intel.found}")
 report = agent.get_final_report()
+```
+
+### CLI
+Scan a target:
+```bash
+python -m osint_nexus.cli scan --username target_user
+```
+
+Check provider health:
+```bash
+python -m osint_nexus.cli health
 ```
 
 ## Testing

@@ -12,6 +12,7 @@ import argparse
 import logging
 import signal
 import sys
+import time
 from typing import List, Tuple, Any
 
 from rich.console import Console
@@ -31,11 +32,50 @@ from rich.layout import Layout
 
 from osint_nexus.core import constants
 from osint_nexus.core.agent import OSINTAgent
+from osint_nexus.core.health import HealthTracker
 from osint_nexus.utils.security import SecurityUtility
 
 # Configure Rich Console
 console = Console(theme=Theme({"orange": constants.COLOR_ORANGE}), force_terminal=True)
 logger = logging.getLogger("osint_nexus.cli")
+
+# Shared singleton for HealthTracker
+_health_tracker = HealthTracker()
+
+def run_health_check() -> None:
+    """Displays the current health status of all providers."""
+    table = Table(title="Provider Health Status", expand=True)
+    table.add_column("Provider", style="cyan")
+    table.add_column("Status")
+    table.add_column("Failures")
+    table.add_column("Last Failure")
+
+    # Access tracker instance directly
+    providers = list(_health_tracker.platform_failures.keys())
+    
+    exit_code = 0
+    
+    for provider in providers:
+        failures = _health_tracker.platform_failures.get(provider, 0)
+        is_healthy = _health_tracker.is_healthy(provider)
+        is_degraded = _health_tracker.is_degraded(provider)
+        
+        last_fail_ts = _health_tracker.last_failure_times.get(provider, 0.0)
+        last_fail = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(last_fail_ts)) if last_fail_ts > 0 else "Never"
+        
+        if not is_healthy:
+            status = "[bold red]CIRCUIT OPEN[/]"
+            exit_code = 1
+        elif is_degraded:
+            status = "[bold yellow]DEGRADED[/]"
+            exit_code = 1
+        else:
+            status = "[bold green]HEALTHY[/]"
+            
+        table.add_row(provider, status, str(failures), last_fail)
+        
+    console.print(table)
+    sys.exit(exit_code)
 
 def get_layout(
     progress: Progress,
@@ -68,14 +108,8 @@ def get_layout(
     return layout
 
 
-async def async_main() -> None:
+def async_main(args: argparse.Namespace) -> None:
     """Main async entry point for the CLI."""
-    parser = argparse.ArgumentParser(description="Advanced OSINT Target Scanner")
-    parser.add_argument("--username", required=True, help="Target username to investigate")
-    parser.add_argument("--timeout", type=float, default=15.0, help="Per-provider timeout in seconds")
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    args = parser.parse_args()
-
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -202,8 +236,26 @@ async def async_main() -> None:
 
 def main() -> None:
     """Synchronous entry point that safely wraps the asyncio loop."""
+    parser = argparse.ArgumentParser(description="Advanced OSINT Target Scanner")
+    subparsers = parser.add_subparsers(dest="command", help="Command to run", required=True)
+    
+    # Scanner command
+    scan_parser = subparsers.add_parser("scan", help="Scan a target username")
+    scan_parser.add_argument("--username", required=True, help="Target username to investigate")
+    scan_parser.add_argument("--timeout", type=float, default=15.0, help="Per-provider timeout in seconds")
+    scan_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    
+    # Health command
+    subparsers.add_parser("health", help="Check provider health status")
+    
+    args = parser.parse_args()
+    
+    if args.command == "health":
+        run_health_check()
+        return
+
     try:
-        asyncio.run(async_main())
+        asyncio.run(async_main(args))
     except KeyboardInterrupt:
         # Failsafe for OSes where the signal handler doesn't catch it in time
         console.print("\n[bold red]Execution forcefully terminated by user.[/]")

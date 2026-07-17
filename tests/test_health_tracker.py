@@ -2,7 +2,7 @@ import pytest
 from osint_nexus.core.health import HealthTracker
 
 def test_health_tracker():
-    tracker = HealthTracker()
+    tracker = HealthTracker(failure_threshold=3)
     
     assert tracker.is_healthy("p1")
     

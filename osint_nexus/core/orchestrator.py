@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Dict, List, Optional, Protocol, runtime_checkable
 
@@ -98,7 +99,7 @@ class ScanOrchestrator:
 
             # Circuit breaker check
             if not getattr(self.deps.health, "is_healthy", lambda _: True)(provider.name):
-                return self._build_error_intel(provider.name, username, "Skipped (Unhealthy)")
+                return self._build_error_intel(provider.name, username, "Skipped (Circuit Breaker Tripped)")
 
             try:
                 raw_found, content = await provider.check_username(
@@ -133,6 +134,8 @@ class ScanOrchestrator:
                 return intel
 
             except Exception as exc:  # pylint: disable=broad-exception-caught
+                if os.getenv("DEBUG_PROVIDERS"):
+                    raise
                 logger.error("Scan failure in %s: %s", provider.name, exc, exc_info=True)
                 getattr(self.deps.health, "record_failure", lambda _: None)(provider.name)
                 return self._build_error_intel(provider.name, username, f"Error: {type(exc).__name__}")
