@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "osint_nexus"
+version = "2.0.1"
+description = "High-performance OSINT username finder"
+dependencies = [
+    "httpx",
+    "rich",
+    "tqdm",
+    "aiohttp",
+]
+requires-python = ">=3.12"
+
+[tool.setuptools]
+packages = ["osint_nexus"]
+
+[tool.black]
+line-length = 110
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.venv
+)/
+'''
+
+[tool.pylint.format]
+max-line-length = 110

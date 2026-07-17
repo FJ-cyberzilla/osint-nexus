@@ -1,0 +1,8 @@
+# Agent ignore patterns
+**/__pycache__/**
+**/.pytest_cache/
+**/osint_results.db
+**/osint.log
+**/.venv
+**/.git/
+**/*.egg-info/
