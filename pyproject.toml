@@ -11,20 +11,21 @@ dependencies = [
     "rich",
     "tqdm",
     "aiohttp",
+    "pydantic>=2.0.0",
 ]
 requires-python = ">=3.12"
 
 [tool.setuptools]
 packages = ["osint_nexus"]
 
-[tool.black]
-line-length = 110
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  \.venv
-)/
-'''
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
 
-[tool.pylint.format]
-max-line-length = 110
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
