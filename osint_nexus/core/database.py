@@ -5,13 +5,14 @@ Provides persistent storage for scan results with optional SQLite
 optimisations, thread‑safe async wrappers, and schema migration.
 Integrates with the HierarchyManager through a health check interface.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from osint_nexus.core.config import Config
 
@@ -34,14 +35,14 @@ class DatabaseManager:
     - Backward‑compatible `save_result()` now async (update agent calls to await).
     """
 
-    def __init__(self, config: Optional[Config] = None, db_path: Optional[str] = None) -> None:
+    def __init__(self, config: Config | None = None, db_path: str | None = None) -> None:
         self.config = config or Config()
         custom_path = db_path or getattr(self.config, "DB_PATH", "osint_results.db")
         self.db_path = Path(custom_path).resolve()
         self._init_lock = asyncio.Lock()
 
         # Use WAL mode for better concurrency
-        self._connection_kwargs: Dict[str, Any] = {
+        self._connection_kwargs: dict[str, Any] = {
             "database": str(self.db_path),
             "check_same_thread": False,  # we manage thread safety ourselves
         }
@@ -103,19 +104,17 @@ class DatabaseManager:
             This method is now async. Callers should use `await`.
         """
         try:
-            await asyncio.to_thread(
-                self._save_sync, username, platform, int(found)
-            )
+            await asyncio.to_thread(self._save_sync, username, platform, int(found))
             logger.debug("Saved result: %s / %s = %s", username, platform, found)
         except Exception as exc:  # pylint: disable=broad-except
             logger.error("Failed to save result: %s", exc, exc_info=True)
 
     async def query_results(
         self,
-        username: Optional[str] = None,
-        platform: Optional[str] = None,
+        username: str | None = None,
+        platform: str | None = None,
         limit: int = 100,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Query stored results with optional filters.
 
@@ -138,7 +137,7 @@ class DatabaseManager:
         query += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
 
-        def _query_sync() -> List[Dict[str, Any]]:
+        def _query_sync() -> list[dict[str, Any]]:
             with self._get_connection() as conn:
                 rows = conn.execute(query, params).fetchall()
                 return [dict(row) for row in rows]
@@ -183,9 +182,7 @@ class DatabaseManager:
                 "INSERT INTO results (username, platform, found) VALUES ('__health__', '__test__', 0)"
             )
             conn.commit()
-            conn.execute(
-                "DELETE FROM results WHERE username = '__health__' AND platform = '__test__'"
-            )
+            conn.execute("DELETE FROM results WHERE username = '__health__' AND platform = '__test__'")
             conn.commit()
 
     # ------------------------------------------------------------------

@@ -1,149 +1,111 @@
 """
-Advanced result validation for OSINT username checks.
+Validation logic for OSINT results.
 
-Uses a pluggable rule engine to assess whether a provider's response
-genuinely indicates the presence of a target username. Rules can be
-platform‑specific, combining positive signals (username found) and
-negative signals (error messages, "not found" pages) for high accuracy.
+Implements a multi-layered voting system where different rules
+(content length, presence of username, exclusion of 'page not found' text)
+collaborate to decide if a result is valid.
 """
+
 from __future__ import annotations
 
-import enum
 import logging
 import re
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from enum import Enum
+from typing import Protocol, runtime_checkable
+
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("osint_nexus.validator")
 
 
-class ValidationVote(enum.Enum):
-    """Vote cast by a single validation rule."""
-    VALID = "valid"          # positive evidence for username presence
-    INVALID = "invalid"      # evidence that username is NOT present
-    NEUTRAL = "neutral"      # rule does not apply or is inconclusive
+class ValidationVote(Enum):
+    VALID = "valid"
+    INVALID = "invalid"
+    NEUTRAL = "neutral"
 
 
-@dataclass
-class ValidationResult:
-    """
-    Encapsulates the outcome of a validation check.
+class ValidationResult(BaseModel):
+    """Detailed outcome of a validation check."""
 
-    Attributes:
-        is_valid: Overall decision – True if username is considered present.
-        confidence: 0.0 to 1.0 indicating confidence in the decision.
-        details: Human‑readable explanation of why the result was reached.
-        rules_applied: Names of rules that contributed to the decision.
-        evidence: Dict of rule name -> vote for transparency.
-    """
+    model_config = ConfigDict(frozen=True)
+
     is_valid: bool
-    confidence: float = 1.0
+    confidence: float = Field(ge=0.0, le=1.0)
     details: str = ""
-    rules_applied: List[str] = field(default_factory=list)
-    evidence: Dict[str, str] = field(default_factory=dict)
-
-    def __str__(self) -> str:
-        return f"ValidationResult(valid={self.is_valid}, confidence={self.confidence:.2f})"
+    rules_applied: list[str] = Field(default_factory=list)
+    evidence: dict[str, str] = Field(default_factory=dict)
 
 
-class ValidationRule(ABC):
-    """
-    Abstract base class for a single validation check.
+@runtime_checkable
+class ValidationRule(Protocol):
+    """Interface for all validation rules."""
 
-    Subclasses must implement `evaluate`. They return a `ValidationVote`
-    and, optionally, a confidence score (0–1) for that specific vote.
-    """
+    @property
+    def name(self) -> str: ...
 
-    def __init__(self, name: Optional[str] = None) -> None:
-        self.name = name or self.__class__.__name__
-
-    @abstractmethod
-    def evaluate(self, response_text: str, platform: str, username: str) -> tuple[ValidationVote, float]:
+    def evaluate(
+        self, response_text: str, platform: str, target_username: str
+    ) -> tuple[ValidationVote, float]:
         """
-        Assess the response and return a (vote, confidence) tuple.
-
-        Args:
-            response_text: The HTTP response body (or snippet).
-            platform: The name of the platform being checked.
-            username: The target username.
-
-        Returns:
-            A tuple of (ValidationVote, confidence).
-            Confidence should be between 0.0 and 1.0.
+        Evaluate response text and return a vote with confidence.
+        Confidence: 0.0 to 1.0 (1.0 = absolute certainty).
         """
         ...
 
 
-class UsernamePresenceRule(ValidationRule):
-    """Checks for the literal presence of the target username (case‑insensitive)."""
+class UsernamePresenceRule:
+    """Rule that checks if the username literally appears in the response."""
 
-    def evaluate(self, response_text: str, platform: str, username: str) -> tuple[ValidationVote, float]:
-        if not username:
+    name = "UsernamePresenceRule"
+
+    def evaluate(
+        self, response_text: str, platform: str, target_username: str
+    ) -> tuple[ValidationVote, float]:
+        if not response_text or not target_username:
             return ValidationVote.NEUTRAL, 0.0
-        pattern = re.compile(re.escape(username), re.IGNORECASE)
-        if pattern.search(response_text):
-            return ValidationVote.VALID, 0.9  # moderately high confidence
-        return ValidationVote.INVALID, 0.7
 
-
-class ExclusionPatternRule(ValidationRule):
-    """
-    Detects known "not found" or error patterns that indicate the
-    username is *not* present, even if it appears elsewhere in the page.
-    """
-
-    # Default patterns – extend per platform
-    DEFAULT_PATTERNS: Dict[str, List[str]] = {
-        "generic": [
-            r"not\s*found",
-            r"doesn['’]t\s*exist",
-            r"no\s*results",
-            r"page\s*not\s*available",
-            r"user\s*not\s*found",
-            r"profile\s*not\s*found",
-            r"nothing\s*here",
-        ],
-        "github": [
-            r"is\s*not\s*a\s*user",
-            r"could\s*not\s*find\s*user",
-        ],
-    }
-
-    def __init__(
-        self,
-        name: str = "ExclusionPatternRule",
-        platform_patterns: Optional[Dict[str, List[str]]] = None,
-    ) -> None:
-        super().__init__(name)
-        self._patterns = platform_patterns or self.DEFAULT_PATTERNS
-
-    def evaluate(self, response_text: str, platform: str, username: str) -> tuple[ValidationVote, float]:
-        # Get patterns for this platform, falling back to generic
-        patterns = self._patterns.get(platform, self._patterns.get("generic", []))
-        for pat in patterns:
-            if re.search(pat, response_text, re.IGNORECASE):
-                return ValidationVote.INVALID, 0.95  # high confidence this is a "not found" page
+        if target_username.lower() in response_text.lower():
+            return ValidationVote.VALID, 0.8
         return ValidationVote.NEUTRAL, 0.0
 
 
-class MinimumContentLengthRule(ValidationRule):
-    """
-    Rejects responses that are too short (likely error pages or empty
-    responses) and raises a flag if the content is unusually large.
-    """
+class ExclusionPatternRule:
+    """Rule that checks for known 'Not Found' or 'Error' signatures."""
 
-    def __init__(
-        self,
-        name: str = "MinimumContentLengthRule",
-        min_length: int = 100,
-        max_length: int = 5_000_000,
-    ) -> None:
-        super().__init__(name)
+    def __init__(self, patterns: list[str] | None = None, name: str | None = None) -> None:
+        self.name = name or "ExclusionPatternRule"
+        self._patterns = patterns or [
+            r"404 Not Found",
+            r"page not found",
+            r"doesn't exist",
+            r"user not found",
+            r"could not find",
+            r"profile not found",
+            r"no results found",
+        ]
+        self._compiled = [re.compile(p, re.IGNORECASE) for p in self._patterns]
+
+    def evaluate(
+        self, response_text: str, platform: str, target_username: str
+    ) -> tuple[ValidationVote, float]:
+        for pattern in self._compiled:
+            if pattern.search(response_text):
+                return ValidationVote.INVALID, 0.95
+        return ValidationVote.NEUTRAL, 0.0
+
+
+class MinimumContentLengthRule:
+    """Rule that flags very short responses as potentially invalid."""
+
+    name = "MinimumContentLengthRule"
+
+    def __init__(self, min_length: int = 50, max_length: int = 1_000_000) -> None:
         self.min_length = min_length
         self.max_length = max_length
 
-    def evaluate(self, response_text: str, platform: str, username: str) -> tuple[ValidationVote, float]:
+    def evaluate(
+        self, response_text: str, platform: str, target_username: str
+    ) -> tuple[ValidationVote, float]:
         length = len(response_text)
         if length < self.min_length:
             return ValidationVote.INVALID, 0.9
@@ -168,7 +130,7 @@ class ResultValidator:
     def __init__(
         self,
         target_username: str,
-        rules: Optional[List[ValidationRule]] = None,
+        rules: list[ValidationRule] | None = None,
     ) -> None:
         self.target_username = target_username
         self._rules = rules or []
@@ -204,9 +166,69 @@ class ResultValidator:
         result = self.validate_with_details(response_text, platform)
         return result.is_valid
 
-    def validate_with_details(
-        self, response_text: str, platform: str
-    ) -> ValidationResult:
+    def _gather_votes(self, response_text: str, platform: str) -> dict[str, tuple[ValidationVote, float]]:
+        votes: dict[str, tuple[ValidationVote, float]] = {}
+        for rule in self._rules:
+            try:
+                vote, conf = rule.evaluate(response_text, platform, self.target_username)
+                votes[rule.name] = (vote, conf)
+            except Exception as exc:  # pylint: disable=broad-except
+                logger.error("Rule '%s' raised exception: %s", rule.name, exc, exc_info=True)
+                votes[rule.name] = (ValidationVote.NEUTRAL, 0.0)
+        return votes
+
+    def _resolve_decision(self, votes: dict[str, tuple[ValidationVote, float]]) -> bool:
+        any_valid = any(v == ValidationVote.VALID for v, _ in votes.values())
+        any_invalid = any(v == ValidationVote.INVALID for v, _ in votes.values())
+
+        is_valid = any_valid
+        if any_valid:
+            # If we found the username, check if any EXTREMELY high-confidence
+            # exclusion rule invalidates it.
+            exclusion_rules = [
+                (name, conf)
+                for name, (v, conf) in votes.items()
+                if v == ValidationVote.INVALID and name == "ExclusionPatternRule"
+            ]
+            if exclusion_rules:
+                highest_exclusion_conf = max(conf for _, conf in exclusion_rules)
+                if highest_exclusion_conf > 0.98:
+                    is_valid = False
+        elif any_invalid:
+            is_valid = False
+
+        return is_valid
+
+    def _build_result(self, is_valid: bool, votes: dict[str, tuple[ValidationVote, float]]) -> ValidationResult:
+        if is_valid:
+            # Confidence: average of all VALID vote confidences (skip NEUTRAL/INVALID)
+            valid_confidences = [conf for (vote, conf) in votes.values() if vote == ValidationVote.VALID]
+            avg_confidence = sum(valid_confidences) / len(valid_confidences) if valid_confidences else 0.5
+            details = "Username presence confirmed by rule(s): " + ", ".join(
+                name for name, (v, _) in votes.items() if v == ValidationVote.VALID
+            )
+        else:
+            # If invalid due to an INVALID vote, confidence is that rule's confidence
+            invalid_votes = [(name, conf) for name, (v, conf) in votes.items() if v == ValidationVote.INVALID]
+            if invalid_votes:
+                _, highest_conf = max(invalid_votes, key=lambda x: x[1])
+                avg_confidence = highest_conf
+                details = "Invalidated by rule(s): " + ", ".join(
+                    name for name, (v, _) in votes.items() if v == ValidationVote.INVALID
+                )
+            else:
+                avg_confidence = 0.5
+                details = "No positive evidence found (all rules neutral)"
+
+        return ValidationResult(
+            is_valid=is_valid,
+            confidence=avg_confidence,
+            details=details,
+            rules_applied=list(votes.keys()),
+            evidence={name: vote.value for name, (vote, _) in votes.items()},
+        )
+
+    def validate_with_details(self, response_text: str, platform: str) -> ValidationResult:
         """
         Run all rules and return a detailed result.
 
@@ -226,77 +248,9 @@ class ResultValidator:
                 evidence={},
             )
 
-        votes: Dict[str, tuple[ValidationVote, float]] = {}
-        any_valid = False
-        any_invalid = False
-
-        for rule in self._rules:
-            try:
-                vote, conf = rule.evaluate(response_text, platform, self.target_username)
-                votes[rule.name] = (vote, conf)
-                if vote == ValidationVote.VALID:
-                    any_valid = True
-                elif vote == ValidationVote.INVALID:
-                    any_invalid = True
-            except Exception as exc:  # pylint: disable=broad-except
-                logger.error(
-                    "Rule '%s' raised exception: %s", rule.name, exc, exc_info=True
-                )
-                votes[rule.name] = (ValidationVote.NEUTRAL, 0.0)
-
-        # Decision logic
-        # Prioritize VALID votes. 
-        # Only reject if ExclusionPatternRule is extremely high confidence 
-        # AND no VALID vote exists.
-
-        is_valid = any_valid
-        if any_valid:
-             # If we found the username, check if any EXTREMELY high-confidence 
-             # exclusion rule invalidates it.
-             exclusion_rules = [
-                (name, conf) for name, (v, conf) in votes.items() 
-                if v == ValidationVote.INVALID and name == "ExclusionPatternRule"
-            ]
-             if exclusion_rules:
-                 highest_exclusion_conf = max(conf for _, conf in exclusion_rules)
-                 if highest_exclusion_conf > 0.98:
-                     is_valid = False
-        else:
-            # If no VALID vote, check if any rule invalidates it
-            if any_invalid:
-                is_valid = False
-
-        if is_valid:
-            # Confidence: average of all VALID vote confidences (skip NEUTRAL/INVALID)
-            valid_confidences = [
-                conf for (vote, conf) in votes.values() if vote == ValidationVote.VALID
-            ]
-            avg_confidence = sum(valid_confidences) / len(valid_confidences) if valid_confidences else 0.5
-            details = "Username presence confirmed by rule(s): " + ", ".join(
-                name for name, (v, _) in votes.items() if v == ValidationVote.VALID
-            )
-        else:
-            # If invalid due to an INVALID vote, confidence is that rule's confidence
-            invalid_votes = [
-                (name, conf) for name, (v, conf) in votes.items() if v == ValidationVote.INVALID
-            ]
-            if invalid_votes:
-                _, highest_conf = max(invalid_votes, key=lambda x: x[1])
-                avg_confidence = highest_conf
-                details = "Invalidated by rule(s): " + ", ".join(
-                    name for name, (v, _) in votes.items() if v == ValidationVote.INVALID
-                )
-            else:
-                avg_confidence = 0.5
-                details = "No positive evidence found (all rules neutral)"
-
-        return ValidationResult(
-            is_valid=is_valid,
-            confidence=avg_confidence,
-            details=details,
-            rules_applied=list(votes.keys()),
-            evidence={name: vote.value for name, (vote, _) in votes.items()},
-        )
+        votes = self._gather_votes(response_text, platform)
+        is_valid = self._resolve_decision(votes)
+        return self._build_result(is_valid, votes)
 
     # ------------------------------------------------------------------
     # Health check (for hierarchy integration)

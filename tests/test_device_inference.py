@@ -1,9 +1,12 @@
 import pytest
+
 from osint_nexus.core.device_inference import DeviceInferenceService
+
 
 @pytest.fixture
 def service():
     return DeviceInferenceService()
+
 
 def test_inference_oui(service):
     metadata = {"mac_address": "00:1A:2B:CC:DD:EE"}
@@ -12,6 +15,7 @@ def test_inference_oui(service):
     assert profile.os_guess == "Cisco IOS"
     assert profile.confidence == 0.9
 
+
 def test_inference_ports(service):
     metadata = {"ports": [22, 80]}
     profile = service.infer("some content", metadata)
@@ -19,6 +23,7 @@ def test_inference_ports(service):
     assert profile.device_type == "Server"
     assert profile.os_guess == "Linux"
     assert profile.confidence == 0.5
+
 
 def test_inference_unknown(service):
     metadata = {"mac_address": "AA:BB:CC:DD:EE:FF", "ports": [1234]}

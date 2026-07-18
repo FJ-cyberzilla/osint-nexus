@@ -11,9 +11,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Callable
 
 from osint_nexus.core.config import Config
 
@@ -51,7 +51,7 @@ class HumanMimicryEngine:
     based on network latency to avoid 'impossible' interactions.
     """
 
-    def __init__(self, config: Config, latency_provider: Optional[Callable[[], float]] = None) -> None:
+    def __init__(self, config: Config, latency_provider: Callable[[], float] | None = None) -> None:
         self.config = config
         self._latency_provider = latency_provider
 
@@ -117,7 +117,7 @@ class HumanMimicryEngine:
         char_max = getattr(self.config, "TYPING_CHAR_MAX", 0.3)
 
         total = 0.0
-        for i in range(text_length):
+        for _ in range(text_length):
             delay = random.uniform(char_min, char_max) * self._get_latency_factor()
             total += delay
             await asyncio.sleep(delay)

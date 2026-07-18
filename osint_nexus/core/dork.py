@@ -4,10 +4,10 @@ Advanced Google Dork & search query generator.
 Provides configurable, platform-aware dork templates to aid manual
 or automated cross-platform identity verification.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
 
 from osint_nexus.core.config import Config
 
@@ -25,7 +25,7 @@ class DorkEngine:
 
     # Default dork templates per platform. Each template can contain
     # the placeholder ``{username}``.
-    DEFAULT_TEMPLATES: Dict[str, List[str]] = {
+    DEFAULT_TEMPLATES: dict[str, list[str]] = {
         "generic": [
             'site:{platform}.com "{username}"',
             'site:{platform}.com "{username} profile"',
@@ -49,11 +49,11 @@ class DorkEngine:
         ],
     }
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Config | None = None) -> None:
         self.config = config or Config()
         # Merge custom templates from config if provided
         custom_templates = getattr(self.config, "dork_templates", None)
-        self._templates: Dict[str, List[str]] = self.DEFAULT_TEMPLATES.copy()
+        self._templates: dict[str, list[str]] = self.DEFAULT_TEMPLATES.copy()
         if custom_templates and isinstance(custom_templates, dict):
             for platform, templates in custom_templates.items():
                 if isinstance(templates, list):
@@ -92,7 +92,7 @@ class DorkEngine:
         # Render both platform and username placeholders
         return template.format(platform=platform.lower(), username=username)
 
-    def get_all_dorks(self, username: str, platform: str) -> List[str]:
+    def get_all_dorks(self, username: str, platform: str) -> list[str]:
         """
         Return all dork query variants for a platform.
 
@@ -106,7 +106,7 @@ class DorkEngine:
         templates = self._templates.get(platform, self._templates.get("generic", []))
         return [tpl.format(platform=platform.lower(), username=username) for tpl in templates]
 
-    def add_platform_template(self, platform: str, templates: List[str]) -> None:
+    def add_platform_template(self, platform: str, templates: list[str]) -> None:
         """
         Override or add dork templates for a platform at runtime.
 

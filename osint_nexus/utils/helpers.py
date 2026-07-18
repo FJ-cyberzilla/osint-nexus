@@ -4,11 +4,11 @@ Logging configuration helpers for OSINT Nexus.
 Provides centralized logging setup that reads from the project Config
 and avoids duplicate handler registration.
 """
+
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from osint_nexus.core.config import Config
 
@@ -17,8 +17,8 @@ _logging_configured: bool = False
 
 
 def setup_logger(
-    config: Optional[Config] = None,
-    log_file: Optional[str] = None,
+    config: Config | None = None,
+    log_file: str | None = None,
     logger_name: str = "osint_nexus",
 ) -> logging.Logger:
     """
@@ -56,9 +56,7 @@ def setup_logger(
         log_level = config.log_level
 
     # Build formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     # File handler
     file_handler = logging.FileHandler(Path(resolved_log_file))

@@ -1,4 +1,5 @@
 """Project-wide constants for OSINT Nexus."""
+
 from typing import Final
 
 VERSION: Final[str] = "2.0.0"

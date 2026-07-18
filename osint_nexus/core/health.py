@@ -1,17 +1,18 @@
 """
 Manages provider health tracking to avoid hammering failing platforms.
 """
+
 import logging
 import time
-from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+
 class HealthTracker:
     def __init__(self, failure_threshold: int = 5, default_recovery_timeout: float = 60.0) -> None:
-        self.platform_failures: Dict[str, int] = {}
-        self.last_failure_times: Dict[str, float] = {}
-        self.provider_timeouts: Dict[str, float] = {}
+        self.platform_failures: dict[str, int] = {}
+        self.last_failure_times: dict[str, float] = {}
+        self.provider_timeouts: dict[str, float] = {}
         self.failure_threshold = failure_threshold
         self.default_recovery_timeout = default_recovery_timeout
 
@@ -40,7 +41,7 @@ class HealthTracker:
         count = self.platform_failures.get(provider_name, 0) + 1
         self.platform_failures[provider_name] = count
         self.last_failure_times[provider_name] = time.time()
-        
+
         if count >= self.failure_threshold:
             logger.error("Provider %s is now marked as FAILED (failures: %d)", provider_name, count)
         elif self.is_degraded(provider_name):
@@ -51,7 +52,7 @@ class HealthTracker:
         self.platform_failures[provider_name] = 0
         self.last_failure_times.pop(provider_name, None)
 
-    def reset(self, provider_name: Optional[str] = None) -> None:
+    def reset(self, provider_name: str | None = None) -> None:
         if provider_name:
             self.platform_failures.pop(provider_name, None)
             self.last_failure_times.pop(provider_name, None)

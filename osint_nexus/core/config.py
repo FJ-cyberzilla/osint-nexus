@@ -1,4 +1,5 @@
 """Centralised configuration for OSINT Nexus."""
+
 from __future__ import annotations
 
 import json
@@ -6,17 +7,18 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from osint_nexus.core import constants
 
 logger = logging.getLogger("osint_nexus.config")
 
-_DEFAULT_USER_AGENTS: List[str] = [
+_DEFAULT_USER_AGENTS: list[str] = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
 ]
+
 
 @dataclass
 class Config:
@@ -26,7 +28,7 @@ class Config:
     default_rate_limit_delay: float = 0.5
     require_proxy: bool = False
     proxy_api_url: str = ""
-    user_agents: List[str] = field(default_factory=lambda: _DEFAULT_USER_AGENTS.copy())
+    user_agents: list[str] = field(default_factory=lambda: _DEFAULT_USER_AGENTS.copy())
     min_jitter: float = constants.JITTER_MIN
     max_jitter: float = constants.JITTER_MAX
     typing_char_min: float = 0.05
@@ -36,12 +38,12 @@ class Config:
     think_base: float = 1.5
     click_hesitation_prob: float = 0.4
     click_misclick_prob: float = 0.08
-    click_observation_delay: Tuple[float, float] = (0.5, 2.0)
-    mimicry_profiles: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    click_observation_delay: tuple[float, float] = (0.5, 2.0)
+    mimicry_profiles: dict[str, dict[str, Any]] = field(default_factory=dict)
     db_path: str = "osint_results.db"
-    device_patterns: List[Tuple[str, str, str]] = field(default_factory=list)
+    device_patterns: list[tuple[str, str, str]] = field(default_factory=list)
     captcha_api_key: str = ""
-    dork_templates: Dict[str, List[str]] = field(default_factory=dict)
+    dork_templates: dict[str, list[str]] = field(default_factory=dict)
     tls_backend: str = "httpx"
     log_level: int = logging.INFO
 
@@ -58,14 +60,12 @@ class Config:
                 target_type = type(getattr(instance, field_name))
                 try:
                     if target_type is bool:
-                        setattr(instance, field_name, raw.lower() in ("1","true","yes"))
+                        setattr(instance, field_name, raw.lower() in ("1", "true", "yes"))
                     elif target_type is int:
                         setattr(instance, field_name, int(raw))
                     elif target_type is float:
                         setattr(instance, field_name, float(raw))
-                    elif target_type is list or target_type is tuple:
-                        setattr(instance, field_name, json.loads(raw))
-                    elif target_type is dict:
+                    elif target_type is list or target_type is tuple or target_type is dict:
                         setattr(instance, field_name, json.loads(raw))
                     else:
                         setattr(instance, field_name, raw)
@@ -81,7 +81,7 @@ class Config:
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         instance = cls()
         for k, v in data.items():

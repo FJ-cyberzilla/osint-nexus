@@ -6,13 +6,13 @@ Turnstile, etc.) and multiple solving backends (2captcha, Anti‑Captcha,
 custom solvers) via a registry-based architecture. All solving is
 asynchronous and includes health‑check capabilities.
 """
+
 from __future__ import annotations
 
 import asyncio
 import enum
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, Type
 
 logger = logging.getLogger("osint_nexus.captcha")
 
@@ -29,6 +29,7 @@ class CaptchaType(enum.Enum):
         IMAGE_CAPTCHA: Classic text‑in‑image captcha.
         CUSTOM: Any other captcha type (use a descriptive string).
     """
+
     RECAPTCHA_V2 = "captcha"
     RECAPTCHA_V3 = "captcha2"
     HCAPTCHA = "hcaptcha"
@@ -46,10 +47,11 @@ class CaptchaSolveResult:
         error: Error description if solving was unsuccessful.
         cost: Estimated cost (in USD) if using a paid service.
     """
+
     def __init__(
         self,
-        token: Optional[str] = None,
-        error: Optional[str] = None,
+        token: str | None = None,
+        error: str | None = None,
         cost: float = 0.0,
     ) -> None:
         self.token = token
@@ -143,7 +145,7 @@ class CaptchaSolverRegistry:
     """
 
     def __init__(self) -> None:
-        self._solvers: Dict[str, CaptchaSolver] = {}
+        self._solvers: dict[str, CaptchaSolver] = {}
 
     def register(self, name: str, solver: CaptchaSolver) -> None:
         """
@@ -162,13 +164,11 @@ class CaptchaSolverRegistry:
             del self._solvers[name]
             logger.info("Captcha solver '%s' unregistered.", name)
 
-    def get_solver(self, name: str) -> Optional[CaptchaSolver]:
+    def get_solver(self, name: str) -> CaptchaSolver | None:
         """Return a solver by name, or None if not found."""
         return self._solvers.get(name)
 
-    def find_solver(
-        self, captcha_type: CaptchaType, exclude: Optional[list] = None
-    ) -> Optional[CaptchaSolver]:
+    def find_solver(self, captcha_type: CaptchaType, exclude: list | None = None) -> CaptchaSolver | None:
         """
         Find the first available solver that supports the captcha type.
 
@@ -192,7 +192,7 @@ class CaptchaSolverRegistry:
         site_key: str,
         url: str,
         captcha_type: CaptchaType = CaptchaType.RECAPTCHA_V2,
-        solver_name: Optional[str] = None,
+        solver_name: str | None = None,
         **kwargs,
     ) -> CaptchaSolveResult:
         """
@@ -208,15 +208,9 @@ class CaptchaSolverRegistry:
         Returns:
             CaptchaSolveResult with the token or failure info.
         """
-        solver = None
-        if solver_name:
-            solver = self.get_solver(solver_name)
-        else:
-            solver = self.find_solver(captcha_type)
+        solver = self.get_solver(solver_name) if solver_name else self.find_solver(captcha_type)
         if not solver:
-            return CaptchaSolveResult(
-                error=f"No solver available for {captcha_type.value}"
-            )
+            return CaptchaSolveResult(error=f"No solver available for {captcha_type.value}")
         try:
             result = await solver.solve(
                 site_key=site_key,
@@ -229,6 +223,6 @@ class CaptchaSolverRegistry:
             logger.error("Captcha solving failed: %s", exc, exc_info=True)
             return CaptchaSolveResult(error=str(exc))
 
-    def list_solvers(self) -> Dict[str, bool]:
+    def list_solvers(self) -> dict[str, bool]:
         """Return a dict of solver names and their support status."""
-        return {name: True for name in self._solvers}
+        return dict.fromkeys(self._solvers, True)

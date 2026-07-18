@@ -2,43 +2,40 @@
 Handles telemetry collection, data structuring, and report generation for OSINT scans.
 Supports structured JSON output and human-readable terminal summaries.
 """
-import json
+
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("osint_nexus.report")
 
+
 class ScanReport(BaseModel):
     """Structured representation of a complete OSINT scan."""
+
     model_config = ConfigDict(frozen=True)
 
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     target: str = Field(default="Unknown")
     total_platforms_found: int = Field(default=0)
-    platforms: List[str] = Field(default_factory=list)
+    platforms: list[str] = Field(default_factory=list)
     confidence_score: float = Field(default=0.0)
-    device_intelligence: Dict[str, Any] = Field(default_factory=dict)
-    telemetry: Dict[str, Any] = Field(default_factory=dict)
-    scan_duration_sec: Optional[float] = Field(default=None)
+    device_intelligence: dict[str, Any] = Field(default_factory=dict)
+    telemetry: dict[str, Any] = Field(default_factory=dict)
+    scan_duration_sec: float | None = Field(default=None)
 
 
 class ReportGenerator:
-    def __init__(
-        self, 
-        fingerprint_agent: Any, 
-        evasion_agent: Any, 
-        confidence_engine: Any
-    ) -> None:
+    def __init__(self, fingerprint_agent: Any, evasion_agent: Any, confidence_engine: Any) -> None:
         self.fingerprint_agent = fingerprint_agent
         self.evasion_agent = evasion_agent
         self.confidence_engine = confidence_engine
 
-    def collect_telemetry(self) -> Dict[str, Any]:
+    def collect_telemetry(self) -> dict[str, Any]:
         """
-        Safely collects telemetry data. If evasion or fingerprinting fails, 
+        Safely collects telemetry data. If evasion or fingerprinting fails,
         it gracefully degrades rather than crashing the final report.
         """
         try:
@@ -48,17 +45,17 @@ class ReportGenerator:
 
             # Pass to fingerprint agent
             return self.fingerprint_agent.collect_scan_telemetry(proxy, user_agent)
-            
+
         except Exception as exc:
             logger.error("Failed to collect scan telemetry: %s", exc)
             return {"status": "degraded", "error": str(exc)}
 
     def build_structured_report(
-        self, 
+        self,
         target: str,
-        found_platforms: List[str], 
-        inferred_device: Union[Dict[str, Any], Any],
-        duration: Optional[float] = None
+        found_platforms: list[str],
+        inferred_device: dict[str, Any] | Any,
+        duration: float | None = None,
     ) -> ScanReport:
         """
         Builds a comprehensive, strictly-typed Pydantic model of the scan results
@@ -88,14 +85,11 @@ class ReportGenerator:
             confidence_score=confidence,
             device_intelligence=device_data,
             telemetry=self.collect_telemetry(),
-            scan_duration_sec=duration
+            scan_duration_sec=duration,
         )
 
     def generate_summary(
-        self, 
-        found_platforms: List[str], 
-        inferred_device: Union[Dict[str, Any], Any],
-        target: str = "Unknown"
+        self, found_platforms: list[str], inferred_device: dict[str, Any] | Any, target: str = "Unknown"
     ) -> str:
         """
         Generates a clean, human-readable terminal/Markdown summary of the scan.
@@ -108,30 +102,32 @@ class ReportGenerator:
         device_str = "Unknown"
         # Log for debugging
         logger.debug("Formatting device intelligence: %s", report.device_intelligence)
-        
+
         # Check for dictionary keys if report.device_intelligence is a dict
         if isinstance(report.device_intelligence, dict):
-            dtype = report.device_intelligence.get('device_type', 'Unknown')
-            os_guess = report.device_intelligence.get('os_guess', 'Unknown')
-            dev_conf = report.device_intelligence.get('confidence', 0.0)
-            
+            dtype = report.device_intelligence.get("device_type", "Unknown")
+            os_guess = report.device_intelligence.get("os_guess", "Unknown")
+            dev_conf = report.device_intelligence.get("confidence", 0.0)
+
             if dtype != "Unknown" or os_guess != "Unknown":
                 device_str = f"{dtype} running {os_guess} (Conf: {dev_conf:.2f})"
             else:
                 device_str = "Unknown Device Context"
         elif hasattr(report.device_intelligence, "device_type"):
             # Handle object if returned
-            dtype = getattr(report.device_intelligence, 'device_type', 'Unknown')
-            os_guess = getattr(report.device_intelligence, 'os_guess', 'Unknown')
-            dev_conf = getattr(report.device_intelligence, 'confidence', 0.0)
-            
+            dtype = getattr(report.device_intelligence, "device_type", "Unknown")
+            os_guess = getattr(report.device_intelligence, "os_guess", "Unknown")
+            dev_conf = getattr(report.device_intelligence, "confidence", 0.0)
+
             if dtype != "Unknown" or os_guess != "Unknown":
                 device_str = f"{dtype} running {os_guess} (Conf: {dev_conf:.2f})"
             else:
                 device_str = "Unknown Device Context"
         else:
             # Last resort fallback
-            device_str = str(report.device_intelligence) if report.device_intelligence else "Unknown Device Context"
+            device_str = (
+                str(report.device_intelligence) if report.device_intelligence else "Unknown Device Context"
+            )
 
         # 3. Format Telemetry compactly
         telem_str = ", ".join(f"{k}: {v}" for k, v in report.telemetry.items() if k != "error")
@@ -141,21 +137,21 @@ class ReportGenerator:
         # 4. Construct the UI representation
         summary = [
             f"[bold orange]=== OSINT Scan Report: {report.target} ===[/]",
-            f"[orange]──────────────────────────────────────────[/]",
+            "[orange]──────────────────────────────────────────[/]",
             f"[bold white]Timestamp:[/]\t[cyan]{report.timestamp}[/]",
             f"[bold white]Platforms:[/]\t[bold {'green' if report.total_platforms_found > 0 else 'red'}]{report.total_platforms_found} found[/]",
-            f"[orange]──────────────────────────────────────────[/]",
+            "[orange]──────────────────────────────────────────[/]",
             f"[bold white]Matches:[/]\t{'[green]' + ', '.join(report.platforms) + '[/]' if report.platforms else '[red]None[/]'}",
             f"[bold white]Confidence:[/]\t[bold {'green' if report.confidence_score > 0.5 else 'yellow'}]{report.confidence_score:.2f}/1.0[/]",
-            f"[orange]──────────────────────────────────────────[/]",
+            "[orange]──────────────────────────────────────────[/]",
             f"[bold white]Device Info:[/]\t[dim]{device_str}[/]",
             f"[bold white]Environment:[/]\t[dim]{telem_str}[/]",
-            "[orange]──────────────────────────────────────────[/]"
+            "[orange]──────────────────────────────────────────[/]",
         ]
 
         return "\n".join(summary)
 
-    def export_json(self, target: str, found_platforms: List[str], inferred_device: Any) -> str:
+    def export_json(self, target: str, found_platforms: list[str], inferred_device: Any) -> str:
         """Helper to quickly generate a JSON string for webhooks or file saving."""
         report = self.build_structured_report(target, found_platforms, inferred_device)
         return report.model_dump_json(indent=2)

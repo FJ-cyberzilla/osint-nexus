@@ -5,12 +5,11 @@ Provides proxy rotation, User-Agent selection, and failure-driven
 adaptation to avoid detection. Integrates with the hierarchy health
 monitoring by implementing the HealthCheckable protocol.
 """
+
 from __future__ import annotations
 
-import asyncio
 import logging
 import random
-from typing import List, Optional
 
 import httpx
 
@@ -32,8 +31,8 @@ class EvasionAgent:
 
     def __init__(self, config: Config) -> None:
         self.config = config
-        self.current_proxy: Optional[str] = None
-        self.user_agents: List[str] = self._load_user_agents()
+        self.current_proxy: str | None = None
+        self.user_agents: list[str] = self._load_user_agents()
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -48,7 +47,7 @@ class EvasionAgent:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    def get_proxy(self) -> Optional[str]:
+    def get_proxy(self) -> str | None:
         """Return the currently active proxy, or None if direct."""
         return self.current_proxy
 
@@ -81,7 +80,7 @@ class EvasionAgent:
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
-    def _load_user_agents(self) -> List[str]:
+    def _load_user_agents(self) -> list[str]:
         """Return the User-Agent pool from config or a safe default list."""
         agents = self.config.user_agents
         if agents and isinstance(agents, list) and len(agents) > 0:
@@ -186,7 +185,7 @@ class EvasionAgent:
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Mobile Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/151.0",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
         ]
 
     async def _refresh_proxy(self) -> None:

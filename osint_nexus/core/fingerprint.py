@@ -6,12 +6,13 @@ Provides:
 - Inference of target device / OS from provider response content.
 - Configurable detection rules for extending device recognition.
 """
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from osint_nexus.core.config import Config
 
@@ -21,12 +22,13 @@ logger = logging.getLogger("osint_nexus.fingerprint")
 @dataclass
 class DeviceInfo:
     """Structured result of device fingerprint inference."""
+
     device_model: str = "Unknown"
     os_family: str = "Unknown"
     confidence: float = 0.0
     raw_matches: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for backward compatibility."""
         return {
             "device_model": self.device_model,
@@ -59,12 +61,12 @@ class FingerprintAgent:
         (r"CrOS", "Chromebook", "Chrome OS"),
     ]
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Config | None = None) -> None:
         self.config = config or Config()
         # Load custom patterns from config if provided
         self._device_patterns = self._load_patterns()
 
-    def collect_scan_telemetry(self, proxy: Optional[str], user_agent: str) -> Dict[str, Any]:
+    def collect_scan_telemetry(self, proxy: str | None, user_agent: str) -> dict[str, Any]:
         """
         Collect environment metadata for the current scan.
 
@@ -80,13 +82,13 @@ class FingerprintAgent:
             return {
                 "proxy_node": proxy or "Direct (No Proxy)",
                 "agent_fingerprint": user_agent,
-                "scan_timestamp": datetime.now(timezone.utc).isoformat(),
+                "scan_timestamp": datetime.now(UTC).isoformat(),
             }
         except Exception as exc:  # pylint: disable=broad-except
             logger.error("Telemetry collection failed: %s", exc, exc_info=True)
             return {"error": "Telemetry collection failed"}
 
-    def infer_target_device(self, content: str) -> Dict[str, Any]:
+    def infer_target_device(self, content: str) -> dict[str, Any]:
         """
         Infer the target's device model and OS from response content.
 

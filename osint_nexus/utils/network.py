@@ -4,14 +4,14 @@ Robust HTTP client with built-in evasion, retry, and TLS impersonation.
 This module provides a NetworkManager that handles persistent session state,
 proxy integration, and browser-grade TLS fingerprinting.
 """
+
 from __future__ import annotations
 
 import logging
 import random
-from typing import Optional, Tuple
 
-import httpx
 import curl_cffi.requests as curl_requests
+import httpx
 
 from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
@@ -42,9 +42,9 @@ class NetworkManager:
         self.retry = RetryHandler(config)
 
         # Session state
-        self._session: Optional[curl_requests.AsyncSession] = None
-        self._current_proxy: Optional[str] = None
-        self._current_profile: Optional[str] = None
+        self._session: curl_requests.AsyncSession | None = None
+        self._current_proxy: str | None = None
+        self._current_profile: str | None = None
 
     def _get_session(self) -> curl_requests.AsyncSession:
         """
@@ -61,14 +61,13 @@ class NetworkManager:
             self._current_proxy = new_proxy
 
             self._session = curl_requests.AsyncSession(
-                impersonate=self._current_profile,
-                proxy=self._current_proxy
+                impersonate=self._current_profile, proxy=self._current_proxy
             )
             logger.debug("Created new session with profile %s", self._current_profile)
 
         return self._session
 
-    async def fetch(self, url: str, use_microlink: bool = False, **microlink_options) -> Tuple[bool, str]:
+    async def fetch(self, url: str, use_microlink: bool = False, **microlink_options) -> tuple[bool, str]:
         """
         Performs a GET request using the configured evasion and retry logic.
 
@@ -81,7 +80,7 @@ class NetworkManager:
             A tuple of (success_boolean, response_text).
         """
 
-        async def _attempt() -> Tuple[bool, str]:
+        async def _attempt() -> tuple[bool, str]:
             await self.mimicry.apply_jitter()
 
             if use_microlink:
@@ -91,11 +90,7 @@ class NetworkManager:
             headers = {"Referer": "https://www.google.com/"}
 
             try:
-                response = await session.get(
-                    url,
-                    headers=headers,
-                    timeout=self.config.http_timeout
-                )
+                response = await session.get(url, headers=headers, timeout=self.config.http_timeout)
                 await self._handle_response_status(response.status_code)
                 return response.status_code == 200, response.text
             except (curl_requests.RequestsError, httpx.HTTPError) as exc:
@@ -109,7 +104,7 @@ class NetworkManager:
             logger.exception("Request failed after retries: %s", url)
             return False, ""
 
-    async def _fetch_with_microlink(self, url: str, **microlink_options) -> Tuple[bool, str]:
+    async def _fetch_with_microlink(self, url: str, **microlink_options) -> tuple[bool, str]:
         """
         Executes a request via the Microlink API.
 

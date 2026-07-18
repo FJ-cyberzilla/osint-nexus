@@ -1,9 +1,11 @@
 """Subsystem lifecycle and health monitoring manager."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from typing import Any, Dict, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger("osint_nexus.hierarchy")
 
@@ -18,7 +20,7 @@ class SubsystemStatus:
         self.subsystem = subsystem
         self.healthy: bool = True
         self.failure_count: int = 0
-        self.last_error: Optional[str] = None
+        self.last_error: str | None = None
         self.circuit_open: bool = False
         self.recovery_ticks: int = 0  # Used to back-off checks when circuit is open
 
@@ -29,13 +31,13 @@ class HierarchyManager:
         check_interval: float = 30.0,
         check_timeout: float = 10.0,  # FIX #2: Added explicit timeout for health checks
         failure_threshold: int = 3,
-        abort_event: Optional[asyncio.Event] = None,
+        abort_event: asyncio.Event | None = None,
     ) -> None:
-        self._subsystems: Dict[str, SubsystemStatus] = {}
+        self._subsystems: dict[str, SubsystemStatus] = {}
         self._check_interval = check_interval
         self._check_timeout = check_timeout
         self._failure_threshold = failure_threshold
-        self._monitor_task: Optional[asyncio.Task[None]] = None
+        self._monitor_task: asyncio.Task[None] | None = None
         self._abort_event = abort_event or asyncio.Event()
         self._running = False
 
@@ -52,10 +54,10 @@ class HierarchyManager:
             await self._shutdown_one(name, status.subsystem)
             logger.info("Subsystem '%s' unregistered.", name)
 
-    def get_status(self, name: str) -> Optional[SubsystemStatus]:
+    def get_status(self, name: str) -> SubsystemStatus | None:
         return self._subsystems.get(name)
 
-    def list_subsystems(self) -> Dict[str, bool]:
+    def list_subsystems(self) -> dict[str, bool]:
         return {name: status.healthy for name, status in self._subsystems.items()}
 
     # FIX #5: Added manual reporting for non-HealthCheckable subsystems
@@ -88,15 +90,15 @@ class HierarchyManager:
             return False
         return await self._check_one(name, status)
 
-    async def check_all(self) -> Dict[str, bool]:
+    async def check_all(self) -> dict[str, bool]:
         results = {}
         # FIX #3: Snapshot keys to prevent dictionary mutation race conditions
         names_to_check = list(self._subsystems.keys())
         checks = [self._check_safe(name) for name in names_to_check]
-        
+
         if checks:
             done = await asyncio.gather(*checks, return_exceptions=True)
-            for name, healthy in zip(names_to_check, done):
+            for name, healthy in zip(names_to_check, done, strict=True):
                 if isinstance(healthy, Exception):
                     logger.error("Health check for '%s' raised: %s", name, healthy)
                     results[name] = False
@@ -116,15 +118,13 @@ class HierarchyManager:
         self._running = False
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
             self._monitor_task = None
         logger.info("Health monitoring stopped.")
 
     async def _check_one(self, name: str, status: SubsystemStatus) -> bool:
-        # FIX #1: Circuit breaker actually breaks. We back off and only probe 
+        # FIX #1: Circuit breaker actually breaks. We back off and only probe
         # the failing service every 5th interval to avoid hammering it.
         if status.circuit_open:
             status.recovery_ticks += 1
@@ -136,15 +136,12 @@ class HierarchyManager:
         try:
             if isinstance(subsystem, HealthCheckable):
                 # FIX #2: Added timeout to prevent hanging the whole monitor
-                healthy = await asyncio.wait_for(
-                    subsystem.health_check(), 
-                    timeout=self._check_timeout
-                )
+                healthy = await asyncio.wait_for(subsystem.health_check(), timeout=self._check_timeout)
             else:
-                # FIX #5: Fallback logic for non-checkable modules relies on 
+                # FIX #5: Fallback logic for non-checkable modules relies on
                 # manual reporting rather than an un-incrementable integer.
                 healthy = status.failure_count < self._failure_threshold
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Health check timed out for '%s' after %.1fs", name, self._check_timeout)
             healthy = False
             status.last_error = "Health check timed out"
@@ -180,7 +177,7 @@ class HierarchyManager:
             try:
                 await asyncio.wait_for(self._abort_event.wait(), timeout=self._check_interval)
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
         self._running = False
 
@@ -190,23 +187,22 @@ class HierarchyManager:
                 result = subsystem.shutdown()
                 # FIX #4: Actually await async shutdown coroutines to prevent memory leaks
                 if asyncio.iscoroutine(result):
-                    await result 
+                    await result
         except Exception as exc:
             logger.error("Error shutting down '%s': %s", name, exc)
 
     async def shutdown_all(self) -> None:
         logger.info("Shutting down all subsystems...")
         await self.stop_monitoring()
-        
+
         # Execute all shutdowns concurrently and safely
         shutdown_tasks = [
-            self._shutdown_one(name, status.subsystem) 
-            for name, status in self._subsystems.items()
+            self._shutdown_one(name, status.subsystem) for name, status in self._subsystems.items()
         ]
-        
+
         if shutdown_tasks:
             await asyncio.gather(*shutdown_tasks, return_exceptions=True)
-            
+
         self._subsystems.clear()
         logger.info("All subsystems shut down.")
 

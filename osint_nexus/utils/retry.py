@@ -4,12 +4,14 @@ Asynchronous retry handler with exponential backoff and jitter.
 Provides a configurable retry loop for network operations and other
 transient failures. Integrates with the project's Config class.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 import random
-from typing import Any, Callable, Optional, Tuple, Type
+from collections.abc import Callable
+from typing import Any
 
 from osint_nexus.core.config import Config
 
@@ -33,7 +35,7 @@ class RetryHandler:
         self,
         config: Config,
         *,
-        retry_exceptions: Tuple[Type[BaseException], ...] = (Exception,),
+        retry_exceptions: tuple[type[BaseException], ...] = (Exception,),
     ) -> None:
         self.config = config
         self.retry_exceptions = retry_exceptions
@@ -60,7 +62,7 @@ class RetryHandler:
         """
         max_attempts = self.config.retry_attempts
         backoff = self.config.retry_backoff_factor
-        last_exception: Optional[BaseException] = None
+        last_exception: BaseException | None = None
 
         for attempt in range(1, max_attempts + 1):
             try:

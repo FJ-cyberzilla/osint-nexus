@@ -5,11 +5,12 @@ Defines the minimal interface that every platform‑specific check must
 implement. The registry injects the shared NetworkManager so that
 providers can make HTTP requests with evasion already built in.
 """
+
 from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Tuple, Any
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from osint_nexus.utils.network import NetworkManager
@@ -34,7 +35,7 @@ class BaseProvider(ABC):
     # Provider interface
     # ------------------------------------------------------------------
     @abstractmethod
-    async def check_username(self, username: str, **kwargs: Any) -> Tuple[bool, str]:
+    async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
         """
         Determine if the username is registered on the platform.
 

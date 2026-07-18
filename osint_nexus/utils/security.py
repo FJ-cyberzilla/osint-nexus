@@ -3,6 +3,7 @@ Input sanitization utilities for OSINT Nexus.
 
 Provides safe string cleaning to prevent injection attacks.
 """
+
 from __future__ import annotations
 
 import html

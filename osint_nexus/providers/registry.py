@@ -1,14 +1,13 @@
-from typing import List
+from osint_nexus.core.evasion_agent import EvasionAgent
+from osint_nexus.providers.aparat import AparatProvider
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.providers.generic import GenericProvider
 from osint_nexus.providers.github import GitHubProvider
-from osint_nexus.providers.aparat import AparatProvider
-from osint_nexus.core.evasion import EvasionManager
 from osint_nexus.utils.network import NetworkManager
 
 
 class ProviderRegistry:
-    def __init__(self, evasion_manager: EvasionManager, network_manager: NetworkManager):
+    def __init__(self, evasion_manager: EvasionAgent, network_manager: NetworkManager):
         self.evasion_manager = evasion_manager
         self.network_manager = network_manager
 
@@ -44,13 +43,13 @@ class ProviderRegistry:
             "Nashenas": "https://nashenas.com/{}",
         }
 
-        self.providers: List[BaseProvider] = [
+        self.providers: list[BaseProvider] = [
             GenericProvider(name, url, network_manager) for name, url in platform_map.items()
         ]
-        
+
         # Add specialized providers
         self.providers.append(GitHubProvider(network_manager))
         self.providers.append(AparatProvider(network_manager))
 
-    def get_providers(self) -> List[BaseProvider]:
+    def get_providers(self) -> list[BaseProvider]:
         return self.providers
