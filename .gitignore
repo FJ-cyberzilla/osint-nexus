@@ -20,6 +20,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+osint.log
+osint_results.db
 
 # Environments
 .env
