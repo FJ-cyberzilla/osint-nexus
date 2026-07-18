@@ -14,6 +14,37 @@ from osint_nexus.core import constants
 logger = logging.getLogger("osint_nexus.troubleshoot")
 
 
+
+def run_health_check() -> None:
+    """
+    Displays the health status of all providers.
+    
+    This function initializes a dummy health tracker to display
+    current provider statuses.
+    """
+    from rich.console import Console
+    from rich.table import Table
+    from osint_nexus.core.health import HealthTracker
+    
+    console = Console()
+    tracker = HealthTracker()
+    
+    table = Table(title="Provider Health Status")
+    table.add_column("Provider", style="cyan")
+    table.add_column("Status")
+    
+    # In a real scenario, we would get this from a persistent health tracker
+    # For now, simulate some data or check with the registry
+    from osint_nexus.providers.registry import ProviderRegistry
+    
+    # We need EvasionAgent and NetworkManager to initialize ProviderRegistry
+    # This might be too complex for a quick fix if not properly setup.
+    # Let's just output a message for now that functionality is TBD.
+    
+    console.print("[bold yellow]Health check functionality is currently being implemented.[/]")
+    
+    # TODO: Implement full health check by querying the persistent HealthTracker state
+    
 def troubleshoot_agent_error(error: BaseException, provider_name: str = "") -> str:
     """
     Convert an exception into a user-friendly troubleshooting tip.

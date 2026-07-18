@@ -125,14 +125,14 @@ async def async_main(args: argparse.Namespace) -> None:
 
     # UI Components setup
     progress = Progress(
-        SpinnerColumn(style="orange"),
-        TextColumn("[bold orange]{task.description}"),
-        BarColumn(bar_width=40, complete_style="orange", finished_style="green"),
+        SpinnerColumn(style="bold orange1"),
+        TextColumn("[bold orange1]{task.description}"),
+        BarColumn(bar_width=40, complete_style="bold orange1", finished_style="green"),
         TaskProgressColumn(),
         TimeRemainingColumn(),
         console=console,
     )
-    task = progress.add_task("[orange]Executing intelligence gather...", total=total_providers)
+    task = progress.add_task("[bold orange1]Executing intelligence gather...", total=total_providers)
 
     table = Table(
         title="[bold orange]Active Reconnaissance Results[/]",
@@ -167,10 +167,10 @@ async def async_main(args: argparse.Namespace) -> None:
     except asyncio.CancelledError:
         console.print("[yellow]Scan cancelled by system.[/]")
 
-    input("\n[bold orange]Scan complete. Press Enter to generate final report...[/]")
+    input("\n[bold orange1]Scan complete. Press Enter to generate final report...[/]")
     console.print(
         Panel(
-            "[bold white]Reconnaissance Complete![/]\n[orange]Compiling intelligence report...[/]",
+            "[bold white]Reconnaissance Complete![/]\n[orange1]Compiling intelligence report...[/]",
             border_style="green",
         )
     )

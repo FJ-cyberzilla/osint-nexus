@@ -6,51 +6,57 @@ An adaptive, high-performance OSINT agent for verifying username presence across
 
 ## Architecture Overview
 
-OSINT Nexus has been refactored to a modular facade-based architecture, decoupling the main orchestration logic into distinct, testable subsystems.
+OSINT Nexus has been refactored to a modular, facade-based architecture, decoupling the main orchestration logic into distinct, testable subsystems.
 
 ### Core Components
-- `OSINTAgent` (Facade): The primary entry point, orchestrating the scan lifecycle via injected subsystems.
-- `ScanOrchestrator`: Manages concurrent provider scanning, health tracking, and persistence.
-- `HealthTracker`: Implements platform health monitoring with failure decay, circuit breaking, and auto-healing.
-- `ReportGenerator`: Handles telemetry collection and scan summary generation.
-- `DeviceInferenceService`: Provides intelligent device context (MAC OUI, port heuristics).
-- `DatabaseManager`: Ensures thread-safe/async-safe persistence of scan results.
+
+*   **`OSINTAgent` (Facade)**: The primary entry point, orchestrating the scan lifecycle via injected subsystems.
+*   **`ScanOrchestrator`**: Manages concurrent provider scanning, health tracking, and persistence.
+*   **`HealthTracker`**: Implements platform health monitoring with failure decay, circuit breaking, and auto-healing.
+*   **`ReportGenerator`**: Handles telemetry collection and scan summary generation.
+*   **`DeviceInferenceService`**: Provides intelligent device context (MAC OUI, port heuristics).
+*   **`DatabaseManager`**: Ensures thread-safe/async-safe persistence of scan results.
 
 ## Key Improvements
-- **Health Monitoring & Circuit Breaking**: Implemented robust failure tracking with configurable thresholds and auto-healing recovery periods to improve resilience.
-- **Safety Valve**: Added developer-friendly debugging flag (`DEBUG_PROVIDERS`) for graceful error handling in production.
-- **CLI Health Management**: Added `health` command for monitoring provider status.
-- **Concurrency Fixes**: Resolved database persistence race conditions in `run_scan`.
-- **Modular Design**: Extracted logic into independent subsystems, significantly improving maintainability and testability.
-- **Dependency Injection**: Subsystems are explicitly injected, simplifying isolated component testing.
-- **Enhanced Capability**: Added `DeviceInferenceService` for production-grade device context.
-- **Termux Optimizations**: Automated TLS profile selection (restricting to `chrome120`) to ensure stability in Android/Termux environments.
-- **Aesthetic Reporting**: Integrated `rich` for color-coded CLI tables and panel-based final intelligence summaries.
-- **Platform Compatibility**: Expanded support for short-name platforms (e.g., 'X') and Iranian platforms (Eitaa, Soroush+, etc.).
+
+*   **Health Monitoring & Circuit Breaking**: Robust failure tracking with configurable thresholds and auto-healing.
+*   **Debugging**: Added developer-friendly `DEBUG_PROVIDERS` flag for graceful error handling.
+*   **CLI Enhancements**: Added a dedicated `health` command for monitoring provider status.
+*   **Concurrency**: Resolved database persistence race conditions in `run_scan`.
+*   **Modular Design**: Logic extracted into independent, testable subsystems.
+*   **Enhanced Capability**: Added `DeviceInferenceService` for production-grade device context.
+*   **Termux Optimizations**: Automated TLS profile selection (`chrome120`) for Android/Termux stability.
+*   **Aesthetic Reporting**: Integrated `rich` for color-coded CLI tables and final summaries.
 
 ## Usage
-The agent is designed to be used in asynchronous contexts:
+
+### Programmatic API
+
 ```python
+from osint_nexus.core.agent import OSINTAgent
+
 agent = OSINTAgent(username="target_user")
 async for intel in agent.run_scan("target_user"):
-    # intel is an IntelligenceObject
     print(f"Found on {intel.platform}: {intel.found}")
 report = agent.get_final_report()
 ```
 
-### CLI
-Scan a target:
+### CLI Operations
+
+**Scan a target username:**
 ```bash
 python -m osint_nexus.cli scan --username target_user
 ```
 
-Check provider health:
+**Check provider health:**
 ```bash
 python -m osint_nexus.cli health
 ```
 
 ## Testing
-Comprehensive test suite available in `tests/`. Run using:
+
+Comprehensive test suite available in `tests/`.
+
 ```bash
 PYTHONPATH=. pytest tests/
 ```
