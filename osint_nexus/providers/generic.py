@@ -26,9 +26,16 @@ class GenericProvider(BaseProvider):
         )
     """
 
-    def __init__(self, name: str, url_template: str, network: NetworkManager) -> None:
+    def __init__(
+        self, 
+        name: str, 
+        url_template: str, 
+        network: NetworkManager,
+        dork_engine: DorkEngine | None = None
+    ) -> None:
         super().__init__(name, network)
         self.url_template = url_template
+        self.dork_engine = dork_engine or DorkEngine()
 
     async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
         """Fetch the profile page and return (found, content)."""
@@ -37,4 +44,4 @@ class GenericProvider(BaseProvider):
 
     def get_dork_query(self, username: str) -> str:
         """Return a dork query for the platform."""
-        return DorkEngine.get_dork_query_static(username, self.name)
+        return self.dork_engine.get_dork_query(username, self.name)

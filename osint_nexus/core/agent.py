@@ -10,8 +10,10 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
+from osint_nexus.core.orchestrator import ProviderProtocol
 
+from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.confidence import ConfidenceEngine
 from osint_nexus.core.config import Config
 from osint_nexus.core.database import DatabaseManager
@@ -22,7 +24,8 @@ from osint_nexus.core.health import HealthTracker
 from osint_nexus.core.hierarchy import HierarchyManager
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.orchestrator import OrchestratorDeps, ScanOrchestrator
-from osint_nexus.core.report import ReportGenerator
+from osint_nexus.core.report import AdvancedReportGenerator
+from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.validator import ResultValidator
 from osint_nexus.providers.registry import ProviderRegistry
 from osint_nexus.utils.helpers import setup_logger
@@ -41,11 +44,13 @@ class AgentSubsystems:
     registry: ProviderRegistry
     validator: ResultValidator
     confidence: ConfidenceEngine
+    dork: DorkEngine
     hierarchy: HierarchyManager
     mimicry: HumanMimicryEngine
     fingerprint: FingerprintAgent
     health: HealthTracker
-    report: ReportGenerator
+    report: AdvancedReportGenerator
+    detection: DetectionEngine
     orchestrator: ScanOrchestrator
     device_inference: DeviceInferenceService
 
@@ -75,26 +80,31 @@ class OSINTAgent:
         db_manager = DatabaseManager()
         fingerprint = FingerprintAgent()
         confidence = ConfidenceEngine()
+        dork = DorkEngine(templates=self.config.dork_templates)
         validator = ResultValidator(username)
         health = HealthTracker()
         device_inference = DeviceInferenceService()
+        detection = DetectionEngine(weights=self.config.evasion_weights)
 
         self.subsystems = AgentSubsystems(
             evasion=evasion,
             network=network,
             db=db_manager,
-            registry=ProviderRegistry(evasion, network),
+            registry=ProviderRegistry(evasion, network, dork),
             validator=validator,
             confidence=confidence,
+            dork=dork,
             hierarchy=HierarchyManager(),
             mimicry=mimicry,
             fingerprint=fingerprint,
             health=health,
-            report=ReportGenerator(fingerprint, evasion, confidence),
+            report=AdvancedReportGenerator(),
+            detection=detection,
             orchestrator=ScanOrchestrator(
                 OrchestratorDeps(health, validator, db_manager, network, mimicry),
-                max_concurrency,
-                device_inference,
+                detection_engine=detection,
+                max_concurrency=max_concurrency,
+                device_inference=device_inference,
             ),
             device_inference=device_inference,
         )
@@ -122,7 +132,7 @@ class OSINTAgent:
         self.logger.info("Agent starting scan for: %s", username)
         providers = self.subsystems.registry.get_providers()
 
-        async for intel in self.subsystems.orchestrator.run_scan(username, providers, timeout):
+        async for intel in self.subsystems.orchestrator.run_scan(username, cast(list[ProviderProtocol], providers), timeout):
             if intel.found:
                 self.found_platforms.append(intel.platform)
                 # Capture device inference from the first found platform with data
@@ -136,6 +146,14 @@ class OSINTAgent:
 
     def get_final_report(self) -> str:
         """Generate a summary report after scan completion."""
-        return self.subsystems.report.generate_summary(
-            self.found_platforms, self.device_inference_profile, target=self.username
+        # Using a dummy payload for the example; this should be updated with actual telemetry
+        self.subsystems.report.render_hardware_intelligence(
+            self.username,
+            {
+                "is_poisoned": False,
+                "shannon_entropy": 3.0,
+                "render_time_ms": 1.5,
+                "reported_user_agent": "Mozilla/5.0"
+            }
         )
+        return "Report rendered to console."

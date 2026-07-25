@@ -41,40 +41,42 @@ def setup_logger(
     if _logging_configured:
         return logging.getLogger(logger_name)
 
-    # Determine log file path
-    resolved_log_file = log_file
-    if not resolved_log_file and config:
-        # Use the database directory with a default name
-        db_path = Path(config.db_path) if config.db_path else Path(".")
-        resolved_log_file = str(db_path.parent / "osint.log")
-    if not resolved_log_file:
-        resolved_log_file = "osint.log"
-
-    # Determine log level
-    log_level = logging.INFO
-    if config and hasattr(config, "log_level"):
-        log_level = config.log_level
-
-    # Build formatter
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-    # File handler
-    file_handler = logging.FileHandler(Path(resolved_log_file))
-    file_handler.setFormatter(formatter)
-
-    # Stream handler (console)
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-
-    # Root logger setup
-    root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(stream_handler)
+    log_path = _get_log_file_path(config, log_file)
+    log_level = _get_log_level(config)
+    _configure_root_logger(log_path, log_level)
 
     _logging_configured = True
 
     return logging.getLogger(logger_name)
+
+
+def _get_log_file_path(config: Config | None, log_file: str | None) -> Path:
+    if log_file:
+        return Path(log_file)
+    if config and config.db_path:
+        return Path(config.db_path).parent / "osint.log"
+    return Path("osint.log")
+
+
+def _get_log_level(config: Config | None) -> int:
+    if config and hasattr(config, "log_level"):
+        return cast(int, config.log_level)
+    return logging.INFO
+
+
+def _configure_root_logger(log_path: Path, log_level: int) -> None:
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(stream_handler)
 
 
 def get_logger(name: str) -> logging.Logger:

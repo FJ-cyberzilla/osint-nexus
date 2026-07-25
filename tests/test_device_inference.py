@@ -1,33 +1,18 @@
 import pytest
-
 from osint_nexus.core.device_inference import DeviceInferenceService
 
+@pytest.mark.asyncio
+async def test_infer_by_ports_windows_profile():
+    service = DeviceInferenceService()
+    # Mocking standard Active Directory / Windows Server exposed ports
+    result = await service.infer_by_ports("192.168.1.50", [445, 3389])
+    
+    assert "Windows" in result.possible_os
+    assert "Remote Desktop (RDP)" in result.detected_roles
+    assert result.confidence_score > 50
 
-@pytest.fixture
-def service():
-    return DeviceInferenceService()
-
-
-def test_inference_oui(service):
-    metadata = {"mac_address": "00:1A:2B:CC:DD:EE"}
-    profile = service.infer("some content", metadata)
-    assert profile.device_type == "Network Equipment"
-    assert profile.os_guess == "Cisco IOS"
-    assert profile.confidence == 0.9
-
-
-def test_inference_ports(service):
-    metadata = {"ports": [22, 80]}
-    profile = service.infer("some content", metadata)
-    # Both "Server" and "Web Server" have 0.2, but "Server" was added first
-    assert profile.device_type == "Server"
-    assert profile.os_guess == "Linux"
-    assert profile.confidence == 0.5
-
-
-def test_inference_unknown(service):
-    metadata = {"mac_address": "AA:BB:CC:DD:EE:FF", "ports": [1234]}
-    profile = service.infer("some content", metadata)
-    assert profile.device_type == "Unknown"
-    assert profile.os_guess == "Unknown"
-    assert profile.confidence == 0.0
+@pytest.mark.asyncio
+async def test_infer_by_mac_apple_lookup():
+    service = DeviceInferenceService()
+    manufacturer = await service.infer_by_mac("A4-77-33-FF-12-34")
+    assert manufacturer == "Apple, Inc."

@@ -38,8 +38,7 @@ class DatabaseManager:
     def __init__(self, config: Config | None = None, db_path: str | None = None) -> None:
         self.config = config or Config()
         custom_path = db_path or getattr(self.config, "DB_PATH", "osint_results.db")
-        self.db_path = Path(custom_path).resolve()
-        self._init_lock = asyncio.Lock()
+        self.db_path = Path(str(custom_path)).resolve()
 
         # Use WAL mode for better concurrency
         self._connection_kwargs: dict[str, Any] = {
@@ -51,7 +50,7 @@ class DatabaseManager:
 
     def _get_connection(self) -> sqlite3.Connection:
         """Create a new connection with WAL mode enabled."""
-        conn = sqlite3.connect(**self._connection_kwargs)
+        conn: sqlite3.Connection = sqlite3.connect(**self._connection_kwargs)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.row_factory = sqlite3.Row
         return conn
@@ -127,7 +126,7 @@ class DatabaseManager:
             List of dictionaries with keys: id, username, platform, found, timestamp.
         """
         query = "SELECT id, username, platform, found, timestamp FROM results WHERE 1=1"
-        params: list = []
+        params: list[Any] = []
         if username:
             query += " AND username = ?"
             params.append(username)

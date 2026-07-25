@@ -179,46 +179,31 @@ class ResultValidator:
 
     def _resolve_decision(self, votes: dict[str, tuple[ValidationVote, float]]) -> bool:
         any_valid = any(v == ValidationVote.VALID for v, _ in votes.values())
-        any_invalid = any(v == ValidationVote.INVALID for v, _ in votes.values())
+        return any_valid and not self._should_exclude(votes)
 
-        is_valid = any_valid
-        if any_valid:
-            # If we found the username, check if any EXTREMELY high-confidence
-            # exclusion rule invalidates it.
-            exclusion_rules = [
-                (name, conf)
-                for name, (v, conf) in votes.items()
-                if v == ValidationVote.INVALID and name == "ExclusionPatternRule"
-            ]
-            if exclusion_rules:
-                highest_exclusion_conf = max(conf for _, conf in exclusion_rules)
-                if highest_exclusion_conf > 0.98:
-                    is_valid = False
-        elif any_invalid:
-            is_valid = False
+    def _should_exclude(self, votes: dict[str, tuple[ValidationVote, float]]) -> bool:
+        """Determines if the result should be excluded based on exclusion rules."""
+        exclusion_rules = self._get_exclusion_rules(votes)
+        if not exclusion_rules:
+            return False
+        
+        return max(conf for _, conf in exclusion_rules) > 0.98
 
-        return is_valid
+    def _get_exclusion_rules(self, votes: dict[str, tuple[ValidationVote, float]]) -> list[tuple[str, float]]:
+        """Filters votes for exclusion rules."""
+        return [
+            (name, conf)
+            for name, (v, conf) in votes.items()
+            if v == ValidationVote.INVALID and name == "ExclusionPatternRule"
+        ]
 
-    def _build_result(self, is_valid: bool, votes: dict[str, tuple[ValidationVote, float]]) -> ValidationResult:
+    def _build_result(
+        self, is_valid: bool, votes: dict[str, tuple[ValidationVote, float]]
+    ) -> ValidationResult:
         if is_valid:
-            # Confidence: average of all VALID vote confidences (skip NEUTRAL/INVALID)
-            valid_confidences = [conf for (vote, conf) in votes.values() if vote == ValidationVote.VALID]
-            avg_confidence = sum(valid_confidences) / len(valid_confidences) if valid_confidences else 0.5
-            details = "Username presence confirmed by rule(s): " + ", ".join(
-                name for name, (v, _) in votes.items() if v == ValidationVote.VALID
-            )
+            avg_confidence, details = self._get_valid_result(votes)
         else:
-            # If invalid due to an INVALID vote, confidence is that rule's confidence
-            invalid_votes = [(name, conf) for name, (v, conf) in votes.items() if v == ValidationVote.INVALID]
-            if invalid_votes:
-                _, highest_conf = max(invalid_votes, key=lambda x: x[1])
-                avg_confidence = highest_conf
-                details = "Invalidated by rule(s): " + ", ".join(
-                    name for name, (v, _) in votes.items() if v == ValidationVote.INVALID
-                )
-            else:
-                avg_confidence = 0.5
-                details = "No positive evidence found (all rules neutral)"
+            avg_confidence, details = self._get_invalid_result(votes)
 
         return ValidationResult(
             is_valid=is_valid,
@@ -227,6 +212,26 @@ class ResultValidator:
             rules_applied=list(votes.keys()),
             evidence={name: vote.value for name, (vote, _) in votes.items()},
         )
+
+    def _get_valid_result(self, votes: dict[str, tuple[ValidationVote, float]]) -> tuple[float, str]:
+        valid_confidences = [conf for (vote, conf) in votes.values() if vote == ValidationVote.VALID]
+        avg_confidence = sum(valid_confidences) / len(valid_confidences) if valid_confidences else 0.5
+        details = self._format_details("Username presence confirmed by rule(s)", votes, ValidationVote.VALID)
+        return avg_confidence, details
+
+    def _get_invalid_result(self, votes: dict[str, tuple[ValidationVote, float]]) -> tuple[float, str]:
+        invalid_votes = [(name, conf) for name, (v, conf) in votes.items() if v == ValidationVote.INVALID]
+        if not invalid_votes:
+            return 0.5, "No positive evidence found (all rules neutral)"
+        
+        _, highest_conf = max(invalid_votes, key=lambda x: x[1])
+        details = self._format_details("Invalidated by rule(s)", votes, ValidationVote.INVALID)
+        return highest_conf, details
+
+    def _format_details(self, prefix: str, votes: dict[str, tuple[ValidationVote, float]], vote_type: ValidationVote) -> str:
+        """Formats the details string for a given validation result."""
+        names = [name for name, (v, _) in votes.items() if v == vote_type]
+        return f"{prefix}: " + ", ".join(names)
 
     def validate_with_details(self, response_text: str, platform: str) -> ValidationResult:
         """

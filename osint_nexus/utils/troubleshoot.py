@@ -14,37 +14,129 @@ from osint_nexus.core import constants
 logger = logging.getLogger("osint_nexus.troubleshoot")
 
 
+import logging
+import sqlite3
 
-def run_health_check() -> None:
-    """
-    Displays the health status of all providers.
+from rich.console import Console
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.table import Table
+from osint_nexus.core import constants
+from rich.logging import RichHandler
+from osint_nexus.core.config import LOG_FILE_PATH, DATABASE_PATH
+
+def setup_logging(verbose: bool = False):
+    log_level = logging.DEBUG if verbose else logging.INFO
     
-    This function initializes a dummy health tracker to display
-    current provider statuses.
-    """
-    from rich.console import Console
-    from rich.table import Table
-    from osint_nexus.core.health import HealthTracker
+    # Root logger config
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
     
+    # Remove existing handlers to avoid duplicates
+    root_logger.handlers.clear()
+
+    # 1. THE AESTHETIC CONSOLE HANDLER (Rich)
+    console_handler = RichHandler(
+        rich_tracebacks=True,       # Gorgeous syntax-highlighted error tracebacks
+        markup=True,                # Allows using [bold red] colors inside custom log messages
+        show_path=False,            # Hides file paths to keep logs looking clean and structured
+        omit_repeated_times=True    # Drops timestamp clutter for simultaneous operations
+    )
+    console_handler.setLevel(log_level)
+    root_logger.addHandler(console_handler)
+
+    # 2. THE PERSISTENT FILE HANDLER (Raw text for log analysis)
+    file_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler = logging.FileHandler(LOG_FILE_PATH, encoding="utf-8")
+    file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(logging.DEBUG)  # Always record full details to the disk log
+    root_logger.addHandler(file_handler)
+
+
+def inspect_database_schema() -> None:
     console = Console()
-    tracker = HealthTracker()
     
-    table = Table(title="Provider Health Status")
-    table.add_column("Provider", style="cyan")
-    table.add_column("Status")
+    try:
+        # Connect to your dynamic database path
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        # 1. Fetch all tables and their explicit SQL creation strings
+        cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        
+        if not tables:
+            console.print("[bold yellow]⚠ Database is empty or no tables have been initialized yet.[/bold yellow]")
+            return
+
+        console.print(Panel("[bold green]📂 OSINT Nexus - Local Storage Architecture[/bold green]", expand=False, border_style="cyan"))
+
+        for table_name, sql_schema in tables:
+            # Skip SQLite internal tracking tables to reduce noise
+            if table_name.startswith("sqlite_"):
+                continue
+                
+            # Get a quick row count for metrics
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+            row_count = cursor.fetchone()[0]
+            
+            # Syntax highlight the SQL creation statement dynamically
+            clean_sql = sql_schema.strip() + ";"
+            highlighted_sql = Syntax(clean_sql, "sql", theme="monokai", line_numbers=True)
+            
+            # Print each table configuration in its own visual block
+            console.print(
+                Panel(
+                    highlighted_sql,
+                    title=f"📦 Table: [bold yellow]{table_name}[/bold yellow]",
+                    subtitle=f"[bold]Records: {row_count}[/bold]",
+                    subtitle_align="right",
+                    border_style="magenta",
+                    padding=(1, 2)
+                )
+            )
+            console.print("") # Space spacer
+            
+        conn.close()
+        
+    except Exception as e:
+        console.print(f"[bold red]❌ Failed to read database schema: {e}[/bold red]")
+
+
+def print_latest_scan_results(limit: int = 10) -> None:
+    console = Console()
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
     
-    # In a real scenario, we would get this from a persistent health tracker
-    # For now, simulate some data or check with the registry
-    from osint_nexus.providers.registry import ProviderRegistry
+    cursor.execute(
+        "SELECT id, username, platform, found, timestamp FROM results ORDER BY id DESC LIMIT ?;", 
+        (limit,)
+    )
+    rows = cursor.fetchall()
     
-    # We need EvasionAgent and NetworkManager to initialize ProviderRegistry
-    # This might be too complex for a quick fix if not properly setup.
-    # Let's just output a message for now that functionality is TBD.
+    if not rows:
+        console.print("[dim]No scan logs recorded yet.[/dim]")
+        return
+        
+    # Build clean columns matching your schema footprint
+    table = Table(title="📊 Recent Footprint Discoveries", border_style="dim")
+    table.add_column("ID", justify="center", style="dim")
+    table.add_column("Target Username", style="yellow")
+    table.add_column("Platform Target", style="cyan")
+    table.add_column("Detection State", justify="center")
+    table.add_column("Observed Timestamp", style="green")
     
-    console.print("[bold yellow]Health check functionality is currently being implemented.[/]")
-    
-    # TODO: Implement full health check by querying the persistent HealthTracker state
-    
+    for row in rows:
+        id_, username, platform, found, timestamp = row
+        status = "[bold green]FOUND[/bold green]" if found == 1 else "[red]ABSENT[/red]"
+        table.add_row(str(id_), username, platform, status, timestamp)
+        
+    console.print(table)
+    conn.close()
+
+
 def troubleshoot_agent_error(error: BaseException, provider_name: str = "") -> str:
     """
     Convert an exception into a user-friendly troubleshooting tip.
@@ -56,31 +148,44 @@ def troubleshoot_agent_error(error: BaseException, provider_name: str = "") -> s
     Returns:
         A Rich-markup string containing an actionable tip.
     """
-    # Build the tip based on exception characteristics
-    error_str = str(error).lower()
-    tip: str
-
-    if isinstance(error, TimeoutError) or "timeout" in error_str:
-        tip = (
-            f"Request timed out for {provider_name}. "
-            "Check network latency or increase the HTTP timeout in config."
-        )
-    elif isinstance(error, ConnectionError) or "connection" in error_str:
-        tip = f"Could not connect to {provider_name}. Verify proxy settings and internet connectivity."
-    elif "ssl" in error_str or "certificate" in error_str:
-        tip = (
-            f"SSL certificate error for {provider_name}. Ensure your system’s CA certificates are up to date."
-        )
-    elif hasattr(error, "response") and error.response is not None:
-        status_code = error.response.status_code
-        tip = (
-            f"HTTP {status_code} from {provider_name}. "
-            "Possible rate‑limiting or block – consider rotating proxy / User‑Agent."
-        )
-    else:
-        tip = f"Unexpected error in {provider_name}. Review the logs for full details."
+    tip = _generate_tip(error, provider_name)
 
     # Log the underlying error for diagnostics
     logger.error("Agent failure in %s: %s", provider_name, error, exc_info=True)
 
     return f"[{constants.COLOR_TIP}]Tip: {tip}[/]"
+
+
+def _generate_tip(error: BaseException, provider_name: str) -> str:
+    error_str = str(error).lower()
+
+    if isinstance(error, TimeoutError) or "timeout" in error_str:
+        return (
+            f"Request timed out for {provider_name}. "
+            "Check network latency or increase the HTTP timeout in config."
+        )
+    if isinstance(error, ConnectionError) or "connection" in error_str:
+        return f"Could not connect to {provider_name}. Verify proxy settings and internet connectivity."
+    if "ssl" in error_str or "certificate" in error_str:
+        return (
+            f"SSL certificate error for {provider_name}. Ensure your system’s CA certificates are up to date."
+        )
+    if hasattr(error, "response") and error.response is not None:
+        status_code = error.response.status_code
+        return (
+            f"HTTP {status_code} from {provider_name}. "
+            "Possible rate‑limiting or block – consider rotating proxy / User‑Agent."
+        )
+    return f"Unexpected error in {provider_name}. Review the logs for full details."
+
+
+def run_health_check() -> None:
+    """
+    Perform a health check of registered providers.
+    
+    This function requires an active scan or agent context to access
+    provider registry and network management services.
+    """
+    console = Console()
+    console.print("[bold yellow]Health check requires an active scan context.[/]")
+    console.print("Please run this tool within a scan environment or initialize the OSINTAgent.")

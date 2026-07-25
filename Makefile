@@ -1,8 +1,8 @@
-# ==========================================
+# ==========================================================================
 # OSINT NEXUS - ADVANCED RECONNAISSANCE
-# ==========================================
+# ==========================================================================
 # Base Theme: Orange
-# ==========================================
+# ==========================================================================
 
 # Colors & Formatting
 ORANGE      := \033[38;5;208m
@@ -18,7 +18,7 @@ SHELL        := /bin/bash
 UV_LINK_MODE := copy
 export UV_LINK_MODE
 
-.PHONY: help sync run test lint format clean
+.PHONY: help sync run health db-info test lint format clean
 
 # --- Help Menu ---
 help:
@@ -32,6 +32,8 @@ help:
 	@echo -e "  $(ORANGE)============================================================$(RESET)"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)sync$(RESET)      $(CYAN)•$(RESET)  Advanced synchronization of dependencies"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)run$(RESET)       $(CYAN)•$(RESET)  Execute OSINT scan (prompts for username)"
+	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)health$(RESET)    $(CYAN)•$(RESET)  Check provider network status & circuit breakers"
+	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)db-info$(RESET)   $(CYAN)•$(RESET)  Inspect schema architecture and database records"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)test$(RESET)      $(CYAN)•$(RESET)  Run comprehensive test suite"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)lint$(RESET)      $(CYAN)•$(RESET)  Verify code quality and complexity"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)format$(RESET)    $(CYAN)•$(RESET)  Apply consistent code formatting"
@@ -61,6 +63,14 @@ run:
 		export PYTHONPATH=$(PYTHONPATH) && uv run python -m osint_nexus.cli.main --username $(USERNAME); \
 	fi
 
+health:
+	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Querying provider networks & circuit-breaker states...$(RESET)"
+	@export PYTHONPATH=$(PYTHONPATH) && uv run python -m osint_nexus.cli.main health
+
+db-info:
+	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Accessing local telemetry database metrics...$(RESET)"
+	@export PYTHONPATH=$(PYTHONPATH) && uv run python -m osint_nexus.cli.main db-info
+
 test:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Executing test suite...$(RESET)"
 	@export PYTHONPATH=$(PYTHONPATH) && uv run pytest tests/
@@ -75,6 +85,6 @@ format:
 
 clean:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Purging artifacts...$(RESET)"
-	@rm -rf __pycache__ .pytest_cache .ruff_cache .coverage htmlcov *.egg-info build dist
+	@rm -rf __pycache__ .pytest_cache .ruff_cache .coverage htmlcov *.egg-info build dist data/*.db logs/*.log
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 	@echo -e "$(GREEN)✔ Cleanup complete.$(RESET)"

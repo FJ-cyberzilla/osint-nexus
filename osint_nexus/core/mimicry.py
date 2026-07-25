@@ -127,7 +127,6 @@ class HumanMimicryEngine:
 
     async def click_checkbox(
         self,
-        label: str = "",
         hesitation_multiplier: float = 1.0,
     ) -> float:
         """Simulates checkbox interaction with hesitation."""

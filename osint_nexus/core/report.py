@@ -1,157 +1,63 @@
-"""
-Handles telemetry collection, data structuring, and report generation for OSINT scans.
-Supports structured JSON output and human-readable terminal summaries.
-"""
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from typing import Dict, Any, Optional
+from pydantic import BaseModel
 
-import logging
-from datetime import UTC, datetime
-from typing import Any
+class TelemetryPayload(BaseModel):
+    browser: Any = None
+    raw_metadata: Dict[str, Any]
+    pipeline_status: str
 
-from pydantic import BaseModel, ConfigDict, Field
+class AdvancedReportGenerator:
+    """Consolidates cross-subsystem telemetry and prints aesthetic structural threat summaries."""
+    
+    def __init__(self) -> None:
+        self.console = Console()
 
-logger = logging.getLogger("osint_nexus.report")
+    def render_hardware_intelligence(self, target_username: str, anti_spoof_data: Dict[str, Any]) -> None:
+        """Generates a premium operational layout wrapping device integrity and footprint anomalies."""
+        self._render_banner(target_username, anti_spoof_data)
 
+        # 2. Heuristic Metric Evaluation Table
+        metrics_table = Table(title="📊 Telemetry Layer Verification", title_style="bold dim", show_header=True, header_style="bold orange3")
+        metrics_table.add_column("Vector Attribute", style="cyan")
+        metrics_table.add_column("Observed Value", justify="center")
+        metrics_table.add_column("Engine Status Assessment", justify="left")
 
-class ScanReport(BaseModel):
-    """Structured representation of a complete OSINT scan."""
+        self._add_metrics_rows(metrics_table, anti_spoof_data)
 
-    model_config = ConfigDict(frozen=True)
+        self.console.print(metrics_table)
+        self.console.print("\n")
 
-    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
-    target: str = Field(default="Unknown")
-    total_platforms_found: int = Field(default=0)
-    platforms: list[str] = Field(default_factory=list)
-    confidence_score: float = Field(default=0.0)
-    device_intelligence: dict[str, Any] = Field(default_factory=dict)
-    telemetry: dict[str, Any] = Field(default_factory=dict)
-    scan_duration_sec: float | None = Field(default=None)
-
-
-class ReportGenerator:
-    def __init__(self, fingerprint_agent: Any, evasion_agent: Any, confidence_engine: Any) -> None:
-        self.fingerprint_agent = fingerprint_agent
-        self.evasion_agent = evasion_agent
-        self.confidence_engine = confidence_engine
-
-    def collect_telemetry(self) -> dict[str, Any]:
-        """
-        Safely collects telemetry data. If evasion or fingerprinting fails,
-        it gracefully degrades rather than crashing the final report.
-        """
-        try:
-            # Safely extract evasion metrics (fallback to None if methods are missing)
-            proxy = getattr(self.evasion_agent, "get_proxy", lambda: None)()
-            user_agent = getattr(self.evasion_agent, "get_user_agent", lambda: "Default/1.0")()
-
-            # Pass to fingerprint agent
-            return self.fingerprint_agent.collect_scan_telemetry(proxy, user_agent)
-
-        except Exception as exc:
-            logger.error("Failed to collect scan telemetry: %s", exc)
-            return {"status": "degraded", "error": str(exc)}
-
-    def build_structured_report(
-        self,
-        target: str,
-        found_platforms: list[str],
-        inferred_device: dict[str, Any] | Any,
-        duration: float | None = None,
-    ) -> ScanReport:
-        """
-        Builds a comprehensive, strictly-typed Pydantic model of the scan results
-        that can be easily exported to an API, Database, or JSON file.
-        """
-        # Calculate confidence using the external engine
-        try:
-            confidence_result = self.confidence_engine.calculate_confidence(found_platforms)
-            confidence = confidence_result.score
-        except Exception as e:
-            logger.warning("Confidence calculation failed, defaulting to 0.0: %s", e)
-            confidence = 0.0
-
-        # Handle both the old raw Dict and the new Pydantic DeviceProfile
-        device_data = {}
-        if hasattr(inferred_device, "model_dump"):
-            device_data = inferred_device.model_dump(mode="json")
-        elif isinstance(inferred_device, dict):
-            device_data = inferred_device
-        else:
-            device_data = {"raw": str(inferred_device)}
-
-        return ScanReport(
-            target=target,
-            total_platforms_found=len(found_platforms),
-            platforms=found_platforms,
-            confidence_score=confidence,
-            device_intelligence=device_data,
-            telemetry=self.collect_telemetry(),
-            scan_duration_sec=duration,
+    def _render_banner(self, target_username: str, anti_spoof_data: Dict[str, Any]) -> None:
+        is_poisoned = anti_spoof_data.get("is_poisoned", False)
+        status_color = "bold red" if is_poisoned else "bold green"
+        verdict_text = "⚠️ DECEPTIVE PROFILE" if is_poisoned else "✅ CONSISTENT (AUTHENTIC)"
+        
+        banner_content = (
+            f"Target Identifier : [bold orange3]{target_username}[/bold orange3]\n"
+            f"Hardware Integrity : [{status_color}]{verdict_text}[/{status_color}]\n"
+            f"Anomalous Vector   : [dim]{anti_spoof_data.get('anomaly_type', 'N/A')}[/dim]"
+        )
+        
+        self.console.print(
+            Panel(
+                banner_content,
+                title="[bold orange3] ░█▀█░█▀▀░█░█░█░█░█▀▀ ░░░ ▀█▀░█▀█░█▀▀░█░█░▀█▀ [/bold orange3]",
+                border_style="orange3",
+                expand=False
+            )
         )
 
-    def generate_summary(
-        self, found_platforms: list[str], inferred_device: dict[str, Any] | Any, target: str = "Unknown"
-    ) -> str:
-        """
-        Generates a clean, human-readable terminal/Markdown summary of the scan.
-        Maintains backwards compatibility with previous caller signatures.
-        """
-        # 1. Build the data model
-        report = self.build_structured_report(target, found_platforms, inferred_device)
+    def _add_metrics_rows(self, table: Table, anti_spoof_data: Dict[str, Any]) -> None:
+        entropy = anti_spoof_data.get("shannon_entropy", 0.0)
+        entropy_status = "[red]CRITICAL (Noise Injected)[/red]" if entropy > 4.2 else "[green]NORMAL (Native Subpixel)[/green]"
+        table.add_row("Canvas Shannon Entropy", f"{entropy:.2f}", entropy_status)
 
-        # 2. Format the Device string intelligently based on the new DeviceProfile
-        device_str = "Unknown"
-        # Log for debugging
-        logger.debug("Formatting device intelligence: %s", report.device_intelligence)
+        latency = anti_spoof_data.get("render_time_ms", 0.0)
+        latency_status = "[red]SUSPICIOUS (Bot/Cache)[/red]" if latency < 1.0 else "[green]NORMAL (Hardware Delay)[/green]"
+        table.add_row("Execution Latency", f"{latency} ms", latency_status)
 
-        # Check for dictionary keys if report.device_intelligence is a dict
-        if isinstance(report.device_intelligence, dict):
-            dtype = report.device_intelligence.get("device_type", "Unknown")
-            os_guess = report.device_intelligence.get("os_guess", "Unknown")
-            dev_conf = report.device_intelligence.get("confidence", 0.0)
-
-            if dtype != "Unknown" or os_guess != "Unknown":
-                device_str = f"{dtype} running {os_guess} (Conf: {dev_conf:.2f})"
-            else:
-                device_str = "Unknown Device Context"
-        elif hasattr(report.device_intelligence, "device_type"):
-            # Handle object if returned
-            dtype = getattr(report.device_intelligence, "device_type", "Unknown")
-            os_guess = getattr(report.device_intelligence, "os_guess", "Unknown")
-            dev_conf = getattr(report.device_intelligence, "confidence", 0.0)
-
-            if dtype != "Unknown" or os_guess != "Unknown":
-                device_str = f"{dtype} running {os_guess} (Conf: {dev_conf:.2f})"
-            else:
-                device_str = "Unknown Device Context"
-        else:
-            # Last resort fallback
-            device_str = (
-                str(report.device_intelligence) if report.device_intelligence else "Unknown Device Context"
-            )
-
-        # 3. Format Telemetry compactly
-        telem_str = ", ".join(f"{k}: {v}" for k, v in report.telemetry.items() if k != "error")
-        if not telem_str:
-            telem_str = "No telemetry available"
-
-        # 4. Construct the UI representation
-        summary = [
-            f"[bold orange]=== OSINT Scan Report: {report.target} ===[/]",
-            "[orange]──────────────────────────────────────────[/]",
-            f"[bold white]Timestamp:[/]\t[cyan]{report.timestamp}[/]",
-            f"[bold white]Platforms:[/]\t[bold {'green' if report.total_platforms_found > 0 else 'red'}]{report.total_platforms_found} found[/]",
-            "[orange]──────────────────────────────────────────[/]",
-            f"[bold white]Matches:[/]\t{'[green]' + ', '.join(report.platforms) + '[/]' if report.platforms else '[red]None[/]'}",
-            f"[bold white]Confidence:[/]\t[bold {'green' if report.confidence_score > 0.5 else 'yellow'}]{report.confidence_score:.2f}/1.0[/]",
-            "[orange]──────────────────────────────────────────[/]",
-            f"[bold white]Device Info:[/]\t[dim]{device_str}[/]",
-            f"[bold white]Environment:[/]\t[dim]{telem_str}[/]",
-            "[orange]──────────────────────────────────────────[/]",
-        ]
-
-        return "\n".join(summary)
-
-    def export_json(self, target: str, found_platforms: list[str], inferred_device: Any) -> str:
-        """Helper to quickly generate a JSON string for webhooks or file saving."""
-        report = self.build_structured_report(target, found_platforms, inferred_device)
-        return report.model_dump_json(indent=2)
+        ua_status = "[yellow]MISMATCH (Header Altered)[/yellow]" if "Mismatch" in anti_spoof_data.get("anomaly_type", "") else "[green]VERIFIED[/green]"
+        table.add_row("User-Agent Crosscheck", anti_spoof_data.get("reported_user_agent", "Unknown"), ua_status)

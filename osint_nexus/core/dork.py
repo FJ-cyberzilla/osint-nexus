@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import logging
 
-from osint_nexus.core.config import Config
-
 logger = logging.getLogger("osint_nexus.dork")
 
 
@@ -49,21 +47,32 @@ class DorkEngine:
         ],
     }
 
-    def __init__(self, config: Config | None = None) -> None:
-        self.config = config or Config()
-        # Merge custom templates from config if provided
-        custom_templates = getattr(self.config, "dork_templates", None)
+    def __init__(
+        self, 
+        templates: dict[str, list[str]] | None = None
+    ) -> None:
+        """
+        Initializes the DorkEngine.
+
+        Args:
+            templates: Optional explicit dictionary of templates to use/merge.
+        """
         self._templates: dict[str, list[str]] = self.DEFAULT_TEMPLATES.copy()
-        if custom_templates and isinstance(custom_templates, dict):
-            for platform, templates in custom_templates.items():
-                if isinstance(templates, list):
-                    self._templates[platform] = templates
-                else:
-                    logger.warning(
-                        "Invalid dork templates for platform '%s' – expected list, got %s",
-                        platform,
-                        type(templates),
-                    )
+        
+        if templates:
+            self._merge_templates(templates)
+
+    def _merge_templates(self, templates: dict[str, list[str]]) -> None:
+        """Safely merge templates into the internal registry."""
+        for platform, tpls in templates.items():
+            if isinstance(tpls, list):
+                self._templates[platform] = tpls
+            else:
+                logger.warning(
+                    "Invalid dork templates for platform '%s' - expected list, got %s",
+                    platform,
+                    type(tpls),
+                )
 
     # ------------------------------------------------------------------
     # Public API
@@ -116,15 +125,6 @@ class DorkEngine:
         """
         self._templates[platform] = templates
         logger.info("Dork templates for '%s' updated (%d variants).", platform, len(templates))
-
-    # ------------------------------------------------------------------
-    # Static method for backward compatibility
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def get_dork_query_static(username: str, platform: str) -> str:
-        """Legacy static method – prefer using an instance."""
-        return f'site:{platform.lower()}.com "{username}" OR "{username} profile"'
 
     # ------------------------------------------------------------------
     # Health check (for hierarchy integration)

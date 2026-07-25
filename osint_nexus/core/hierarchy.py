@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable, cast
 
 logger = logging.getLogger("osint_nexus.hierarchy")
 
@@ -103,7 +103,7 @@ class HierarchyManager:
                     logger.error("Health check for '%s' raised: %s", name, healthy)
                     results[name] = False
                 else:
-                    results[name] = healthy
+                    results[name] = cast(bool, healthy)
         return results
 
     async def start_monitoring(self) -> None:
@@ -124,46 +124,63 @@ class HierarchyManager:
         logger.info("Health monitoring stopped.")
 
     async def _check_one(self, name: str, status: SubsystemStatus) -> bool:
-        # FIX #1: Circuit breaker actually breaks. We back off and only probe
-        # the failing service every 5th interval to avoid hammering it.
-        if status.circuit_open:
-            status.recovery_ticks += 1
-            if status.recovery_ticks < 5:
-                return False  # Still open, don't hammer the subsystem
-            status.recovery_ticks = 0  # Time to probe it again
+        if self._is_circuit_open(status):
+            return False
 
+        healthy = await self._perform_health_check(name, status)
+
+        if healthy:
+            self._handle_success(name, status)
+        else:
+            self._handle_failure(name, status)
+
+        return healthy
+
+    def _is_circuit_open(self, status: SubsystemStatus) -> bool:
+        """Checks if the circuit breaker is open and handles recovery backoff."""
+        if not status.circuit_open:
+            return False
+        
+        status.recovery_ticks += 1
+        if status.recovery_ticks < 5:
+            return True  # Still open, don't hammer the subsystem
+        
+        status.recovery_ticks = 0  # Time to probe it again
+        return False
+
+    async def _perform_health_check(self, name: str, status: SubsystemStatus) -> bool:
+        """Executes the health check for a subsystem."""
         subsystem = status.subsystem
         try:
             if isinstance(subsystem, HealthCheckable):
-                # FIX #2: Added timeout to prevent hanging the whole monitor
-                healthy = await asyncio.wait_for(subsystem.health_check(), timeout=self._check_timeout)
-            else:
-                # FIX #5: Fallback logic for non-checkable modules relies on
-                # manual reporting rather than an un-incrementable integer.
-                healthy = status.failure_count < self._failure_threshold
+                return await asyncio.wait_for(subsystem.health_check(), timeout=self._check_timeout)
+            
+            # Fallback logic for non-checkable modules
+            return status.failure_count < self._failure_threshold
         except TimeoutError:
             logger.error("Health check timed out for '%s' after %.1fs", name, self._check_timeout)
-            healthy = False
             status.last_error = "Health check timed out"
+            return False
         except Exception as exc:
             logger.error("Health check exception for '%s': %s", name, exc)
-            healthy = False
             status.last_error = str(exc)
+            return False
 
-        if healthy:
-            status.failure_count = 0
-            status.healthy = True
-            if status.circuit_open:
-                logger.info("Circuit closed for '%s' – subsystem recovered.", name)
-                status.circuit_open = False
-        else:
-            status.failure_count += 1
-            status.healthy = False
-            if status.failure_count >= self._failure_threshold and not status.circuit_open:
-                status.circuit_open = True
-                logger.warning("Circuit opened for '%s' after %d failures.", name, status.failure_count)
+    def _handle_success(self, name: str, status: SubsystemStatus) -> None:
+        """Handles a successful health check."""
+        status.failure_count = 0
+        status.healthy = True
+        if status.circuit_open:
+            logger.info("Circuit closed for '%s' – subsystem recovered.", name)
+            status.circuit_open = False
 
-        return healthy
+    def _handle_failure(self, name: str, status: SubsystemStatus) -> None:
+        """Handles a failed health check."""
+        status.failure_count += 1
+        status.healthy = False
+        if status.failure_count >= self._failure_threshold and not status.circuit_open:
+            status.circuit_open = True
+            logger.warning("Circuit opened for '%s' after %d failures.", name, status.failure_count)
 
     async def _check_safe(self, name: str) -> bool:
         status = self._subsystems.get(name)

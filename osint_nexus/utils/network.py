@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import logging
 import random
+from typing import Any, cast
 
-import curl_cffi.requests as curl_requests
+import curl_cffi.requests as curl_requests  # type: ignore
 import httpx
 
 from osint_nexus.core.config import Config
@@ -67,7 +68,7 @@ class NetworkManager:
 
         return self._session
 
-    async def fetch(self, url: str, use_microlink: bool = False, **microlink_options) -> tuple[bool, str]:
+    async def fetch(self, url: str, use_microlink: bool = False, **microlink_options: Any) -> tuple[bool, str]:
         """
         Performs a GET request using the configured evasion and retry logic.
 
@@ -104,7 +105,7 @@ class NetworkManager:
             logger.exception("Request failed after retries: %s", url)
             return False, ""
 
-    async def _fetch_with_microlink(self, url: str, **microlink_options) -> tuple[bool, str]:
+    async def _fetch_with_microlink(self, url: str, **microlink_options: Any) -> tuple[bool, str]:
         """
         Executes a request via the Microlink API.
 
@@ -117,8 +118,13 @@ class NetworkManager:
                 params={"url": url, **microlink_options},
                 follow_redirects=True,
             )
-            data = response.json()
-            return data.get("status") == "success", str(data.get("data", {}))
+            data: dict[str, Any] = response.json()
+            status_val = data.get("status")
+            status: bool = False
+            if isinstance(status_val, str) and status_val == "success":
+                status = True
+            result: str = str(data.get("data", {}))
+            return status, result
 
     async def _handle_response_status(self, status_code: int) -> None:
         """

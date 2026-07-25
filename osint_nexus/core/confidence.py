@@ -22,6 +22,29 @@ logger = logging.getLogger("osint_nexus.confidence")
 
 
 @dataclass
+class Factor:
+    """
+    Represents a scoring modifier (either a multiplier or a bonus)
+    for the ConfidenceEngine, incorporating strict validation.
+    """
+    name: str
+    value: float
+    factor_type: str  # must be "multiplier" or "bonus"
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValueError("Factor name must be a non-empty string.")
+        if self.factor_type not in ("multiplier", "bonus"):
+            raise ValueError("Factor type must be either 'multiplier' or 'bonus'.")
+        if self.factor_type == "multiplier":
+            if not (0.0 <= self.value <= 1.0):
+                raise ValueError(f"Multiplier '{self.name}' must be between 0.0 and 1.0, got {self.value}")
+        elif self.factor_type == "bonus":
+            if self.value < 0.0:
+                raise ValueError(f"Bonus '{self.name}' must be non-negative, got {self.value}")
+
+
+@dataclass
 class ConfidenceResult:
     """
     Encapsulates the result of a confidence calculation.
@@ -117,23 +140,17 @@ class ConfidenceEngine:
         detail["base_score_subtotal"] = score
         return score, total_weight
 
-    def _apply_multipliers(self, score: float, multipliers: dict[str, float], detail: dict[str, float]) -> float:
-        for signal, factor in multipliers.items():
-            factor = max(0.0, factor)
-            if factor > 1.0:
-                logger.warning(
-                    "Multiplier '%s' is > 1.0. Consider using additive_bonuses instead.", signal
-                )
-            score *= factor
-            detail[f"multiplier_{signal}"] = factor
-        return score
-
-    def _apply_bonuses(self, score: float, bonuses: dict[str, float], detail: dict[str, float]) -> float:
-        for signal, bonus in bonuses.items():
-            if bonus < 0:
-                logger.warning("Bonus '%s' is < 0. Consider using multipliers instead.", signal)
-            score += bonus
-            detail[f"bonus_{signal}"] = bonus
+    def _apply_factors(
+        self, score: float, factors: list[Factor], detail: dict[str, float]
+    ) -> float:
+        """Apply a list of pre-validated factors to the score."""
+        for factor in factors:
+            if factor.factor_type == "multiplier":
+                score *= factor.value
+                detail[f"multiplier_{factor.name}"] = factor.value
+            elif factor.factor_type == "bonus":
+                score += factor.value
+                detail[f"bonus_{factor.name}"] = factor.value
         return score
 
     def _get_category(self, score: float) -> str:
@@ -175,11 +192,18 @@ class ConfidenceEngine:
 
         score, total_weight = self._get_base_score(clean_platforms, detail)
 
+        # Convert and validate modifiers into Factor objects
+        factors: list[Factor] = []
         if multipliers:
-            score = self._apply_multipliers(score, multipliers, detail)
-
+            for name, val in multipliers.items():
+                factors.append(Factor(name=name, value=val, factor_type="multiplier"))
+        
         if additive_bonuses:
-            score = self._apply_bonuses(score, additive_bonuses, detail)
+            for name, val in additive_bonuses.items():
+                factors.append(Factor(name=name, value=val, factor_type="bonus"))
+
+        if factors:
+            score = self._apply_factors(score, factors, detail)
 
         final_score = max(0.0, min(100.0, score))
         category = self._get_category(final_score)
