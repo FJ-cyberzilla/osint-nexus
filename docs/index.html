@@ -1,0 +1,803 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT Nexus v2.1.0 - Architectural Infographic | FJ™ Cybertronic Systems®</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            black: '#0a0a0f',
+                            darker: '#0f0e17',
+                            card: 'rgba(20, 18, 28, 0.75)',
+                            orange: '#FF6B00',
+                            orangeBright: '#FF8C00',
+                            orangeNeon: '#FF4500',
+                            amber: '#F59E0B',
+                            glow: 'rgba(255, 107, 0, 0.25)',
+                            gray: '#1e1b2e',
+                            textMuted: '#94a3b8'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif'],
+                        fira: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #06050a;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.12) 0%, transparent 60%),
+                linear-gradient(rgba(255, 107, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 107, 0, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .cyber-border {
+            border: 1px solid rgba(255, 107, 0, 0.3);
+            box-shadow: 0 0 15px rgba(255, 107, 0, 0.1), inset 0 0 15px rgba(255, 107, 0, 0.05);
+            backdrop-filter: blur(12px);
+        }
+
+        .cyber-border-glow {
+            border: 1px solid rgba(255, 140, 0, 0.6);
+            box-shadow: 0 0 25px rgba(255, 107, 0, 0.35), inset 0 0 10px rgba(255, 107, 0, 0.15);
+        }
+
+        .orange-glow-text {
+            text-shadow: 0 0 12px rgba(255, 107, 0, 0.7);
+        }
+
+        .orange-gradient-text {
+            background: linear-gradient(135deg, #FF9E2C 0%, #FF6B00 50%, #FF3D00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .cyber-badge {
+            background: linear-gradient(90deg, rgba(255, 107, 0, 0.2), rgba(255, 69, 0, 0.1));
+            border-left: 3px solid #FF6B00;
+        }
+
+        .corner-accent {
+            position: relative;
+        }
+        .corner-accent::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid #FF6B00;
+            border-left: 2px solid #FF6B00;
+        }
+        .corner-accent::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            right: -1px;
+            width: 8px;
+            height: 8px;
+            border-bottom: 2px solid #FF6B00;
+            border-right: 2px solid #FF6B00;
+        }
+
+        /* Pulse Animations */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .scanline-effect {
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 10px;
+            background: linear-gradient(to bottom, transparent, rgba(255,107,0,0.2), transparent);
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff6b00;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff8c00;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(90deg, rgba(255, 107, 0, 0.3), rgba(255, 69, 0, 0.15));
+            border-color: #FF6B00;
+            color: #FFFFFF;
+            box-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
+        }
+
+        /* Terminal styling */
+        .terminal-code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(10, 8, 16, 0.95);
+        }
+
+        /* Flow Arrow Animation */
+        @keyframes pulseArrow {
+            0%, 100% { opacity: 0.3; transform: translateX(0); }
+            50% { opacity: 1; transform: translateX(4px); }
+        }
+        .pulse-arrow {
+            animation: pulseArrow 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16 relative selection:bg-orange-500 selection:text-black">
+
+    <div class="scanline-effect"></div>
+
+    <!-- HEADER / HERO SECTION -->
+    <header class="border-b border-orange-500/20 bg-cyber-darker/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                
+                <!-- Brand & Title -->
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-black font-black font-orbitron text-2xl shadow-lg shadow-orange-500/30">
+                        FJ
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-orbitron tracking-widest text-orange-400 font-semibold uppercase">
+                                FJ™ Cybertronic Systems®
+                            </span>
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping"></span>
+                        </div>
+                        <h1 class="text-3xl md:text-4xl font-black font-orbitron tracking-wider text-white">
+                            OSINT <span class="orange-gradient-text orange-glow-text">NEXUS</span>
+                        </h1>
+                    </div>
+                </div>
+
+                <!-- System Metadata Badges -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="px-3 py-1.5 rounded bg-cyber-black border border-orange-500/30 text-xs font-fira flex items-center gap-2">
+                        <span class="text-cyber-textMuted">SYSTEM VER:</span>
+                        <span class="text-orange-400 font-bold">2.1.0</span>
+                    </div>
+                    <div class="px-3 py-1.5 rounded bg-cyber-black border border-orange-500/30 text-xs font-fira flex items-center gap-2">
+                        <span class="text-cyber-textMuted">ENGINE:</span>
+                        <span class="text-emerald-400 font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-shield-halved text-[10px]"></i> ADAPTIVE EVASION
+                        </span>
+                    </div>
+                    <div class="px-3 py-1.5 rounded bg-cyber-black border border-orange-500/30 text-xs font-fira flex items-center gap-2">
+                        <span class="text-cyber-textMuted">ARCHITECTURE:</span>
+                        <span class="text-amber-400 font-bold">FACADE PATTERN</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-10">
+
+        <!-- INTRO HERO BANNER -->
+        <section class="cyber-border corner-accent rounded-xl bg-cyber-card p-6 md:p-8 relative overflow-hidden">
+            <div class="absolute -right-20 -top-20 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-8 space-y-4">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full cyber-badge text-orange-400 text-xs font-orbitron font-semibold">
+                        <i class="fa-solid fa-bolt"></i> HIGH-PERFORMANCE INTELLIGENCE RECONNAISSANCE
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-orbitron font-bold text-white">
+                        Adaptive Reconnaissance Engine Across Global Platforms
+                    </h2>
+                    <p class="text-slate-300 text-base md:text-lg leading-relaxed font-rajdhani font-medium">
+                        OSINT Nexus is a next-generation intelligence gathering agent engineered for high-accuracy username verification, device context inference, and evasion-aware target discovery across web networks. Refactored into a decoupled, facade-driven subsystem for enterprise reliability.
+                    </p>
+                    
+                    <!-- Quick Metric Counters -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                        <div class="p-3 rounded bg-cyber-black/60 border border-orange-500/20">
+                            <div class="text-2xl font-orbitron font-bold text-orange-400">100%</div>
+                            <div class="text-xs text-slate-400 font-fira">Decoupled Architecture</div>
+                        </div>
+                        <div class="p-3 rounded bg-cyber-black/60 border border-orange-500/20">
+                            <div class="text-2xl font-orbitron font-bold text-orange-400">chrome120</div>
+                            <div class="text-xs text-slate-400 font-fira">Termux TLS Profile</div>
+                        </div>
+                        <div class="p-3 rounded bg-cyber-black/60 border border-orange-500/20">
+                            <div class="text-2xl font-orbitron font-bold text-orange-400">Zero</div>
+                            <div class="text-xs text-slate-400 font-fira">DB Race Conditions</div>
+                        </div>
+                        <div class="p-3 rounded bg-cyber-black/60 border border-orange-500/20">
+                            <div class="text-2xl font-orbitron font-bold text-orange-400">Auto</div>
+                            <div class="text-xs text-slate-400 font-fira">Circuit Healing</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASCII Logo Display / Visual Frame -->
+                <div class="lg:col-span-4 flex flex-col items-center justify-center">
+                    <div class="w-full cyber-border rounded-lg p-4 bg-cyber-black/90 font-fira text-[10px] leading-tight text-orange-500 overflow-x-auto select-none shadow-inner">
+                        <pre class="text-center font-bold">
+░█▀█░█▀▀░█░█░█░█░█▀▀
+░█░█░█▀▀░▄▀▄░█░█░▀▀█
+░▀░▀░▀▀▀░▀░▀░▀▀▀░▀▀▀
+─── OSINT NEXUS v2.1 ───
+░█▀█░█▀▀░▀█▀░█▀█░▀█▀
+░█░█░▀▀█░░█░░█░█░░█░
+░▀▀▀░▀▀▀░░▀░░▀░▀░░▀░
+                        </pre>
+                        <div class="mt-3 pt-3 border-t border-orange-500/30 text-center text-xs text-slate-400">
+                            Proprietary Intelligence Agent<br>
+                            <span class="text-orange-400 font-semibold">FJ™ Cybertronic Systems®</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARCHITECTURE SYSTEM DIAGRAM (SUBSYSTEMS) -->
+        <section class="space-y-6">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-2 border-b border-orange-500/20 pb-4">
+                <div>
+                    <span class="text-orange-400 font-orbitron text-xs tracking-widest uppercase font-semibold">// Facade Architecture</span>
+                    <h2 class="text-2xl md:text-3xl font-orbitron font-bold text-white">Subsystem Orchestration Lifecycle</h2>
+                </div>
+                <p class="text-slate-400 text-sm max-w-md">
+                    Decoupled subsystems manage single-responsibility domains orchestrated through the unified <code class="text-orange-400">OSINTAgent</code> facade.
+                </p>
+            </div>
+
+            <!-- Interactive Architecture Map -->
+            <div class="cyber-border corner-accent rounded-xl bg-cyber-card p-6">
+                <!-- Top Level Facade -->
+                <div class="flex justify-center mb-8">
+                    <div class="cyber-border-glow rounded-xl p-5 bg-gradient-to-r from-orange-950/80 via-cyber-darker to-orange-950/80 text-center max-w-md w-full relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded bg-orange-600 text-black text-[10px] font-orbitron font-black uppercase tracking-wider">
+                            Primary Entrypoint Facade
+                        </div>
+                        <div class="text-xl font-orbitron font-bold text-white flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-network-wired text-orange-400"></i>
+                            OSINTAgent
+                        </div>
+                        <p class="text-xs text-slate-300 font-rajdhani mt-1">
+                            Coordinates scan requests, manages asynchronous execution streams, and yields aggregated intelligence objects.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Subsystem Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative">
+                    
+                    <!-- Core 1: ScanOrchestrator -->
+                    <div class="cyber-border rounded-lg p-5 bg-cyber-black/70 hover:border-orange-500/60 transition-all group">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 text-lg group-hover:bg-orange-500 group-hover:text-black transition-all">
+                                <i class="fa-solid fa-microchip"></i>
+                            </div>
+                            <span class="text-[10px] font-fira text-slate-500">Core Subsystem</span>
+                        </div>
+                        <h3 class="text-lg font-orbitron font-bold text-white group-hover:text-orange-400 transition-colors">
+                            ScanOrchestrator
+                        </h3>
+                        <p class="text-sm text-slate-300 font-rajdhani mt-2">
+                            Manages multi-provider concurrent async scans with rate throttling, retry queuing, and result aggregation.
+                        </p>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-fira text-orange-400/80">
+                            <span>Concurrent Scanning</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </div>
+                    </div>
+
+                    <!-- Core 2: HealthTracker -->
+                    <div class="cyber-border rounded-lg p-5 bg-cyber-black/70 hover:border-orange-500/60 transition-all group">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 text-lg group-hover:bg-orange-500 group-hover:text-black transition-all">
+                                <i class="fa-solid fa-heart-pulse"></i>
+                            </div>
+                            <span class="text-[10px] font-fira text-slate-500">Health Subsystem</span>
+                        </div>
+                        <h3 class="text-lg font-orbitron font-bold text-white group-hover:text-orange-400 transition-colors">
+                            HealthTracker
+                        </h3>
+                        <p class="text-sm text-slate-300 font-rajdhani mt-2">
+                            Monitors target platform vitality using failure decay counters, circuit breaking thresholds, and auto-healing logic.
+                        </p>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-fira text-orange-400/80">
+                            <span>Circuit Breakers</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </div>
+                    </div>
+
+                    <!-- Core 3: DeviceInferenceService -->
+                    <div class="cyber-border rounded-lg p-5 bg-cyber-black/70 hover:border-orange-500/60 transition-all group">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 text-lg group-hover:bg-orange-500 group-hover:text-black transition-all">
+                                <i class="fa-solid fa-laptop-code"></i>
+                            </div>
+                            <span class="text-[10px] font-fira text-slate-500">Inference Engine</span>
+                        </div>
+                        <h3 class="text-lg font-orbitron font-bold text-white group-hover:text-orange-400 transition-colors">
+                            DeviceInferenceService
+                        </h3>
+                        <p class="text-sm text-slate-300 font-rajdhani mt-2">
+                            Generates context telemetry via MAC OUI lookup, open port heuristics, timing entropy, and footprint analysis.
+                        </p>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-fira text-orange-400/80">
+                            <span>OUI & Port Heuristics</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </div>
+                    </div>
+
+                    <!-- Core 4: DatabaseManager -->
+                    <div class="cyber-border rounded-lg p-5 bg-cyber-black/70 hover:border-orange-500/60 transition-all group">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 text-lg group-hover:bg-orange-500 group-hover:text-black transition-all">
+                                <i class="fa-solid fa-database"></i>
+                            </div>
+                            <span class="text-[10px] font-fira text-slate-500">Persistence</span>
+                        </div>
+                        <h3 class="text-lg font-orbitron font-bold text-white group-hover:text-orange-400 transition-colors">
+                            DatabaseManager
+                        </h3>
+                        <p class="text-sm text-slate-300 font-rajdhani mt-2">
+                            Thread-safe and async-safe SQLite persistence layer eliminating race conditions during dynamic scan runs.
+                        </p>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-fira text-orange-400/80">
+                            <span>Thread-Safe Async DB</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </div>
+                    </div>
+
+                    <!-- Core 5: ReportGenerator -->
+                    <div class="cyber-border rounded-lg p-5 bg-cyber-black/70 hover:border-orange-500/60 transition-all group">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 text-lg group-hover:bg-orange-500 group-hover:text-black transition-all">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </div>
+                            <span class="text-[10px] font-fira text-slate-500">Telemetry</span>
+                        </div>
+                        <h3 class="text-lg font-orbitron font-bold text-white group-hover:text-orange-400 transition-colors">
+                            ReportGenerator
+                        </h3>
+                        <p class="text-sm text-slate-300 font-rajdhani mt-2">
+                            Synthesizes scan results into structured JSON telemetry, printable summaries, and colorized rich tables.
+                        </p>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-fira text-orange-400/80">
+                            <span>Rich Render Engine</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </div>
+                    </div>
+
+                    <!-- Core 6: Evasion & Detection -->
+                    <div class="cyber-border rounded-lg p-5 bg-cyber-black/70 hover:border-orange-500/60 transition-all group">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 text-lg group-hover:bg-orange-500 group-hover:text-black transition-all">
+                                <i class="fa-solid fa-user-ninja"></i>
+                            </div>
+                            <span class="text-[10px] font-fira text-slate-500">Stealth Engine</span>
+                        </div>
+                        <h3 class="text-lg font-orbitron font-bold text-white group-hover:text-orange-400 transition-colors">
+                            EvasionAgent & Mimicry
+                        </h3>
+                        <p class="text-sm text-slate-300 font-rajdhani mt-2">
+                            Automates TLS fingerprinting (<code class="text-orange-300">chrome120</code>), browser mimicry, and timing entropy to bypass WAFs.
+                        </p>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-fira text-orange-400/80">
+                            <span>TLS Fingerprinting</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- KEY IMPROVEMENTS HIGHLIGHT GRID -->
+        <section class="space-y-6">
+            <div class="border-b border-orange-500/20 pb-4">
+                <span class="text-orange-400 font-orbitron text-xs tracking-widest uppercase font-semibold">// Version Changelog</span>
+                <h2 class="text-2xl md:text-3xl font-orbitron font-bold text-white">v2.1.0 Key System Enhancements</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <div class="cyber-border rounded-lg p-5 bg-cyber-card hover:bg-cyber-darker transition-all">
+                    <div class="text-orange-500 text-2xl mb-3"><i class="fa-solid fa-shield-virus"></i></div>
+                    <h4 class="font-orbitron font-bold text-white text-base">Circuit Breaking</h4>
+                    <p class="text-sm text-slate-400 mt-2">
+                        Automatic failure decay algorithms temporarily suspend unresponsive provider APIs to maximize throughput.
+                    </p>
+                </div>
+
+                <div class="cyber-border rounded-lg p-5 bg-cyber-card hover:bg-cyber-darker transition-all">
+                    <div class="text-orange-500 text-2xl mb-3"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                    <h4 class="font-orbitron font-bold text-white text-base">Termux Optimized</h4>
+                    <p class="text-sm text-slate-400 mt-2">
+                        Tailored for Android/Termux environments with auto-selected <code class="text-orange-300">chrome120</code> TLS profiles.
+                    </p>
+                </div>
+
+                <div class="cyber-border rounded-lg p-5 bg-cyber-card hover:bg-cyber-darker transition-all">
+                    <div class="text-orange-500 text-2xl mb-3"><i class="fa-solid fa-terminal"></i></div>
+                    <h4 class="font-orbitron font-bold text-white text-base">CLI Health Inspection</h4>
+                    <p class="text-sm text-slate-400 mt-2">
+                        Dedicated <code class="text-orange-300">health</code> command to evaluate individual platform API health metrics real-time.
+                    </p>
+                </div>
+
+                <div class="cyber-border rounded-lg p-5 bg-cyber-card hover:bg-cyber-darker transition-all">
+                    <div class="text-orange-500 text-2xl mb-3"><i class="fa-solid fa-bug font-mono"></i></div>
+                    <h4 class="font-orbitron font-bold text-white text-base">Developer Debugging</h4>
+                    <p class="text-sm text-slate-400 mt-2">
+                        Configurable <code class="text-orange-300">DEBUG_PROVIDERS</code> flag for targeted exception stack traces and mock checks.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- CODE API & CLI INTERACTIVE TAB SYSTEM -->
+        <section class="space-y-6">
+            <div class="border-b border-orange-500/20 pb-4">
+                <span class="text-orange-400 font-orbitron text-xs tracking-widest uppercase font-semibold">// Usage & Interfaces</span>
+                <h2 class="text-2xl md:text-3xl font-orbitron font-bold text-white">Execution Paradigms</h2>
+            </div>
+
+            <div class="cyber-border corner-accent rounded-xl bg-cyber-card overflow-hidden">
+                <!-- Tabs -->
+                <div class="flex flex-wrap border-b border-orange-500/20 bg-cyber-black/80 p-2 gap-2">
+                    <button onclick="switchTab('api')" id="tab-api" class="tab-btn active px-4 py-2 rounded text-sm font-orbitron font-semibold transition-all flex items-center gap-2">
+                        <i class="fa-brands fa-python text-orange-400"></i> Programmatic Python API
+                    </button>
+                    <button onclick="switchTab('cli')" id="tab-cli" class="tab-btn px-4 py-2 rounded text-sm font-orbitron font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-terminal text-orange-400"></i> CLI Commands
+                    </button>
+                    <button onclick="switchTab('make')" id="tab-make" class="tab-btn px-4 py-2 rounded text-sm font-orbitron font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-gears text-orange-400"></i> Makefile Automation
+                    </button>
+                </div>
+
+                <!-- Tab Content: Python API -->
+                <div id="content-api" class="p-6">
+                    <p class="text-sm text-slate-300 mb-4 font-rajdhani font-medium">
+                        Integrate OSINT Nexus into automated threat intelligence pipelines via the core asynchronous facade:
+                    </p>
+                    <div class="rounded-lg border border-orange-500/30 p-4 terminal-code text-sm text-slate-200 overflow-x-auto relative">
+                        <div class="absolute top-3 right-3 text-xs text-orange-500 font-fira">python</div>
+                        <pre><code><span class="text-purple-400">from</span> osint_nexus.core.agent <span class="text-purple-400">import</span> OSINTAgent
+
+<span class="text-slate-500"># Initialize OSINT Agent Facade for target username</span>
+agent = OSINTAgent(username=<span class="text-emerald-300">"target_user"</span>)
+
+<span class="text-slate-500"># Asynchronously stream platform intel as scans finalize</span>
+<span class="text-purple-400">async for</span> intel <span class="text-purple-400">in</span> agent.run_scan(<span class="text-emerald-300">"target_user"</span>):
+    <span class="text-blue-400">print</span>(f<span class="text-emerald-300">"Found on {intel.platform}: {intel.found}"</span>)
+
+<span class="text-slate-500"># Retrieve aggregated telemetry & confidence reports</span>
+report = agent.get_final_report()</code></pre>
+                    </div>
+                </div>
+
+                <!-- Tab Content: CLI Commands -->
+                <div id="content-cli" class="p-6 hidden">
+                    <p class="text-sm text-slate-300 mb-4 font-rajdhani font-medium">
+                        Execute target scans directly from modern terminal shells or Termux on Android devices:
+                    </p>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-fira text-orange-400 mb-1">Target Reconnaissance Scan:</div>
+                            <div class="rounded-lg border border-orange-500/30 p-3 terminal-code text-sm text-slate-200 font-fira flex items-center justify-between">
+                                <code>python -m osint_nexus.cli scan --username target_user</code>
+                                <i class="fa-regular fa-copy text-slate-500 hover:text-orange-400 cursor-pointer" onclick="copyText('python -m osint_nexus.cli scan --username target_user')"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-fira text-orange-400 mb-1">Provider Network & Circuit Breaker Health Check:</div>
+                            <div class="rounded-lg border border-orange-500/30 p-3 terminal-code text-sm text-slate-200 font-fira flex items-center justify-between">
+                                <code>python -m osint_nexus.cli health</code>
+                                <i class="fa-regular fa-copy text-slate-500 hover:text-orange-400 cursor-pointer" onclick="copyText('python -m osint_nexus.cli health')"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-fira text-orange-400 mb-1">Run Test Suite with Pytest:</div>
+                            <div class="rounded-lg border border-orange-500/30 p-3 terminal-code text-sm text-slate-200 font-fira flex items-center justify-between">
+                                <code>PYTHONPATH=. pytest tests/</code>
+                                <i class="fa-regular fa-copy text-slate-500 hover:text-orange-400 cursor-pointer" onclick="copyText('PYTHONPATH=. pytest tests/')"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Makefile Commands -->
+                <div id="content-make" class="p-6 hidden">
+                    <p class="text-sm text-slate-300 mb-3 font-rajdhani font-medium">
+                        Unified development workflow commands built into the repository Makefile:
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make sync</span>
+                            <p class="text-xs text-slate-400 mt-1">Sync dependencies</p>
+                        </div>
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make run</span>
+                            <p class="text-xs text-slate-400 mt-1">Prompted OSINT scan</p>
+                        </div>
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make health</span>
+                            <p class="text-xs text-slate-400 mt-1">Check provider status</p>
+                        </div>
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make db-info</span>
+                            <p class="text-xs text-slate-400 mt-1">Inspect DB records</p>
+                        </div>
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make test</span>
+                            <p class="text-xs text-slate-400 mt-1">Run test suite</p>
+                        </div>
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make lint</span>
+                            <p class="text-xs text-slate-400 mt-1">Code complexity check</p>
+                        </div>
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make format</span>
+                            <p class="text-xs text-slate-400 mt-1">Apply code formatting</p>
+                        </div>
+                        <div class="p-3 bg-cyber-black rounded border border-orange-500/20">
+                            <span class="text-orange-400 font-fira font-bold text-sm">make clean</span>
+                            <p class="text-xs text-slate-400 mt-1">Purge build caches</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- PROJECT MODULE DIRECTORY TREE STRUCTURE -->
+        <section class="space-y-6">
+            <div class="border-b border-orange-500/20 pb-4">
+                <span class="text-orange-400 font-orbitron text-xs tracking-widest uppercase font-semibold">// Codebase Topology</span>
+                <h2 class="text-2xl md:text-3xl font-orbitron font-bold text-white">Repository File Tree & Submodule Map</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Visual Directory Tree -->
+                <div class="lg:col-span-7 cyber-border corner-accent rounded-xl bg-cyber-card p-5 font-fira text-xs text-slate-300">
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-orange-500/20 text-orange-400 font-bold">
+                        <span><i class="fa-regular fa-folder-open"></i> osint_nexus/</span>
+                        <span class="text-[10px] text-slate-500">v2.1.0 MODULE LAYOUT</span>
+                    </div>
+
+                    <div class="space-y-1 overflow-x-auto">
+                        <div>├── <span class="text-orange-400 font-semibold">cli/</span></div>
+                        <div class="pl-4">│ ├── __init__.py</div>
+                        <div class="pl-4">│ └── <span class="text-emerald-400">main.py</span> <span class="text-slate-500">(CLI entrypoint)</span></div>
+                        
+                        <div>├── <span class="text-orange-400 font-semibold">core/</span> <span class="text-slate-500">(Engine Subsystems)</span></div>
+                        <div class="pl-4">│ ├── <span class="text-orange-300 font-bold">agent.py</span> <span class="text-amber-400 font-semibold">(Facade Engine)</span></div>
+                        <div class="pl-4">│ ├── orchestrator.py</div>
+                        <div class="pl-4">│ ├── health.py</div>
+                        <div class="pl-4">│ ├── device_inference.py</div>
+                        <div class="pl-4">│ ├── database.py</div>
+                        <div class="pl-4">│ ├── report.py</div>
+                        <div class="pl-4">│ ├── evasion_agent.py & timing_entropy.py</div>
+                        <div class="pl-4">│ └── captcha.py, fingerprint.py, mimicry.py...</div>
+
+                        <div>├── <span class="text-orange-400 font-semibold">providers/</span> <span class="text-slate-500">(Platform Adapters)</span></div>
+                        <div class="pl-4">│ ├── github.py, aparat.py, generic.py</div>
+                        <div class="pl-4">│ └── registry.py</div>
+
+                        <div>├── <span class="text-orange-400 font-semibold">utils/</span> <span class="text-slate-500">(Network & Crypto Security)</span></div>
+                        <div class="pl-4">│ └── network.py, security.py, retry.py, troubleshoot.py</div>
+
+                        <div>├── <span class="text-cyan-300">osint_results.db</span> <span class="text-slate-500">(SQLite Target Persistence)</span></div>
+                        <div>└── <span class="text-purple-300">pyproject.toml</span></div>
+                    </div>
+                </div>
+
+                <!-- Subsystem Details -->
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="cyber-border rounded-lg p-4 bg-cyber-black/80">
+                        <h4 class="font-orbitron font-bold text-orange-400 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-filter"></i> Provider Registry Engine
+                        </h4>
+                        <p class="text-xs text-slate-300 font-rajdhani mt-2">
+                            Platform providers inherit from <code class="text-orange-300">base.py</code> and self-register via <code class="text-orange-300">registry.py</code>. Supports generic regex endpoints as well as customized provider adapters like Github and Aparat.
+                        </p>
+                    </div>
+
+                    <div class="cyber-border rounded-lg p-4 bg-cyber-black/80">
+                        <h4 class="font-orbitron font-bold text-orange-400 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-lock"></i> Evasion & Security Suite
+                        </h4>
+                        <p class="text-xs text-slate-300 font-rajdhani mt-2">
+                            Features captcha detection, timing entropy estimation, browser mimicry, and fingerprint obfuscation to avoid bot-mitigation triggers.
+                        </p>
+                    </div>
+
+                    <div class="cyber-border rounded-lg p-4 bg-cyber-black/80">
+                        <h4 class="font-orbitron font-bold text-orange-400 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-server"></i> Async Database Persistence
+                        </h4>
+                        <p class="text-xs text-slate-300 font-rajdhani mt-2">
+                            Resolved race conditions during concurrent write operations using isolated task-safe locks and unified connection pools in SQLite.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LIVE TELEMETRY SIMULATOR -->
+        <section class="space-y-6">
+            <div class="border-b border-orange-500/20 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <span class="text-orange-400 font-orbitron text-xs tracking-widest uppercase font-semibold">// Interactive Simulation</span>
+                    <h2 class="text-2xl md:text-3xl font-orbitron font-bold text-white">Live Scan Telemetry Simulator</h2>
+                </div>
+                <button onclick="runSimulation()" class="px-4 py-2 rounded bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-black font-orbitron font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i> Trigger Mock Scan
+                </button>
+            </div>
+
+            <div class="cyber-border corner-accent rounded-xl bg-cyber-card p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Terminal Console -->
+                    <div class="lg:col-span-7 bg-cyber-black rounded-lg border border-orange-500/30 p-4 font-fira text-xs space-y-2 h-64 overflow-y-auto" id="sim-console">
+                        <div class="text-slate-500">[SYSTEM READY] OSINT Nexus v2.1.0 initialised. Click "Trigger Mock Scan" to execute target agent.</div>
+                    </div>
+
+                    <!-- Scan Metrics Widget -->
+                    <div class="lg:col-span-5 flex flex-col justify-between space-y-4">
+                        <div class="bg-cyber-black/80 rounded-lg p-4 border border-orange-500/20 space-y-3">
+                            <div class="text-xs font-orbitron font-bold text-orange-400 uppercase">Provider Circuit Breakers</div>
+                            
+                            <div>
+                                <div class="flex justify-between text-xs font-fira mb-1">
+                                    <span>GitHub API</span>
+                                    <span class="text-emerald-400" id="status-github">HEALTHY (100%)</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-fira mb-1">
+                                    <span>Aparat Provider</span>
+                                    <span class="text-emerald-400" id="status-aparat">HEALTHY (98%)</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 98%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs font-fira mb-1">
+                                    <span>Generic Provider Engine</span>
+                                    <span class="text-amber-400" id="status-generic">HEALED (85%)</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-amber-500 h-1.5 rounded-full" style="width: 85%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-lg bg-orange-500/10 border border-orange-500/30 text-xs font-rajdhani text-slate-300">
+                            <span class="font-bold text-orange-400">Device Context Engine:</span> Automated TLS Profile set to <code class="text-white bg-black px-1 rounded">chrome120</code>. Open Port Heuristics active.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER COPYRIGHT -->
+    <footer class="mt-16 border-t border-orange-500/20 bg-cyber-darker/90 py-8 text-center font-rajdhani text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4 space-y-2">
+            <div class="font-orbitron font-bold text-sm text-orange-400">
+                FJ™ Cybertronic Systems®
+            </div>
+            <p>© 2026 FJ™ Cybertronic Systems®. All Rights Reserved. OSINT Nexus v2.1.0 intelligence suite.</p>
+            <p class="text-slate-600 font-fira text-[11px]">Designed with Adaptive Cyber Aesthetics & Orange Color Spectrum</p>
+        </div>
+    </footer>
+
+    <!-- INTERACTIVE JAVASCRIPT -->
+    <script>
+        // Tab Switcher Logic
+        function switchTab(tab) {
+            const tabs = ['api', 'cli', 'make'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const content = document.getElementById(`content-${t}`);
+                if (t === tab) {
+                    btn.classList.add('active');
+                    btn.classList.remove('text-slate-400');
+                    content.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.add('text-slate-400');
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        // Copy Helper
+        function copyText(text) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert('Copied to clipboard: ' + text);
+        }
+
+        // Mock Scan Simulation
+        let simRunning = false;
+        function runSimulation() {
+            if (simRunning) return;
+            simRunning = true;
+            
+            const consoleEl = document.getElementById('sim-console');
+            consoleEl.innerHTML = '';
+            
+            const logs = [
+                { text: "[INIT] Launching OSINTAgent Facade instance...", color: "text-slate-400", delay: 200 },
+                { text: "[CONFIG] TLS Profile initialized: chrome120 (Termux stable)", color: "text-orange-400", delay: 600 },
+                { text: "[HEALTH] Ping provider endpoints... Circuit health nominal", color: "text-emerald-400", delay: 1000 },
+                { text: "[DISPATCH] ScanOrchestrator spawning provider async tasks...", color: "text-slate-300", delay: 1400 },
+                { text: "[MATCH] GitHub: target_user -> CONFIRMED (200 OK)", color: "text-orange-400 font-bold", delay: 2000 },
+                { text: "[MATCH] Aparat: target_user -> CONFIRMED (200 OK)", color: "text-orange-400 font-bold", delay: 2500 },
+                { text: "[DEVICE] DeviceInferenceService inferred context: MAC OUI Vendor Found", color: "text-cyan-300", delay: 3000 },
+                { text: "[PERSIST] DatabaseManager saved results to osint_results.db thread-safely", color: "text-emerald-400", delay: 3400 },
+                { text: "[COMPLETE] ReportGenerator generated rich telemetry report summary.", color: "text-orange-500 font-bold", delay: 3800 }
+            ];
+
+            logs.forEach(log => {
+                setTimeout(() => {
+                    const line = document.createElement('div');
+                    line.className = log.color;
+                    line.innerText = log.text;
+                    consoleEl.appendChild(line);
+                    consoleEl.scrollTop = consoleEl.scrollHeight;
+                }, log.delay);
+            });
+
+            setTimeout(() => {
+                simRunning = false;
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
+
+```
