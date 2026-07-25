@@ -1,4 +1,5 @@
 import pytest
+from urllib.parse import urlparse
 from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.config import Config
 
@@ -28,4 +29,13 @@ def test_get_all_dorks():
     assert len(dorks) > 0
     for dork in dorks:
         assert "testuser" in dork
-        assert "github.com" in dork
+        tokens = dork.split()
+        github_host_found = False
+        for token in tokens:
+            parsed = urlparse(token)
+            host = parsed.hostname
+            if parsed.scheme in ("http", "https") and host:
+                if host == "github.com" or host.endswith(".github.com"):
+                    github_host_found = True
+                    break
+        assert github_host_found
