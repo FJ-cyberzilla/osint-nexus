@@ -72,3 +72,16 @@ indent-style = "space"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 pythonpath = ["."]
+
+# ===== MYPY CONFIGURATION =====
+[tool.mypy]
+python_version = "3.13"
+strict = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# Per-module overrides for problematic libraries or files
+[[tool.mypy.overrides]]
+module = ["curl_cffi.*", "httpx.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

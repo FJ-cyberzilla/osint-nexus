@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Any
+from typing import Any, cast
 
-import curl_cffi.requests as curl_requests  # type: ignore
+import curl_cffi.requests as curl_requests
 import httpx
 
 from osint_nexus.core.config import Config
@@ -62,7 +62,7 @@ class NetworkManager:
             self._current_proxy = new_proxy
 
             self._session = curl_requests.AsyncSession(
-                impersonate=self._current_profile, proxy=self._current_proxy
+                impersonate=cast(Any, self._current_profile), proxy=self._current_proxy
             )
             logger.debug("Created new session with profile %s", self._current_profile)
 
@@ -95,7 +95,9 @@ class NetworkManager:
             try:
                 response = await session.get(url, headers=headers, timeout=self.config.http_timeout)
                 await self._handle_response_status(response.status_code)
-                return response.status_code == 200, response.text
+                is_success: bool = response.status_code == 200
+                response_text: str = str(response.text)
+                return (is_success, response_text)  # type: ignore[no-any-return]
             except (curl_requests.RequestsError, httpx.HTTPError) as exc:
                 logger.error("Request failed: %s", exc)
                 self._session = None
@@ -105,6 +107,7 @@ class NetworkManager:
             return await self.retry.run(_attempt)
         except (curl_requests.RequestsError, httpx.HTTPError):
             logger.exception("Request failed after retries: %s", url)
+            await self.close_session()
             return False, ""
 
     async def _fetch_with_microlink(self, url: str, **microlink_options: Any) -> tuple[bool, str]:
@@ -125,7 +128,7 @@ class NetworkManager:
             status: bool = False
             if isinstance(status_val, str) and status_val == "success":
                 status = True
-            result: str = str(data.get("data", {}))
+            result: str = str(data.get("data", ""))
             return status, result
 
     async def _handle_response_status(self, status_code: int) -> None:
@@ -140,8 +143,8 @@ class NetworkManager:
             self._session = None
             await self.evasion.report_failure(status_code)
 
-    def close_session(self) -> None:
+    async def close_session(self) -> None:
         """Explicitly closes the active session and clears state."""
         if self._session:
-            self._session.close()
+            await self._session.close()
             self._session = None
