@@ -1,8 +1,18 @@
-from typing import Optional, Any, Dict
-import time
 import asyncio
+import time
+from typing import Any
+
 import aiohttp
-from osint_nexus.core.captcha.base import CaptchaSolver, CaptchaConfig, CaptchaSolveResult, CaptchaType, CaptchaServiceError, CaptchaTimeoutError
+
+from osint_nexus.core.captcha.base import (
+    CaptchaConfig,
+    CaptchaServiceError,
+    CaptchaSolver,
+    CaptchaSolveResult,
+    CaptchaTimeoutError,
+    CaptchaType,
+)
+
 
 class TwoCaptchaSolver(CaptchaSolver):
     """Solver using 2Captcha.com API."""
@@ -13,7 +23,7 @@ class TwoCaptchaSolver(CaptchaSolver):
     def __init__(
         self,
         config: CaptchaConfig,
-        session: Optional[aiohttp.ClientSession] = None,
+        session: aiohttp.ClientSession | None = None,
     ) -> None:
         super().__init__("2captcha", config, session)
         if not config.two_captcha_key:
@@ -56,18 +66,14 @@ class TwoCaptchaSolver(CaptchaSolver):
     ) -> CaptchaSolveResult:
         session = self._ensure_session()
         method = self._get_method(captcha_type)
-        submit_params = self._build_submit_params(
-            site_key, url, captcha_type, method, kwargs
-        )
+        submit_params = self._build_submit_params(site_key, url, captcha_type, method, kwargs)
 
         # 1. Submit captcha
         submit_url = f"{self.BASE_URL}/in.php"
         async with session.post(submit_url, data=submit_params) as resp:
             data = await resp.json()
         if data.get("status") != 1:
-            raise CaptchaServiceError(
-                f"Submission failed: {data.get('request', 'unknown error')}"
-            )
+            raise CaptchaServiceError(f"Submission failed: {data.get('request', 'unknown error')}")
         captcha_id = data["request"]
 
         # 2. Poll for result
@@ -92,8 +98,8 @@ class TwoCaptchaSolver(CaptchaSolver):
         url: str,
         captcha_type: CaptchaType,
         method: str,
-        extra: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        extra: dict[str, Any],
+    ) -> dict[str, Any]:
         """Build the submit payload for 2captcha."""
         params = {
             "key": self.config.two_captcha_key,
@@ -111,9 +117,7 @@ class TwoCaptchaSolver(CaptchaSolver):
             params["sitekey"] = site_key
         return params
 
-    async def _poll_for_result(
-        self, session: aiohttp.ClientSession, captcha_id: str
-    ) -> str:
+    async def _poll_for_result(self, session: aiohttp.ClientSession, captcha_id: str) -> str:
         """Poll 2captcha until result is ready."""
         poll_params = {
             "key": self.config.two_captcha_key,
@@ -126,12 +130,12 @@ class TwoCaptchaSolver(CaptchaSolver):
             await asyncio.sleep(self.config.poll_interval)
             async with session.get(self.POLL_URL, params=poll_params) as resp:
                 data = await resp.json()
-            
+
             result = self._handle_poll_response(data, start_time)
             if result:
                 return result
 
-    def _handle_poll_response(self, data: Dict[str, Any], start_time: float) -> Optional[str]:
+    def _handle_poll_response(self, data: dict[str, Any], start_time: float) -> str | None:
         """Handle the poll response from 2captcha."""
         if data.get("status") == 1:
             return data["request"]

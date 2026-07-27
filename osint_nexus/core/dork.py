@@ -47,10 +47,7 @@ class DorkEngine:
         ],
     }
 
-    def __init__(
-        self, 
-        templates: dict[str, list[str]] | None = None
-    ) -> None:
+    def __init__(self, templates: dict[str, list[str]] | None = None) -> None:
         """
         Initializes the DorkEngine.
 
@@ -58,7 +55,7 @@ class DorkEngine:
             templates: Optional explicit dictionary of templates to use/merge.
         """
         self._templates: dict[str, list[str]] = self.DEFAULT_TEMPLATES.copy()
-        
+
         if templates:
             self._merge_templates(templates)
 

@@ -27,21 +27,26 @@ class Factor:
     Represents a scoring modifier (either a multiplier or a bonus)
     for the ConfidenceEngine, incorporating strict validation.
     """
+
     name: str
     value: float
     factor_type: str  # must be "multiplier" or "bonus"
 
     def __post_init__(self) -> None:
+        self._validate_meta()
+        self._validate_value()
+
+    def _validate_meta(self) -> None:
         if not isinstance(self.name, str) or not self.name.strip():
             raise ValueError("Factor name must be a non-empty string.")
         if self.factor_type not in ("multiplier", "bonus"):
             raise ValueError("Factor type must be either 'multiplier' or 'bonus'.")
-        if self.factor_type == "multiplier":
-            if not (0.0 <= self.value <= 1.0):
-                raise ValueError(f"Multiplier '{self.name}' must be between 0.0 and 1.0, got {self.value}")
-        elif self.factor_type == "bonus":
-            if self.value < 0.0:
-                raise ValueError(f"Bonus '{self.name}' must be non-negative, got {self.value}")
+
+    def _validate_value(self) -> None:
+        if self.factor_type == "multiplier" and not (0.0 <= self.value <= 1.0):
+            raise ValueError(f"Multiplier '{self.name}' must be between 0.0 and 1.0, got {self.value}")
+        if self.factor_type == "bonus" and self.value < 0.0:
+            raise ValueError(f"Bonus '{self.name}' must be non-negative, got {self.value}")
 
 
 @dataclass
@@ -136,13 +141,10 @@ class ConfidenceEngine:
             detail[f"platform_{platform}"] = weight
 
         base_score = (total_weight / self._target_weight_for_max) * 100.0
-        score = min(100.0, base_score)
-        detail["base_score_subtotal"] = score
-        return score, total_weight
+        detail["base_score_subtotal"] = base_score
+        return base_score, total_weight
 
-    def _apply_factors(
-        self, score: float, factors: list[Factor], detail: dict[str, float]
-    ) -> float:
+    def _apply_factors(self, score: float, factors: list[Factor], detail: dict[str, float]) -> float:
         """Apply a list of pre-validated factors to the score."""
         for factor in factors:
             if factor.factor_type == "multiplier":
@@ -158,6 +160,39 @@ class ConfidenceEngine:
             if score >= threshold:
                 return cat
         return "Minimal"
+
+    def _create_factors(
+        self, multipliers: dict[str, float] | None, additive_bonuses: dict[str, float] | None
+    ) -> list[Factor]:
+        """Convert and validate modifiers into Factor objects."""
+        factors: list[Factor] = []
+        if multipliers:
+            for name, val in multipliers.items():
+                factors.append(Factor(name=name, value=val, factor_type="multiplier"))
+
+        if additive_bonuses:
+            for name, val in additive_bonuses.items():
+                factors.append(Factor(name=name, value=val, factor_type="bonus"))
+        return factors
+
+    def _clean_platforms(self, found_platforms: Iterable[str]) -> set[str]:
+        """Validate and clean platform names."""
+        clean_platforms: set[str] = set()
+        for p in found_platforms:
+            if not isinstance(p, str) or not p.strip():
+                raise ValueError(f"Invalid platform name provided: {p!r}")
+            clean_platforms.add(p.strip().lower())
+        return clean_platforms
+
+    def _log_result(self, final_score: float, category: str, num_platforms: int, total_weight: float) -> None:
+        """Log the confidence result."""
+        logger.info(
+            "Confidence: %.1f%% (%s) | %d platforms | Base Weight: %.1f",
+            final_score,
+            category,
+            num_platforms,
+            total_weight,
+        )
 
     def calculate_confidence(
         self,
@@ -182,25 +217,13 @@ class ConfidenceEngine:
         if not found_platforms:
             return ConfidenceResult(score=0.0, category="None")
 
-        clean_platforms: set[str] = set()
-        for p in found_platforms:
-            if not isinstance(p, str) or not p.strip():
-                raise ValueError(f"Invalid platform name provided: {p!r}")
-            clean_platforms.add(p.strip().lower())
-
+        clean_platforms = self._clean_platforms(found_platforms)
         detail: dict[str, float] = {}
 
         score, total_weight = self._get_base_score(clean_platforms, detail)
 
         # Convert and validate modifiers into Factor objects
-        factors: list[Factor] = []
-        if multipliers:
-            for name, val in multipliers.items():
-                factors.append(Factor(name=name, value=val, factor_type="multiplier"))
-        
-        if additive_bonuses:
-            for name, val in additive_bonuses.items():
-                factors.append(Factor(name=name, value=val, factor_type="bonus"))
+        factors = self._create_factors(multipliers, additive_bonuses)
 
         if factors:
             score = self._apply_factors(score, factors, detail)
@@ -208,13 +231,8 @@ class ConfidenceEngine:
         final_score = max(0.0, min(100.0, score))
         category = self._get_category(final_score)
 
-        logger.info(
-            "Confidence: %.1f%% (%s) | %d platforms | Base Weight: %.1f",
-            final_score,
-            category,
-            len(clean_platforms),
-            total_weight,
-        )
+        self._log_result(final_score, category, len(clean_platforms), total_weight)
+
         return ConfidenceResult(score=final_score, category=category, details=detail)
 
     # ------------------------------------------------------------------

@@ -9,10 +9,10 @@ from osint_nexus.utils.network import NetworkManager
 
 class ProviderRegistry:
     def __init__(
-        self, 
-        evasion_manager: EvasionAgent, 
+        self,
+        evasion_manager: EvasionAgent,
         network_manager: NetworkManager,
-        dork_engine: DorkEngine | None = None
+        dork_engine: DorkEngine | None = None,
     ):
         self.evasion_manager = evasion_manager
         self.network_manager = network_manager
@@ -51,7 +51,8 @@ class ProviderRegistry:
         }
 
         self.providers: list[BaseProvider] = [
-            GenericProvider(name, url, network_manager, self.dork_engine) for name, url in platform_map.items()
+            GenericProvider(name, url, network_manager, self.dork_engine)
+            for name, url in platform_map.items()
         ]
 
         # Add specialized providers

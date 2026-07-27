@@ -128,9 +128,6 @@ class FingerprintAgent:
         custom = getattr(self.config, "DEVICE_PATTERNS", [])
         if not isinstance(custom, list):
             return self.DEFAULT_DEVICE_PATTERNS
-            
-        validated = [
-            tuple(entry) for entry in custom 
-            if isinstance(entry, (list, tuple)) and len(entry) == 3
-        ]
+
+        validated = [tuple(entry) for entry in custom if isinstance(entry, (list, tuple)) and len(entry) == 3]
         return validated + self.DEFAULT_DEVICE_PATTERNS

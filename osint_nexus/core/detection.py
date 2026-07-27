@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import re
-from typing import Any, cast
+from typing import cast
 
 from osint_nexus.core.detectors.base import BaseDetector
 from osint_nexus.core.evasion import EvasionWeights
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class DetectionResult:
     """Structured output from detection analysis."""
+
     def __init__(
         self,
         evasion_score: float,
@@ -36,9 +37,7 @@ class DetectionEngine:
         self.weights = weights
         self.detectors = detectors or []
 
-    async def analyze(
-        self, payload: TelemetryPayload, platforms: list[str]
-    ) -> DetectionResult:
+    async def analyze(self, payload: TelemetryPayload, platforms: list[str]) -> DetectionResult:
         """Runs signature checks + novel detectors concurrently."""
         score = 0.0
         details: dict[str, float] = {}
@@ -74,12 +73,10 @@ class DetectionEngine:
             score += (1.0 - cast(float, result)) * self.weights.novel_detector_weight
         return score
 
-    def _check_signatures(
-        self, payload: TelemetryPayload, platforms: list[str]
-    ) -> float:
+    def _check_signatures(self, payload: TelemetryPayload, platforms: list[str]) -> float:
         """Existing signature-based checks (regex, headless, webdriver)."""
         score = 0.0
-        
+
         score += self._check_browser_signatures(payload)
 
         if len(platforms) > self.weights.platform_density_threshold:
@@ -94,7 +91,7 @@ class DetectionEngine:
         browser = payload.browser
         if not browser:
             return 0.0
-            
+
         score = 0.0
         checks = [
             (self._has_ai_user_agent(browser.user_agent), self.weights.ai_signature),
@@ -102,11 +99,12 @@ class DetectionEngine:
             (browser.webdriver, self.weights.webdriver_active),
             (browser.automation_plugins, self.weights.automation_plugins),
         ]
-        
+
         for condition, weight in checks:
             if condition:
                 score += weight
         return score
+
     def _has_ai_user_agent(self, ua: str) -> bool:
         """Check against AI footprint regex."""
         pattern = re.compile(

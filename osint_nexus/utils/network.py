@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Any, cast
+from typing import Any
 
 import curl_cffi.requests as curl_requests  # type: ignore
 import httpx
@@ -68,7 +68,9 @@ class NetworkManager:
 
         return self._session
 
-    async def fetch(self, url: str, use_microlink: bool = False, **microlink_options: Any) -> tuple[bool, str]:
+    async def fetch(
+        self, url: str, use_microlink: bool = False, **microlink_options: Any
+    ) -> tuple[bool, str]:
         """
         Performs a GET request using the configured evasion and retry logic.
 

@@ -7,48 +7,46 @@ helping users and operators quickly identify root causes.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+import sqlite3
+
+import aiohttp
+from rich.console import Console
+from rich.logging import RichHandler
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.table import Table
 
 from osint_nexus.core import constants
+from osint_nexus.core.config import DATABASE_PATH, LOG_FILE_PATH
 
 logger = logging.getLogger("osint_nexus.troubleshoot")
 
 
-import logging
-import sqlite3
-
-from rich.console import Console
-from rich.panel import Panel
-from rich.syntax import Syntax
-from rich.table import Table
-from osint_nexus.core import constants
-from rich.logging import RichHandler
-from osint_nexus.core.config import LOG_FILE_PATH, DATABASE_PATH
-
 def setup_logging(verbose: bool = False):
     log_level = logging.DEBUG if verbose else logging.INFO
-    
+
     # Root logger config
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
-    
+
     # Remove existing handlers to avoid duplicates
     root_logger.handlers.clear()
 
     # 1. THE AESTHETIC CONSOLE HANDLER (Rich)
     console_handler = RichHandler(
-        rich_tracebacks=True,       # Gorgeous syntax-highlighted error tracebacks
-        markup=True,                # Allows using [bold red] colors inside custom log messages
-        show_path=False,            # Hides file paths to keep logs looking clean and structured
-        omit_repeated_times=True    # Drops timestamp clutter for simultaneous operations
+        rich_tracebacks=True,  # Gorgeous syntax-highlighted error tracebacks
+        markup=True,  # Allows using [bold red] colors inside custom log messages
+        show_path=False,  # Hides file paths to keep logs looking clean and structured
+        omit_repeated_times=True,  # Drops timestamp clutter for simultaneous operations
     )
     console_handler.setLevel(log_level)
     root_logger.addHandler(console_handler)
 
     # 2. THE PERSISTENT FILE HANDLER (Raw text for log analysis)
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     file_handler = logging.FileHandler(LOG_FILE_PATH, encoding="utf-8")
     file_handler.setFormatter(file_formatter)
     file_handler.setLevel(logging.DEBUG)  # Always record full details to the disk log
@@ -57,35 +55,43 @@ def setup_logging(verbose: bool = False):
 
 def inspect_database_schema() -> None:
     console = Console()
-    
+
     try:
         # Connect to your dynamic database path
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        
+
         # 1. Fetch all tables and their explicit SQL creation strings
         cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
-        
+
         if not tables:
-            console.print("[bold yellow]⚠ Database is empty or no tables have been initialized yet.[/bold yellow]")
+            console.print(
+                "[bold yellow]⚠ Database is empty or no tables have been initialized yet.[/bold yellow]"
+            )
             return
 
-        console.print(Panel("[bold green]📂 OSINT Nexus - Local Storage Architecture[/bold green]", expand=False, border_style="cyan"))
+        console.print(
+            Panel(
+                "[bold green]📂 OSINT Nexus - Local Storage Architecture[/bold green]",
+                expand=False,
+                border_style="cyan",
+            )
+        )
 
         for table_name, sql_schema in tables:
             # Skip SQLite internal tracking tables to reduce noise
             if table_name.startswith("sqlite_"):
                 continue
-                
+
             # Get a quick row count for metrics
             cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
             row_count = cursor.fetchone()[0]
-            
+
             # Syntax highlight the SQL creation statement dynamically
             clean_sql = sql_schema.strip() + ";"
             highlighted_sql = Syntax(clean_sql, "sql", theme="monokai", line_numbers=True)
-            
+
             # Print each table configuration in its own visual block
             console.print(
                 Panel(
@@ -94,13 +100,13 @@ def inspect_database_schema() -> None:
                     subtitle=f"[bold]Records: {row_count}[/bold]",
                     subtitle_align="right",
                     border_style="magenta",
-                    padding=(1, 2)
+                    padding=(1, 2),
                 )
             )
-            console.print("") # Space spacer
-            
+            console.print("")  # Space spacer
+
         conn.close()
-        
+
     except Exception as e:
         console.print(f"[bold red]❌ Failed to read database schema: {e}[/bold red]")
 
@@ -109,17 +115,16 @@ def print_latest_scan_results(limit: int = 10) -> None:
     console = Console()
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute(
-        "SELECT id, username, platform, found, timestamp FROM results ORDER BY id DESC LIMIT ?;", 
-        (limit,)
+        "SELECT id, username, platform, found, timestamp FROM results ORDER BY id DESC LIMIT ?;", (limit,)
     )
     rows = cursor.fetchall()
-    
+
     if not rows:
         console.print("[dim]No scan logs recorded yet.[/dim]")
         return
-        
+
     # Build clean columns matching your schema footprint
     table = Table(title="📊 Recent Footprint Discoveries", border_style="dim")
     table.add_column("ID", justify="center", style="dim")
@@ -127,12 +132,12 @@ def print_latest_scan_results(limit: int = 10) -> None:
     table.add_column("Platform Target", style="cyan")
     table.add_column("Detection State", justify="center")
     table.add_column("Observed Timestamp", style="green")
-    
+
     for row in rows:
         id_, username, platform, found, timestamp = row
         status = "[bold green]FOUND[/bold green]" if found == 1 else "[red]ABSENT[/red]"
         table.add_row(str(id_), username, platform, status, timestamp)
-        
+
     console.print(table)
     conn.close()
 
@@ -156,33 +161,59 @@ def troubleshoot_agent_error(error: BaseException, provider_name: str = "") -> s
     return f"[{constants.COLOR_TIP}]Tip: {tip}[/]"
 
 
-def _generate_tip(error: BaseException, provider_name: str) -> str:
-    error_str = str(error).lower()
+_EXCEPTION_TIPS = {
+    (TimeoutError, asyncio.TimeoutError): lambda p, _: (
+        f"Request timed out for {p}. Check network latency or increase the HTTP timeout in config."
+    ),
+    (ConnectionError, aiohttp.ClientError): lambda p, _: (
+        f"Could not connect to {p}. Verify proxy settings and internet connectivity."
+    ),
+    json.JSONDecodeError: lambda p, _: (
+        f"Failed to parse response from {p}. The site might have returned invalid JSON."
+    ),
+    PermissionError: lambda p, _: "Permission denied. Check your user privileges and system access.",
+}
 
-    if isinstance(error, TimeoutError) or "timeout" in error_str:
-        return (
-            f"Request timed out for {provider_name}. "
-            "Check network latency or increase the HTTP timeout in config."
-        )
-    if isinstance(error, ConnectionError) or "connection" in error_str:
-        return f"Could not connect to {provider_name}. Verify proxy settings and internet connectivity."
-    if "ssl" in error_str or "certificate" in error_str:
-        return (
-            f"SSL certificate error for {provider_name}. Ensure your system’s CA certificates are up to date."
-        )
+
+def _get_type_based_tip(error: BaseException, provider_name: str) -> str | None:
+    for types, tip_func in _EXCEPTION_TIPS.items():
+        if isinstance(error, types):
+            return tip_func(provider_name, error)
+
     if hasattr(error, "response") and error.response is not None:
         status_code = error.response.status_code
         return (
             f"HTTP {status_code} from {provider_name}. "
             "Possible rate‑limiting or block – consider rotating proxy / User‑Agent."
         )
-    return f"Unexpected error in {provider_name}. Review the logs for full details."
+    return None
+
+
+def _get_string_based_tip(error_str: str, provider_name: str) -> str | None:
+    if "timeout" in error_str:
+        return (
+            f"Request timed out for {provider_name}. "
+            "Check network latency or increase the HTTP timeout in config."
+        )
+    if "ssl" in error_str or "certificate" in error_str:
+        return (
+            f"SSL certificate error for {provider_name}. Ensure your system’s CA certificates are up to date."
+        )
+    return None
+
+
+def _generate_tip(error: BaseException, provider_name: str) -> str:
+    error_str = str(error).lower()
+
+    tip = _get_type_based_tip(error, provider_name) or _get_string_based_tip(error_str, provider_name)
+
+    return tip or f"Unexpected error in {provider_name}. Review the logs for full details."
 
 
 def run_health_check() -> None:
     """
     Perform a health check of registered providers.
-    
+
     This function requires an active scan or agent context to access
     provider registry and network management services.
     """

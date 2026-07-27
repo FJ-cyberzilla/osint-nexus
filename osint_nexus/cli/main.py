@@ -27,8 +27,6 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 from rich.table import Table
-from rich.logging import RichHandler
-from osint_nexus.core.config import LOG_FILE_PATH
 
 from osint_nexus.core import constants
 from osint_nexus.core.agent import OSINTAgent
@@ -189,8 +187,7 @@ async def _run_scan_loop(
 
         has_error = "error" in intel.metadata
         status_text = (
-            f"Analyzed {intel.platform} -> "
-            f"{'Match' if intel.found else ('Error' if has_error else 'Clear')}"
+            f"Analyzed {intel.platform} -> {'Match' if intel.found else ('Error' if has_error else 'Clear')}"
         )
         progress.update(task, advance=1)
         live.update(get_layout(progress, username, status_text, table))

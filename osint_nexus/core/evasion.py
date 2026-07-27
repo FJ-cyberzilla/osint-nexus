@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class EvasionWeights(BaseModel):
     ai_signature: float = 0.2
     headless_mode: float = 0.3

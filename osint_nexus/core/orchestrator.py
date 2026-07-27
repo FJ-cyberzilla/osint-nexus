@@ -15,11 +15,11 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
+from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
-from osint_nexus.utils.network import NetworkManager
-from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.report import TelemetryPayload
+from osint_nexus.utils.network import NetworkManager
 
 logger = logging.getLogger("osint_nexus.orchestrator")
 
@@ -121,7 +121,9 @@ class ScanOrchestrator:
         getattr(self.deps.health, "record_success", lambda _: None)(provider.name)
         return intel
 
-    async def _infer_metadata(self, provider: ProviderProtocol, username: str, content: Any, final_found: bool) -> dict[str, Any]:
+    async def _infer_metadata(
+        self, provider: ProviderProtocol, username: str, content: Any, final_found: bool
+    ) -> dict[str, Any]:
         """Infers metadata for a provider result."""
         metadata: dict[str, Any] = {}
         if final_found and self.device_inference:
@@ -131,7 +133,13 @@ class ScanOrchestrator:
         return metadata
 
     def _build_success_intel(
-        self, provider: ProviderProtocol, username: str, final_found: bool, dork: str, content: Any, metadata: dict[str, Any]
+        self,
+        provider: ProviderProtocol,
+        username: str,
+        final_found: bool,
+        dork: str,
+        content: Any,
+        metadata: dict[str, Any],
     ) -> IntelligenceObject:
         """Constructs an IntelligenceObject for a successful scan."""
         return IntelligenceObject(
@@ -172,7 +180,7 @@ class ScanOrchestrator:
         providers: list[ProviderProtocol],
         timeout: float | None = 15.0,
         **microlink_options: Any,
-    ) -> AsyncGenerator[IntelligenceObject, None]:
+    ) -> AsyncGenerator[IntelligenceObject]:
         """
         Executes a bounded scan across providers.
 
@@ -185,7 +193,7 @@ class ScanOrchestrator:
             asyncio.create_task(self._semaphored_worker(p, username, semaphore, timeout, **microlink_options))
             for p in providers
         ]
-        
+
         results: list[IntelligenceObject] = []
         try:
             async for result in self._process_scan_tasks(tasks):
@@ -196,7 +204,7 @@ class ScanOrchestrator:
 
         await self._run_detection_analysis(results)
 
-    async def _process_scan_tasks(self, tasks: list[asyncio.Task]) -> AsyncGenerator[IntelligenceObject, None]:
+    async def _process_scan_tasks(self, tasks: list[asyncio.Task]) -> AsyncGenerator[IntelligenceObject]:
         """Processes completed scan tasks."""
         for coro in asyncio.as_completed(tasks):
             if self._abort_event.is_set():
@@ -212,12 +220,12 @@ class ScanOrchestrator:
     async def _run_detection_analysis(self, results: list[IntelligenceObject]) -> None:
         """Runs the detection engine analysis after a scan."""
         telemetry = TelemetryPayload(
-            browser=None, # Needs actual browser info
+            browser=None,  # Needs actual browser info
             raw_metadata={},
-            pipeline_status="ok"
+            pipeline_status="ok",
         )
         platforms = [r.platform for r in results if r.found]
-        
+
         detection_result = await self.detection.analyze(telemetry, platforms)
         logger.info("Detection score: %f", detection_result.evasion_score)
 

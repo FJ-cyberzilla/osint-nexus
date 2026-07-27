@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from typing import Any, Protocol, runtime_checkable, cast
+from typing import Any, Protocol, cast, runtime_checkable
 
 logger = logging.getLogger("osint_nexus.hierarchy")
 
@@ -140,11 +140,11 @@ class HierarchyManager:
         """Checks if the circuit breaker is open and handles recovery backoff."""
         if not status.circuit_open:
             return False
-        
+
         status.recovery_ticks += 1
         if status.recovery_ticks < 5:
             return True  # Still open, don't hammer the subsystem
-        
+
         status.recovery_ticks = 0  # Time to probe it again
         return False
 
@@ -154,7 +154,7 @@ class HierarchyManager:
         try:
             if isinstance(subsystem, HealthCheckable):
                 return await asyncio.wait_for(subsystem.health_check(), timeout=self._check_timeout)
-            
+
             # Fallback logic for non-checkable modules
             return status.failure_count < self._failure_threshold
         except TimeoutError:

@@ -27,11 +27,7 @@ class GenericProvider(BaseProvider):
     """
 
     def __init__(
-        self, 
-        name: str, 
-        url_template: str, 
-        network: NetworkManager,
-        dork_engine: DorkEngine | None = None
+        self, name: str, url_template: str, network: NetworkManager, dork_engine: DorkEngine | None = None
     ) -> None:
         super().__init__(name, network)
         self.url_template = url_template

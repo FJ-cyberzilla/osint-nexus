@@ -1,5 +1,7 @@
 from typing import Any
+
 from osint_nexus.core.detectors.base import BaseDetector
+
 
 class TimingEntropyDetector(BaseDetector):
     @property

@@ -11,21 +11,20 @@ import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any, cast
-from osint_nexus.core.orchestrator import ProviderProtocol
 
-from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.confidence import ConfidenceEngine
 from osint_nexus.core.config import Config
 from osint_nexus.core.database import DatabaseManager
+from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.device_inference import DeviceInferenceService
+from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.core.fingerprint import FingerprintAgent
 from osint_nexus.core.health import HealthTracker
 from osint_nexus.core.hierarchy import HierarchyManager
 from osint_nexus.core.mimicry import HumanMimicryEngine
-from osint_nexus.core.orchestrator import OrchestratorDeps, ScanOrchestrator
+from osint_nexus.core.orchestrator import OrchestratorDeps, ProviderProtocol, ScanOrchestrator
 from osint_nexus.core.report import AdvancedReportGenerator
-from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.validator import ResultValidator
 from osint_nexus.providers.registry import ProviderRegistry
 from osint_nexus.utils.helpers import setup_logger
@@ -132,7 +131,9 @@ class OSINTAgent:
         self.logger.info("Agent starting scan for: %s", username)
         providers = self.subsystems.registry.get_providers()
 
-        async for intel in self.subsystems.orchestrator.run_scan(username, cast(list[ProviderProtocol], providers), timeout):
+        async for intel in self.subsystems.orchestrator.run_scan(
+            username, cast(list[ProviderProtocol], providers), timeout
+        ):
             if intel.found:
                 self.found_platforms.append(intel.platform)
                 # Capture device inference from the first found platform with data
@@ -153,7 +154,7 @@ class OSINTAgent:
                 "is_poisoned": False,
                 "shannon_entropy": 3.0,
                 "render_time_ms": 1.5,
-                "reported_user_agent": "Mozilla/5.0"
-            }
+                "reported_user_agent": "Mozilla/5.0",
+            },
         )
         return "Report rendered to console."

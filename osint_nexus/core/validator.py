@@ -186,7 +186,7 @@ class ResultValidator:
         exclusion_rules = self._get_exclusion_rules(votes)
         if not exclusion_rules:
             return False
-        
+
         return max(conf for _, conf in exclusion_rules) > 0.98
 
     def _get_exclusion_rules(self, votes: dict[str, tuple[ValidationVote, float]]) -> list[tuple[str, float]]:
@@ -223,12 +223,14 @@ class ResultValidator:
         invalid_votes = [(name, conf) for name, (v, conf) in votes.items() if v == ValidationVote.INVALID]
         if not invalid_votes:
             return 0.5, "No positive evidence found (all rules neutral)"
-        
+
         _, highest_conf = max(invalid_votes, key=lambda x: x[1])
         details = self._format_details("Invalidated by rule(s)", votes, ValidationVote.INVALID)
         return highest_conf, details
 
-    def _format_details(self, prefix: str, votes: dict[str, tuple[ValidationVote, float]], vote_type: ValidationVote) -> str:
+    def _format_details(
+        self, prefix: str, votes: dict[str, tuple[ValidationVote, float]], vote_type: ValidationVote
+    ) -> str:
         """Formats the details string for a given validation result."""
         names = [name for name, (v, _) in votes.items() if v == vote_type]
         return f"{prefix}: " + ", ".join(names)
