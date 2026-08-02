@@ -24,6 +24,7 @@ dependencies = [
     "imagehash>=4.3.0",
     "Pillow>=10.0.0",
     "rapidfuzz>=3.5.0",
+    "pydantic-settings>=2.0.0",
 ]
 
 [project.optional-dependencies]
