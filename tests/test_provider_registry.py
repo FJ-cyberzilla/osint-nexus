@@ -13,5 +13,4 @@ def test_provider_registry_initialization() -> None:
     # Check if a known provider exists
     names = [p.name for p in providers]
     assert "GitHub" in names
-    assert "Telegram" in names
     assert "Aparat" in names

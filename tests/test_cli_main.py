@@ -3,13 +3,13 @@ from unittest.mock import MagicMock
 from rich.progress import Progress
 from rich.table import Table
 
-from osint_nexus.cli.main import _format_intel_row, get_layout
+from osint_nexus.cli.main import _format_intel_row, _get_responsive_layout
 
 
 def test_get_layout() -> None:
     progress = Progress()
     results_table = Table()
-    layout = get_layout(progress, "testuser", "status", results_table)
+    layout = _get_responsive_layout(progress, "testuser", "status", results_table, 80)
     assert layout is not None
 
 

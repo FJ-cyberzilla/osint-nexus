@@ -13,14 +13,11 @@ from osint_nexus.core.captcha.base import (
     CaptchaTimeoutError,
     CaptchaType,
 )
+from osint_nexus.core.config import get_config
 
 
 class AntiCaptchaSolver(CaptchaSolver):
     """Solver using Anti‑Captcha.com API."""
-
-    BASE_URL = "https://api.anti-captcha.com"
-    CREATE_TASK_URL = f"{BASE_URL}/createTask"
-    GET_TASK_RESULT_URL = f"{BASE_URL}/getTaskResult"
 
     def __init__(
         self,
@@ -30,10 +27,13 @@ class AntiCaptchaSolver(CaptchaSolver):
         super().__init__("anti_captcha", config, session)
         if not config.anti_captcha_key:
             raise ValueError("Anti‑Captcha API key not set")
+        self.base_url = get_config().service_urls["anti_captcha"]
+        self.create_task_url = f"{self.base_url}/createTask"
+        self.get_task_result_url = f"{self.base_url}/getTaskResult"
 
     async def health_check(self) -> bool:
         """Check balance via getBalance API."""
-        url = f"{self.BASE_URL}/getBalance"
+        url = f"{self.base_url}/getBalance"
         payload = {"clientKey": self.config.anti_captcha_key}
         try:
             async with self._ensure_session().post(url, json=payload) as resp:
@@ -70,7 +70,7 @@ class AntiCaptchaSolver(CaptchaSolver):
             "clientKey": self.config.anti_captcha_key,
             "task": task_data,
         }
-        async with session.post(self.CREATE_TASK_URL, json=payload) as resp:
+        async with session.post(self.create_task_url, json=payload) as resp:
             data = await resp.json()
         if data.get("errorId") != 0:
             raise CaptchaServiceError(f"Task creation failed: {data.get('errorDescription', 'unknown')}")

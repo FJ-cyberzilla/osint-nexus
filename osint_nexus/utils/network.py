@@ -71,12 +71,13 @@ class NetworkManager:
 
         return self._session
 
-    async def fetch(self, url: str, use_browser: bool = False, **browser_options: Any) -> tuple[bool, str]:
+    async def fetch(self, url: str, headers: dict[str, str] | None = None, use_browser: bool = False, **browser_options: Any) -> tuple[bool, str]:
         """
-        Performs a GET request using the configured evasion and retry logic.
+        Performs a GET request using the configured evasion and retry logic, with dynamic User-Agent support.
 
         Args:
             url: The destination URL.
+            headers: Optional custom headers to use.
             use_browser: If True, uses the local BrowserPool headless browser.
             **browser_options: Keyword arguments for browser parameters.
 
@@ -91,10 +92,18 @@ class NetworkManager:
                 return await self._fetch_with_browser(url, **browser_options)
 
             session = self._get_session()
-            headers = {"Referer": "https://www.google.com/"}
+            
+            # Build request headers
+            request_headers = {"Referer": "https://www.google.com/"}
+            if headers:
+                request_headers.update(headers)
+            
+            # Inject dynamic User-Agent if not provided
+            if "User-Agent" not in request_headers:
+                request_headers["User-Agent"] = random.choice(self.config.user_agents)
 
             try:
-                response = await session.get(url, headers=headers, timeout=self.config.http_timeout)
+                response = await session.get(url, headers=request_headers, timeout=self.config.http_timeout)
                 await self._handle_response_status(response.status_code)
                 is_success: bool = response.status_code == 200
                 response_text: str = str(response.text)

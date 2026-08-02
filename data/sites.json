@@ -1,16 +1,315 @@
 [
   {
-    "name": "example",
-    "url_template": "https://example.com/{username}",
-    "error_indicator": "404 Not Found",
-    "headers": {"User-Agent": "Mozilla/5.0"},
-    "regex_pattern": null
+    "name": "facebook",
+    "url_template": "https://www.facebook.com/{username}"
   },
   {
-    "name": "Telegram",
-    "url_template": "https://t.me/{username}",
-    "error_indicator": "If you have <strong>Telegram</strong>, you can contact",
-    "headers": {"User-Agent": "Mozilla/5.0"},
-    "regex_pattern": null
+    "name": "twitter",
+    "url_template": "https://twitter.com/{username}"
+  },
+  {
+    "name": "instagram",
+    "url_template": "https://www.instagram.com/{username}"
+  },
+  {
+    "name": "linkedin",
+    "url_template": "https://www.linkedin.com/in/{username}"
+  },
+  {
+    "name": "github",
+    "url_template": "https://github.com/{username}"
+  },
+  {
+    "name": "tiktok",
+    "url_template": "https://www.tiktok.com/@{username}"
+  },
+  {
+    "name": "pinterest",
+    "url_template": "https://www.pinterest.com/{username}"
+  },
+  {
+    "name": "reddit",
+    "url_template": "https://www.reddit.com/user/{username}"
+  },
+  {
+    "name": "snapchat",
+    "url_template": "https://www.snapchat.com/add/{username}"
+  },
+  {
+    "name": "tumblr",
+    "url_template": "https://{username}.tumblr.com"
+  },
+  {
+    "name": "medium",
+    "url_template": "https://medium.com/@{username}"
+  },
+  {
+    "name": "soundcloud",
+    "url_template": "https://soundcloud.com/{username}"
+  },
+  {
+    "name": "vimeo",
+    "url_template": "https://vimeo.com/{username}"
+  },
+  {
+    "name": "deviantart",
+    "url_template": "https://www.deviantart.com/{username}"
+  },
+  {
+    "name": "flickr",
+    "url_template": "https://www.flickr.com/people/{username}"
+  },
+  {
+    "name": "etsy",
+    "url_template": "https://www.etsy.com/shop/{username}"
+  },
+  {
+    "name": "quora",
+    "url_template": "https://www.quora.com/profile/{username}"
+  },
+  {
+    "name": "twitch",
+    "url_template": "https://www.twitch.tv/{username}"
+  },
+  {
+    "name": "behance",
+    "url_template": "https://www.behance.net/{username}"
+  },
+  {
+    "name": "discord",
+    "url_template": "https://discordapp.com/users/{username}"
+  },
+  {
+    "name": "stackoverflow",
+    "url_template": "https://stackoverflow.com/users/{username}"
+  },
+  {
+    "name": "goodreads",
+    "url_template": "https://www.goodreads.com/{username}"
+  },
+  {
+    "name": "soundclick",
+    "url_template": "https://www.soundclick.com/{username}"
+  },
+  {
+    "name": "bitbucket",
+    "url_template": "https://bitbucket.org/{username}"
+  },
+  {
+    "name": "bandcamp",
+    "url_template": "https://{username}.bandcamp.com"
+  },
+  {
+    "name": "angel.co",
+    "url_template": "https://angel.co/u/{username}"
+  },
+  {
+    "name": "last.fm",
+    "url_template": "https://www.last.fm/user/{username}"
+  },
+  {
+    "name": "mixcloud",
+    "url_template": "https://www.mixcloud.com/{username}"
+  },
+  {
+    "name": "patreon",
+    "url_template": "https://www.patreon.com/{username}"
+  },
+  {
+    "name": "producthunt",
+    "url_template": "https://www.producthunt.com/@{username}"
+  },
+  {
+    "name": "dribbble",
+    "url_template": "https://dribbble.com/{username}"
+  },
+  {
+    "name": "imgur",
+    "url_template": "https://imgur.com/user/{username}"
+  },
+  {
+    "name": "kickstarter",
+    "url_template": "https://www.kickstarter.com/profile/{username}"
+  },
+  {
+    "name": "keybase",
+    "url_template": "https://keybase.io/{username}"
+  },
+  {
+    "name": "telegram",
+    "url_template": "https://t.me/{username}"
+  },
+  {
+    "name": "whatsapp",
+    "url_template": "https://wa.me/{username}"
+  },
+  {
+    "name": "wechat",
+    "url_template": "https://wechat.com/{username}"
+  },
+  {
+    "name": "line",
+    "url_template": "https://line.me/ti/p/~{username}"
+  },
+  {
+    "name": "vkontakte",
+    "url_template": "https://vk.com/{username}"
+  },
+  {
+    "name": "ok.ru",
+    "url_template": "https://ok.ru/profile/{username}"
+  },
+  {
+    "name": "xing",
+    "url_template": "https://www.xing.com/profile/{username}"
+  },
+  {
+    "name": "meetup",
+    "url_template": "https://www.meetup.com/members/{username}"
+  },
+  {
+    "name": "foursquare",
+    "url_template": "https://foursquare.com/user/{username}"
+  },
+  {
+    "name": "yelp",
+    "url_template": "https://www.yelp.com/user_details?userid={username}"
+  },
+  {
+    "name": "badoo",
+    "url_template": "https://badoo.com/en/{username}"
+  },
+  {
+    "name": "scribd",
+    "url_template": "https://www.scribd.com/{username}"
+  },
+  {
+    "name": "tripadvisor",
+    "url_template": "https://www.tripadvisor.com/members/{username}"
+  },
+  {
+    "name": "disqus",
+    "url_template": "https://disqus.com/{username}"
+  },
+  {
+    "name": "about.me",
+    "url_template": "https://about.me/{username}"
+  },
+  {
+    "name": "drupal",
+    "url_template": "https://www.drupal.org/u/{username}"
+  },
+  {
+    "name": "dev.to",
+    "url_template": "https://dev.to/{username}"
+  },
+  {
+    "name": "ello",
+    "url_template": "https://ello.co/{username}"
+  },
+  {
+    "name": "blogger",
+    "url_template": "https://{username}.blogspot.com"
+  },
+  {
+    "name": "vk",
+    "url_template": "https://vk.com/{username}"
+  },
+  {
+    "name": "livejournal",
+    "url_template": "https://{username}.livejournal.com"
+  },
+  {
+    "name": "500px",
+    "url_template": "https://500px.com/{username}"
+  },
+  {
+    "name": "mix",
+    "url_template": "https://mix.com/{username}"
+  },
+  {
+    "name": "myspace",
+    "url_template": "https://myspace.com/{username}"
+  },
+  {
+    "name": "flipboard",
+    "url_template": "https://flipboard.com/@{username}"
+  },
+  {
+    "name": "anchor",
+    "url_template": "https://anchor.fm/{username}"
+  },
+  {
+    "name": "coub",
+    "url_template": "https://coub.com/{username}"
+  },
+  {
+    "name": "dailymotion",
+    "url_template": "https://www.dailymotion.com/{username}"
+  },
+  {
+    "name": "flipagram",
+    "url_template": "https://flipagram.com/{username}"
+  },
+  {
+    "name": "gaiaonline",
+    "url_template": "https://www.gaiaonline.com/profiles/{username}"
+  },
+  {
+    "name": "hackernews",
+    "url_template": "https://news.ycombinator.com/user?id={username}"
+  },
+  {
+    "name": "homesnap",
+    "url_template": "https://www.homesnap.com/profile/{username}"
+  },
+  {
+    "name": "houzz",
+    "url_template": "https://www.houzz.com/user/{username}"
+  },
+  {
+    "name": "imdb",
+    "url_template": "https://www.imdb.com/user/ur{username}"
+  },
+  {
+    "name": "instructables",
+    "url_template": "https://www.instructables.com/member/{username}"
+  },
+  {
+    "name": "letterboxd",
+    "url_template": "https://letterboxd.com/{username}"
+  },
+  {
+    "name": "mastodon",
+    "url_template": "https://mastodon.social/@{username}",
+    "use_browser": true
+  },
+  {
+    "name": "newgrounds",
+    "url_template": "https://www.newgrounds.com/bbs/profile/{username}"
+  },
+  {
+    "name": "pixiv",
+    "url_template": "https://www.pixiv.net/en/users/{username}"
+  },
+  {
+    "name": "reverbnation",
+    "url_template": "https://www.reverbnation.com/{username}"
+  },
+  {
+    "name": "slack",
+    "url_template": "https://{username}.slack.com"
+  },
+  {
+    "name": "steam",
+    "url_template": "https://steamcommunity.com/id/{username}"
+  },
+  {
+    "name": "wattpad",
+    "url_template": "https://www.wattpad.com/user/{username}"
+  },
+  {
+    "name": "youtube",
+    "url_template": "https://www.youtube.com/{username}"
   }
 ]

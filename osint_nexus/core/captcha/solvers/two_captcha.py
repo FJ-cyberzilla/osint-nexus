@@ -12,13 +12,11 @@ from osint_nexus.core.captcha.base import (
     CaptchaTimeoutError,
     CaptchaType,
 )
+from osint_nexus.core.config import get_config
 
 
 class TwoCaptchaSolver(CaptchaSolver):
     """Solver using 2Captcha.com API."""
-
-    BASE_URL = "https://2captcha.com"
-    POLL_URL = "https://2captcha.com/res.php"
 
     def __init__(
         self,
@@ -28,10 +26,13 @@ class TwoCaptchaSolver(CaptchaSolver):
         super().__init__("2captcha", config, session)
         if not config.two_captcha_key:
             raise ValueError("2Captcha API key not set")
+        service_urls = get_config().service_urls
+        self.base_url = service_urls["two_captcha"]
+        self.poll_url = service_urls["two_captcha_res"]
 
     async def health_check(self) -> bool:
         """Check balance via getBalance API."""
-        url = f"{self.BASE_URL}/res.php"
+        url = f"{self.base_url}/res.php"
         # Cast values to str to be compatible with aiohttp.ClientSession.get params requirements
         params: dict[str, str] = {
             "key": str(self.config.two_captcha_key),
@@ -70,7 +71,7 @@ class TwoCaptchaSolver(CaptchaSolver):
         submit_params = self._build_submit_params(site_key, url, captcha_type, method, kwargs)
 
         # 1. Submit captcha
-        submit_url = f"{self.BASE_URL}/in.php"
+        submit_url = f"{self.base_url}/in.php"
         async with session.post(submit_url, data=submit_params) as resp:
             data = await resp.json()
         if data.get("status") != 1:
@@ -129,7 +130,7 @@ class TwoCaptchaSolver(CaptchaSolver):
         start_time = time.monotonic()
         while True:
             await asyncio.sleep(self.config.poll_interval)
-            async with session.get(self.POLL_URL, params=poll_params) as resp:
+            async with session.get(self.poll_url, params=poll_params) as resp:
                 data = await resp.json()
 
             result = self._handle_poll_response(data, start_time)

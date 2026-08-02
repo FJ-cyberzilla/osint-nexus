@@ -43,8 +43,8 @@ console = Console()
 logger = logging.getLogger("osint_nexus.cli")
 
 
-def get_layout(progress: Progress, username: str, status_line: str, results_table: Table) -> Layout:
-    """Creates the overall TUI layout."""
+def _get_responsive_layout(progress: Progress, username: str, status_line: str, results_table: Table, console_width: int) -> Layout:
+    """Creates a responsive TUI layout."""
     layout = Layout()
     layout.split_column(
         Layout(
@@ -134,7 +134,7 @@ async def async_main(args: argparse.Namespace) -> None:
 
     try:
         with Live(
-            get_layout(progress, safe_username, status_text, table), console=console, refresh_per_second=10
+            _get_responsive_layout(progress, safe_username, status_text, table, console.width), console=console, refresh_per_second=10
         ) as live:
             await _run_scan_loop(agent, live, progress, task, table, safe_username, status_text, args)
 
@@ -190,7 +190,7 @@ async def _run_scan_loop(
             f"Analyzed {intel.platform} -> {'Match' if intel.found else ('Error' if has_error else 'Clear')}"
         )
         progress.update(task, advance=1)
-        live.update(get_layout(progress, username, status_text, table))
+        live.update(_get_responsive_layout(progress, username, status_text, table, console.width))
 
 
 def _generate_report(agent: OSINTAgent) -> None:
@@ -220,13 +220,13 @@ def _generate_report(agent: OSINTAgent) -> None:
 def main() -> None:
     """Synchronous entry point that safely wraps the asyncio loop."""
     parser = argparse.ArgumentParser(description="Advanced OSINT Target Scanner")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     subparsers = parser.add_subparsers(dest="command", help="Command to run", required=True)
 
     # Scanner command
     scan_parser = subparsers.add_parser("scan", help="Scan a target username")
     scan_parser.add_argument("--username", required=True, help="Target username to investigate")
     scan_parser.add_argument("--timeout", type=float, default=15.0, help="Per-provider timeout in seconds")
-    scan_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     # Health command
     subparsers.add_parser("health", help="Check provider health status")

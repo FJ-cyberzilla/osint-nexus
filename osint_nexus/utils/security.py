@@ -30,8 +30,8 @@ class SecurityUtility:
         Returns:
             A safe, clean string suitable for database queries or display.
         """
-        # Allow only word characters (letters, digits, underscore)
-        sanitized = re.sub(r"[^\w]", "", user_input)
+        # Allow word characters (letters, digits, underscore) and periods
+        sanitized = re.sub(r"[^\w\.]", "", user_input)
         # Escape HTML entities to neutralise any residual markup
         return html.escape(sanitized)
 

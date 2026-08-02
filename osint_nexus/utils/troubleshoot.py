@@ -86,8 +86,9 @@ def inspect_database_schema() -> None:
             if table_name.startswith("sqlite_"):
                 continue
 
-            # Get a quick row count for metrics
-            cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+            # Properly quote table name to prevent SQL injection, though already safe from sqlite_master
+            quoted_table_name = f'"{table_name.replace("\"", "\"\"")}"'
+            cursor.execute(f"SELECT COUNT(*) FROM {quoted_table_name};")  # nosec
             row_count = cursor.fetchone()[0]
 
             # Syntax highlight the SQL creation statement dynamically

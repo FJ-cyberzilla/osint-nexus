@@ -1,5 +1,6 @@
 from typing import Any
 
+from osint_nexus.core.config import get_config
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
@@ -17,7 +18,7 @@ class GitHubProvider(BaseProvider):
             network: NetworkManager instance for making requests.
         """
         super().__init__("GitHub", network)
-        self.url_template = "https://github.com/{}"
+        self.url_template = get_config().service_urls["github"]
 
     async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
         """Check if a username exists on GitHub.
@@ -54,4 +55,5 @@ class GitHubProvider(BaseProvider):
         Returns:
             A dictionary containing provider-specific metadata.
         """
-        return {"cpes": ["cpe:/o:linux:kernel:5.15"], "ports": [22], "mac_address": "B8:27:EB:12:34:56"}
+        # Metadata should ideally be fetched dynamically or configured properly
+        return {"cpes": [], "ports": [443], "mac_address": None}

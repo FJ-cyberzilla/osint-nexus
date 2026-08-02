@@ -62,11 +62,11 @@ run:
 		read uname; \
 		echo -e "$(ORANGE)│ $(RESET) $(BOLD)Initiating scan for:$(RESET) $(CYAN)$$uname$(RESET)"; \
 		echo -e "$(ORANGE)└────────────────────────────────────────────────────────────┘$(RESET)"; \
-		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main --username $$uname; \
+		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $$uname; \
 	else \
 		echo -e "$(ORANGE)│ $(RESET) $(BOLD)Initiating scan for:$(RESET) $(CYAN)$(USERNAME)$(RESET)"; \
 		echo -e "$(ORANGE)└────────────────────────────────────────────────────────────┘$(RESET)"; \
-		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main --username $(USERNAME); \
+		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $(USERNAME); \
 	fi
 
 health:

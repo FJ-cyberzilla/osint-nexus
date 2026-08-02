@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from rich.logging import RichHandler
+
 from osint_nexus.core.config import Config
 
 # Global flag to prevent multiple root handler setup
@@ -69,12 +71,20 @@ def _configure_root_logger(log_path: Path, log_level: int) -> None:
 
     file_handler = logging.FileHandler(log_path)
     file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.DEBUG)
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
+    # Use RichHandler for console logging
+    stream_handler = RichHandler(
+        rich_tracebacks=True,
+        markup=True,
+        show_path=False,
+        omit_repeated_times=True,
+    )
+    stream_handler.setLevel(log_level)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
+    root_logger.handlers.clear()
     root_logger.addHandler(file_handler)
     root_logger.addHandler(stream_handler)
 
