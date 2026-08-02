@@ -22,7 +22,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from osint_nexus.core import constants
-from osint_nexus.core.config import DATABASE_PATH, LOG_FILE_PATH
+from osint_nexus.core.bootstrap import DATABASE_PATH, LOG_FILE_PATH
 
 logger = logging.getLogger("osint_nexus.troubleshoot")
 

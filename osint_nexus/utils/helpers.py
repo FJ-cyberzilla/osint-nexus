@@ -12,7 +12,8 @@ from pathlib import Path
 
 from rich.logging import RichHandler
 
-from osint_nexus.core.config import LOGS_DIR, Config
+from osint_nexus.core import bootstrap
+from osint_nexus.core.config import Config
 
 # Global flag to prevent multiple root handler setup
 _logging_configured: bool = False
@@ -54,7 +55,7 @@ def setup_logger(
 def _get_log_file_path(log_file: str | None) -> Path:
     if log_file:
         return Path(log_file)
-    return LOGS_DIR / "osint.log"
+    return bootstrap.LOGS_DIR / "osint.log"
 
 
 def _get_log_level(config: Config | None) -> int:

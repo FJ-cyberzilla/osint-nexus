@@ -11,23 +11,11 @@ from typing import Any
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from osint_nexus.core import constants
+from osint_nexus.core import constants, bootstrap
 from osint_nexus.core.evasion import EvasionWeights
 
-# Locate the project root (assumes config.py is inside osint_nexus/core/)
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-
-# Define standard storage paths
-DATA_DIR = PROJECT_ROOT / "data"
-LOGS_DIR = PROJECT_ROOT / "logs"
-
 # Guarantee directories exist at runtime before modules try to write to them
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
-
-# Exported absolute file paths for database and logging subsystems
-DATABASE_PATH = DATA_DIR / "osint_results.db"
-LOG_FILE_PATH = LOGS_DIR / "osint.log"
+bootstrap.initialize_directories()
 
 logger = logging.getLogger("osint_nexus.config")
 
