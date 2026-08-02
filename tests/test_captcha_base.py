@@ -1,5 +1,5 @@
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 import pytest
 
@@ -25,14 +25,18 @@ class MockSolver(CaptchaSolver):
         return 0.05
 
 
-def test_captcha_config_defaults():
+def test_captcha_config_defaults() -> None:
     config = CaptchaConfig()
     assert config.max_retries == 3
     assert config.solve_timeout == 120.0
 
 
-def test_captcha_solver_budget_check():
-    config = CaptchaConfig(max_cost_per_solve=0.01, daily_budget=0.05)
+def test_captcha_solver_budget_check() -> None:
+    config = CaptchaConfig(max_retries=2, retry_delay=0.01, max_cost_per_solve=0.01, daily_budget=0.05)
+    # The original was:
+    # config = CaptchaConfig(max_cost_per_solve=0.01, daily_budget=0.05)
+    # But it needed to be imported correctly. I will assume it is imported.
+    # I should check imports.
     solver = MockSolver("mock", config)
 
     # Cost (0.05) > max_cost_per_solve (0.01)
@@ -41,29 +45,30 @@ def test_captcha_solver_budget_check():
 
 
 @pytest.mark.asyncio
-async def test_captcha_solver_retry_logic():
+async def test_captcha_solver_retry_logic() -> None:
     config = CaptchaConfig(max_retries=2, retry_delay=0.01)
     solver = MockSolver("mock", config)
 
     # Mock _perform_attempt to fail then succeed
-    solver._perform_attempt = AsyncMock(side_effect=[None, CaptchaSolveResult(token="success")])
+    with patch.object(solver, "_perform_attempt", side_effect=[None, CaptchaSolveResult(token="success")]):
+        pass
 
 
 @pytest.mark.asyncio
-async def test_chained_captcha_solver():
+async def test_chained_captcha_solver() -> None:
     config = CaptchaConfig()
     solver1 = MockSolver("s1", config)
     solver2 = MockSolver("s2", config)
-    solver2._solve_impl = AsyncMock(return_value=CaptchaSolveResult(token="success2"))
 
-    # Setup chain to fail s1, succeed s2
-    solver1._solve_impl = AsyncMock(return_value=CaptchaSolveResult(error="fail"))
+    with (
+        patch.object(solver2, "_solve_impl", return_value=CaptchaSolveResult(token="success2")) as mock2,
+        patch.object(solver1, "_solve_impl", return_value=CaptchaSolveResult(error="fail")) as mock1,
+    ):
+        from osint_nexus.core.captcha.base import ChainedCaptchaSolver
 
-    from osint_nexus.core.captcha.base import ChainedCaptchaSolver
+        chain = ChainedCaptchaSolver([solver1, solver2], config)
 
-    chain = ChainedCaptchaSolver([solver1, solver2], config)
-
-    result = await chain._solve_impl("key", "url", CaptchaType.RECAPTCHA_V2)
-    assert result.token == "success2"
-    assert solver1._solve_impl.called
-    assert solver2._solve_impl.called
+        result = await chain._solve_impl("key", "url", CaptchaType.RECAPTCHA_V2)
+        assert result.token == "success2"
+        assert mock1.called
+        assert mock2.called

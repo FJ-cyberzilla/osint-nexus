@@ -38,7 +38,7 @@ class AntiCaptchaSolver(CaptchaSolver):
         try:
             async with self._ensure_session().post(url, json=payload) as resp:
                 data = await resp.json()
-                balance = data.get("balance", 0)
+                balance = float(data.get("balance", 0))
                 return balance > 0.01
         except Exception:  # pylint: disable=broad-except
             return False
@@ -134,7 +134,7 @@ class AntiCaptchaSolver(CaptchaSolver):
         solution = data.get("solution", {})
         token = solution.get("gRecaptchaResponse") or solution.get("token")
         if token:
-            return token
+            return str(token)
         raise CaptchaServiceError("No token in solution")
 
     def _raise_poll_error(self, data: dict[str, Any]) -> None:

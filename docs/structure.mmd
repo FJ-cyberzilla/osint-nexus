@@ -10,6 +10,8 @@ classDiagram
         +HealthTracker health
         +ReportGenerator report
         +DeviceInferenceService device_inference
+        +ComplianceEngine compliance
+        +List~Exporter~ exporters
     }
     
     class ScanOrchestrator {
@@ -20,10 +22,23 @@ classDiagram
     class DeviceInferenceService {
         +infer()
     }
+
+    class ComplianceEngine {
+        +sanitize(data)
+    }
+
+    class Exporter {
+        <<interface>>
+        +export(data)
+    }
     
     OSINTAgent --> AgentSubsystems
     AgentSubsystems o-- ScanOrchestrator
     AgentSubsystems o-- HealthTracker
     AgentSubsystems o-- ReportGenerator
     AgentSubsystems o-- DeviceInferenceService
+    AgentSubsystems o-- ComplianceEngine
+    AgentSubsystems o-- Exporter
     ScanOrchestrator --> DeviceInferenceService
+    ReportGenerator --> ComplianceEngine
+    ReportGenerator --> Exporter

@@ -1,8 +1,11 @@
+import json
+from pathlib import Path
+
 from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.providers.aparat import AparatProvider
 from osint_nexus.providers.base import BaseProvider
-from osint_nexus.providers.generic import GenericProvider
+from osint_nexus.providers.generic import GenericProvider, SiteConfig
 from osint_nexus.providers.github import GitHubProvider
 from osint_nexus.utils.network import NetworkManager
 
@@ -17,47 +20,35 @@ class ProviderRegistry:
         self.evasion_manager = evasion_manager
         self.network_manager = network_manager
         self.dork_engine = dork_engine or DorkEngine()
+        self.providers = self._load_providers()
 
-        # Mapping of Name -> URL Template
-        platform_map = {
-            # Requested Platforms
-            "Telegram": "https://t.me/{}",
-            "Instagram": "https://www.instagram.com/{}",
-            "X": "https://twitter.com/{}",
-            "Facebook": "https://www.facebook.com/{}",
-            "Bluesky": "https://bsky.app/profile/{}",
-            "Threads": "https://www.threads.net/@{}",
-            # Other Platforms
-            "Discord": "https://discord.com/users/{}",
-            "LinkedIn": "https://www.linkedin.com/in/{}",
-            "TikTok": "https://www.tiktok.com/@{}",
-            "Snapchat": "https://www.snapchat.com/add/{}",
-            "Reddit": "https://www.reddit.com/user/{}",
-            "Pinterest": "https://www.pinterest.com/{}",
-            "Twitch": "https://www.twitch.tv/{}",
-            "Medium": "https://medium.com/@{}",
-            "GitLab": "https://gitlab.com/{}",
-            "StackOverflow": "https://stackoverflow.com/users/{}",
-            # Iranian Platforms
-            "Rubika": "https://rubika.ir/{}",
-            "Bale": "https://ble.ir/{}",
-            "Eitaa": "https://eitaa.com/{}",
-            "Soroush+": "https://splus.ir/{}",
-            "Shad": "https://shad.ir/{}",
-            "Gap": "https://gap.im/{}",
-            "IGap": "https://igap.net/{}",
-            "Virasty": "https://virasty.com/{}",
-            "Nashenas": "https://nashenas.com/{}",
-        }
+    def _load_providers(self) -> list[BaseProvider]:
+        providers: list[BaseProvider] = []
 
-        self.providers: list[BaseProvider] = [
-            GenericProvider(name, url, network_manager, self.dork_engine)
-            for name, url in platform_map.items()
-        ]
+        # Load dynamic providers
+        sites_file = Path("data/sites.json")
+        if sites_file.exists():
+            with open(sites_file) as f:
+                try:
+                    sites_data = json.load(f)
+                    for site_entry in sites_data:
+                        config = SiteConfig(**site_entry)
+                        providers.append(
+                            GenericProvider(
+                                config,
+                                self.network_manager,
+                                self.dork_engine,
+                            )
+                        )
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger("osint_nexus.registry").error(f"Failed to load sites.json: {e}")
 
         # Add specialized providers
-        self.providers.append(GitHubProvider(network_manager))
-        self.providers.append(AparatProvider(network_manager))
+        providers.append(GitHubProvider(self.network_manager))
+        providers.append(AparatProvider(self.network_manager))
+        return providers
 
     def get_providers(self) -> list[BaseProvider]:
         return self.providers

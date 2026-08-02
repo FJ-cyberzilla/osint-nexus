@@ -3,7 +3,7 @@ import time
 from osint_nexus.core.health import HealthTracker
 
 
-def test_circuit_breaker_and_recovery():
+def test_circuit_breaker_and_recovery() -> None:
     # Set a short recovery timeout for testing
     tracker = HealthTracker(failure_threshold=2, default_recovery_timeout=0.1)
 
@@ -23,7 +23,7 @@ def test_circuit_breaker_and_recovery():
     assert tracker.is_healthy("p1")
 
 
-def test_per_provider_timeout():
+def test_per_provider_timeout() -> None:
     tracker = HealthTracker(failure_threshold=1, default_recovery_timeout=1.0)
 
     # Fast recovery provider

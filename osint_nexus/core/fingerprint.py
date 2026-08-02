@@ -125,7 +125,7 @@ class FingerprintAgent:
 
     def _load_patterns(self) -> list[tuple[str, str, str]]:
         """Merge default patterns with any custom patterns from config."""
-        custom = getattr(self.config, "DEVICE_PATTERNS", [])
+        custom = getattr(self.config, "device_patterns", [])
         if not isinstance(custom, list):
             return self.DEFAULT_DEVICE_PATTERNS
 

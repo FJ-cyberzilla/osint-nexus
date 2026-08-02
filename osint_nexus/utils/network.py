@@ -14,6 +14,7 @@ from typing import Any, cast
 import curl_cffi.requests as curl_requests
 import httpx
 
+from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.core.mimicry import HumanMimicryEngine
@@ -36,10 +37,12 @@ class NetworkManager:
         config: Config,
         evasion: EvasionAgent,
         mimicry: HumanMimicryEngine,
+        browser_pool: BrowserPoolManager,
     ) -> None:
         self.config = config
         self.evasion = evasion
         self.mimicry = mimicry
+        self.browser_pool = browser_pool
         self.retry = RetryHandler(config)
 
         # Session state
@@ -68,16 +71,14 @@ class NetworkManager:
 
         return self._session
 
-    async def fetch(
-        self, url: str, use_microlink: bool = False, **microlink_options: Any
-    ) -> tuple[bool, str]:
+    async def fetch(self, url: str, use_browser: bool = False, **browser_options: Any) -> tuple[bool, str]:
         """
         Performs a GET request using the configured evasion and retry logic.
 
         Args:
             url: The destination URL.
-            use_microlink: If True, uses the Microlink headless browser API.
-            **microlink_options: Keyword arguments for Microlink parameters.
+            use_browser: If True, uses the local BrowserPool headless browser.
+            **browser_options: Keyword arguments for browser parameters.
 
         Returns:
             A tuple of (success_boolean, response_text).
@@ -86,8 +87,8 @@ class NetworkManager:
         async def _attempt() -> tuple[bool, str]:
             await self.mimicry.apply_jitter()
 
-            if use_microlink:
-                return await self._fetch_with_microlink(url, **microlink_options)
+            if use_browser:
+                return await self._fetch_with_browser(url, **browser_options)
 
             session = self._get_session()
             headers = {"Referer": "https://www.google.com/"}
@@ -97,39 +98,34 @@ class NetworkManager:
                 await self._handle_response_status(response.status_code)
                 is_success: bool = response.status_code == 200
                 response_text: str = str(response.text)
-                return (is_success, response_text)  # type: ignore[no-any-return]
+                result: tuple[bool, str] = (is_success, response_text)
+                return result
             except (curl_requests.RequestsError, httpx.HTTPError) as exc:
                 logger.error("Request failed: %s", exc)
                 self._session = None
                 raise
 
         try:
-            return await self.retry.run(_attempt)
+            result: tuple[bool, str] = await self.retry.run(_attempt)
+            return result
         except (curl_requests.RequestsError, httpx.HTTPError):
             logger.exception("Request failed after retries: %s", url)
             await self.close_session()
-            return False, ""
+            error_result: tuple[bool, str] = (False, "")
+            return error_result
 
-    async def _fetch_with_microlink(self, url: str, **microlink_options: Any) -> tuple[bool, str]:
+    async def _fetch_with_browser(self, url: str, **browser_options: Any) -> tuple[bool, str]:
         """
-        Executes a request via the Microlink API.
-
-        Note: Standard proxy settings may not propagate through Microlink
-        unless supported by the specific API subscription.
+        Executes a request via the local BrowserPool.
         """
-        async with httpx.AsyncClient(timeout=self.config.http_timeout) as client:
-            response = await client.get(
-                "https://api.microlink.io",
-                params={"url": url, **microlink_options},
-                follow_redirects=True,
-            )
-            data: dict[str, Any] = response.json()
-            status_val = data.get("status")
-            status: bool = False
-            if isinstance(status_val, str) and status_val == "success":
-                status = True
-            result: str = str(data.get("data", ""))
-            return status, result
+        context = await self.browser_pool.get_context()
+        page = await context.new_page()
+        try:
+            response = await page.goto(url, timeout=int(self.config.http_timeout * 1000))
+            content = await page.content()
+            return (response is not None and response.status == 200, content)
+        finally:
+            await context.close()
 
     async def _handle_response_status(self, status_code: int) -> None:
         """

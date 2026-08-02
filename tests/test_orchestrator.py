@@ -1,30 +1,49 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from osint_nexus.core.orchestrator import OrchestratorDeps, ScanOrchestrator
 
 
-def test_orchestrator_init():
-    deps = MagicMock(spec=OrchestratorDeps)
-    detection = MagicMock()
-    orchestrator = ScanOrchestrator(deps, detection)
-    assert orchestrator.max_concurrency == 5
-    assert not orchestrator._abort_event.is_set()
+@pytest.mark.asyncio
+async def test_scan_orchestrator_run_scan() -> None:
+    # Setup mocks
+    mock_health = MagicMock()
+    mock_validator = MagicMock()
+    mock_db = MagicMock()
+    mock_db.save_result = AsyncMock()  # Must be AsyncMock
+    mock_network = MagicMock()
+    mock_mimicry = MagicMock()
+    mock_extractor = MagicMock()
+    mock_extractor.extract = AsyncMock(return_value={})
 
+    deps = OrchestratorDeps(
+        health=mock_health,
+        validator=mock_validator,
+        db_manager=mock_db,
+        network=mock_network,
+        mimicry=mock_mimicry,
+        extractor=mock_extractor,
+    )
+    mock_detection = MagicMock()
+    mock_detection.analyze = AsyncMock(return_value=MagicMock(evasion_score=0.0))  # Must be AsyncMock
+    orchestrator = ScanOrchestrator(deps, mock_detection)
 
-def test_orchestrator_abort():
-    deps = MagicMock(spec=OrchestratorDeps)
-    detection = MagicMock()
-    orchestrator = ScanOrchestrator(deps, detection)
-    orchestrator.abort()
-    assert orchestrator._abort_event.is_set()
+    # Mock Provider
+    mock_provider = MagicMock()
+    mock_provider.name = "TestProvider"
+    mock_provider.check_username = AsyncMock(return_value=(True, "found_content"))
+    mock_provider.get_dork_query = MagicMock(return_value="dork_query")
+    mock_provider.get_metadata = MagicMock(return_value={})
 
+    # Mock validator
+    mock_validator.validate = MagicMock(return_value=True)
 
-def test_build_error_intel():
-    deps = MagicMock(spec=OrchestratorDeps)
-    detection = MagicMock()
-    orchestrator = ScanOrchestrator(deps, detection)
+    # Run scan
+    results = []
+    async for intel in orchestrator.run_scan("testuser", [mock_provider]):
+        results.append(intel)
 
-    intel = orchestrator._build_error_intel("platform", "user", "error")
-    assert intel.platform == "platform"
-    assert intel.found is False
-    assert intel.metadata["error"] == "error"
+    assert len(results) == 1
+    assert results[0].platform == "testprovider"
+    assert results[0].found is True

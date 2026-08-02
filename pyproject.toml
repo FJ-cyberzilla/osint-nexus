@@ -19,13 +19,21 @@ dependencies = [
     "aiohttp>=3.9.0",
     "pydantic>=2.0.0",
     "curl_cffi>=0.7.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "imagehash>=4.3.0",
+    "Pillow>=10.0.0",
+    "rapidfuzz>=3.5.0",
 ]
 
 [project.optional-dependencies]
+browser = [
+    "playwright>=1.40.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
-    "ruff>=0.15.22",
+    # "ruff>=0.15.22",
 ]
 
 [tool.setuptools]
@@ -80,6 +88,7 @@ strict = true
 ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+exclude = ["build"]
 # Per-module overrides for problematic libraries or files
 [[tool.mypy.overrides]]
 module = ["curl_cffi.*", "httpx.*"]

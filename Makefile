@@ -18,7 +18,7 @@ SHELL        := /bin/bash
 UV_LINK_MODE := copy
 export UV_LINK_MODE
 
-.PHONY: help sync run health db-info test lint format clean
+.PHONY: help install sync run health db-info test lint format clean
 
 # --- Help Menu ---
 help:
@@ -30,6 +30,7 @@ help:
 	@echo -e "  $(ORANGE)============================================================$(RESET)"
 	@echo -e "  $(MARGIN)$(CYAN)$(BOLD)DEVELOPMENT & OPERATIONAL COMMANDS$(RESET)"
 	@echo -e "  $(ORANGE)============================================================$(RESET)"
+	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)install$(RESET)   $(CYAN)•$(RESET)  Install dependencies with uv"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)sync$(RESET)      $(CYAN)•$(RESET)  Advanced synchronization of dependencies"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)run$(RESET)       $(CYAN)•$(RESET)  Execute OSINT scan (prompts for username)"
 	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)health$(RESET)    $(CYAN)•$(RESET)  Check provider network status & circuit breakers"
@@ -44,9 +45,14 @@ help:
 
 # --- Implementation ---
 
+install:
+	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Installing dependencies with uv...$(RESET)"
+	@uv sync
+	@echo -e "$(GREEN)✔ Installation complete.$(RESET)"
+
 sync:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Synchronizing environment...$(RESET)"
-	@uv sync --all-extras --dev
+	@uv sync
 	@echo -e "$(GREEN)✔ Environment up to date.$(RESET)"
 
 run:
@@ -56,35 +62,38 @@ run:
 		read uname; \
 		echo -e "$(ORANGE)│ $(RESET) $(BOLD)Initiating scan for:$(RESET) $(CYAN)$$uname$(RESET)"; \
 		echo -e "$(ORANGE)└────────────────────────────────────────────────────────────┘$(RESET)"; \
-		export PYTHONPATH=$(PYTHONPATH) && uv run python -m osint_nexus.cli.main --username $$uname; \
+		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main --username $$uname; \
 	else \
 		echo -e "$(ORANGE)│ $(RESET) $(BOLD)Initiating scan for:$(RESET) $(CYAN)$(USERNAME)$(RESET)"; \
 		echo -e "$(ORANGE)└────────────────────────────────────────────────────────────┘$(RESET)"; \
-		export PYTHONPATH=$(PYTHONPATH) && uv run python -m osint_nexus.cli.main --username $(USERNAME); \
+		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main --username $(USERNAME); \
 	fi
 
 health:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Querying provider networks & circuit-breaker states...$(RESET)"
-	@export PYTHONPATH=$(PYTHONPATH) && uv run python -m osint_nexus.cli.main health
+	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main health
 
 db-info:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Accessing local telemetry database metrics...$(RESET)"
-	@export PYTHONPATH=$(PYTHONPATH) && uv run python -m osint_nexus.cli.main db-info
+	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main db-info
 
 test:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Executing test suite...$(RESET)"
-	@export PYTHONPATH=$(PYTHONPATH) && uv run pytest tests/
+	@export PYTHONPATH=$(PYTHONPATH) && pytest tests/
 
 lint:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Analyzing code quality...$(RESET)"
-	@uv run ruff check .
+	@ruff check .
 
 format:
 	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Formatting codebase...$(RESET)"
-	@uv run ruff format .
+	@ruff format .
 
 clean:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Purging artifacts...$(RESET)"
-	@rm -rf __pycache__ .pytest_cache .ruff_cache .coverage htmlcov *.egg-info build dist data/*.db logs/*.log
+	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Purging artifacts and uv cache...$(RESET)"
+	@rm -rf __pycache__ .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov *.egg-info *.egg build dist .venv
+	@rm -f data/*.db
+	@rm -rf logs/* log/*
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
+	@uv cache clean
 	@echo -e "$(GREEN)✔ Cleanup complete.$(RESET)"

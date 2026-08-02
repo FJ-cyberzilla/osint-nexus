@@ -5,7 +5,7 @@ from osint_nexus.core.captcha.solvers.anti_captcha import AntiCaptchaSolver
 
 
 @pytest.mark.asyncio
-async def test_anti_captcha_zero_balance_error():
+async def test_anti_captcha_zero_balance_error() -> None:
     config = CaptchaConfig(anti_captcha_key="test_key")
     solver = AntiCaptchaSolver(config)
 
@@ -18,7 +18,7 @@ async def test_anti_captcha_zero_balance_error():
 
 
 @pytest.mark.asyncio
-async def test_anti_captcha_invalid_key_error():
+async def test_anti_captcha_invalid_key_error() -> None:
     config = CaptchaConfig(anti_captcha_key="test_key")
     solver = AntiCaptchaSolver(config)
 

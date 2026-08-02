@@ -104,7 +104,7 @@ def _instantiate_solvers(
     solver_configs: dict[str, Any] | None,
 ) -> list[CaptchaSolver]:
     """Instantiate configured solvers."""
-    solvers = []
+    solvers: list[CaptchaSolver] = []
     if solver_configs:
         if "two_captcha" in solver_configs:
             solvers.append(TwoCaptchaSolver(config, session))

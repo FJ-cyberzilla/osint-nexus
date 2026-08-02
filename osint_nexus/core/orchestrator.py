@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 from osint_nexus.core.detection import DetectionEngine
+from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.report import TelemetryPayload
@@ -33,6 +34,7 @@ class OrchestratorDeps:
     db_manager: Any
     network: NetworkManager
     mimicry: HumanMimicryEngine
+    extractor: PivotExtractor
 
 
 @runtime_checkable
@@ -112,7 +114,13 @@ class ScanOrchestrator:
 
         final_found = raw_found and self.deps.validator.validate(content, provider.name)
 
+        # Harvest secondary identifiers if found
+        pivots: dict[str, Any] = {}
+        if final_found:
+            pivots = await self.deps.extractor.extract(str(content))
+
         metadata = await self._infer_metadata(provider, username, content, final_found)
+        metadata.update(pivots)
 
         await self.deps.db_manager.save_result(username, provider.name, final_found)
 
@@ -204,14 +212,14 @@ class ScanOrchestrator:
 
         await self._run_detection_analysis(results)
 
-    async def _process_scan_tasks(self, tasks: list[asyncio.Task]) -> AsyncGenerator[IntelligenceObject]:
+    async def _process_scan_tasks(self, tasks: list[asyncio.Task[Any]]) -> AsyncGenerator[IntelligenceObject]:
         """Processes completed scan tasks."""
         for coro in asyncio.as_completed(tasks):
             if self._abort_event.is_set():
                 break
             yield await coro
 
-    def _cancel_pending_tasks(self, tasks: list[asyncio.Task]) -> None:
+    def _cancel_pending_tasks(self, tasks: list[asyncio.Task[Any]]) -> None:
         """Cancels any pending tasks."""
         for task in tasks:
             if not task.done():

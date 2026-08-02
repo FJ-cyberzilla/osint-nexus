@@ -12,13 +12,17 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any, cast
 
+from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.confidence import ConfidenceEngine
 from osint_nexus.core.config import Config
+from osint_nexus.core.correlation import CorrelationEngine
 from osint_nexus.core.database import DatabaseManager
 from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.device_inference import DeviceInferenceService
+from osint_nexus.core.diff import DiffEngine
 from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.evasion_agent import EvasionAgent
+from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.fingerprint import FingerprintAgent
 from osint_nexus.core.health import HealthTracker
 from osint_nexus.core.hierarchy import HierarchyManager
@@ -52,6 +56,9 @@ class AgentSubsystems:
     detection: DetectionEngine
     orchestrator: ScanOrchestrator
     device_inference: DeviceInferenceService
+    correlation: CorrelationEngine
+    diff: DiffEngine
+    browser_pool: BrowserPoolManager
 
 
 class OSINTAgent:
@@ -67,6 +74,8 @@ class OSINTAgent:
     """
 
     def __init__(self, username: str, max_concurrency: int = 5):
+        from osint_nexus.providers.registry import ProviderRegistry
+
         self.config = Config()
         self.logger = setup_logger()
         self.username = username
@@ -75,8 +84,12 @@ class OSINTAgent:
         # Build subsystems with shared network manager
         evasion = EvasionAgent(self.config)
         mimicry = HumanMimicryEngine(self.config)
-        network = NetworkManager(self.config, evasion, mimicry)
+        browser_pool = BrowserPoolManager()
+        network = NetworkManager(self.config, evasion, mimicry, browser_pool)
         db_manager = DatabaseManager()
+        extractor = PivotExtractor()
+        correlation = CorrelationEngine()
+        diff = DiffEngine(db_manager)
         fingerprint = FingerprintAgent()
         confidence = ConfidenceEngine()
         dork = DorkEngine(templates=self.config.dork_templates)
@@ -100,12 +113,15 @@ class OSINTAgent:
             report=AdvancedReportGenerator(),
             detection=detection,
             orchestrator=ScanOrchestrator(
-                OrchestratorDeps(health, validator, db_manager, network, mimicry),
+                OrchestratorDeps(health, validator, db_manager, network, mimicry, extractor),
                 detection_engine=detection,
                 max_concurrency=max_concurrency,
                 device_inference=device_inference,
             ),
             device_inference=device_inference,
+            correlation=correlation,
+            diff=diff,
+            browser_pool=browser_pool,
         )
 
         # Register core subsystems for hierarchy monitoring
@@ -116,6 +132,11 @@ class OSINTAgent:
         # Scan state
         self.found_platforms: list[str] = []
         self.device_inference_profile: Any | None = None
+
+        # Ensure database is initialized
+        import asyncio
+
+        asyncio.create_task(db_manager.ensure_initialized())
 
     def abort_scan(self) -> None:
         """Signal the running scan to cancel gracefully."""

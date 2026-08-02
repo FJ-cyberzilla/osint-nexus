@@ -11,6 +11,8 @@ import asyncio
 import json
 import logging
 import sqlite3
+from collections.abc import Callable
+from typing import Any, cast
 
 import aiohttp
 from rich.console import Console
@@ -25,7 +27,7 @@ from osint_nexus.core.config import DATABASE_PATH, LOG_FILE_PATH
 logger = logging.getLogger("osint_nexus.troubleshoot")
 
 
-def setup_logging(verbose: bool = False):
+def setup_logging(verbose: bool = False) -> None:
     log_level = logging.DEBUG if verbose else logging.INFO
 
     # Root logger config
@@ -161,7 +163,9 @@ def troubleshoot_agent_error(error: BaseException, provider_name: str = "") -> s
     return f"[{constants.COLOR_TIP}]Tip: {tip}[/]"
 
 
-_EXCEPTION_TIPS = {
+_EXCEPTION_TIPS: dict[
+    type[BaseException] | tuple[type[BaseException], ...], Callable[[str, BaseException], str]
+] = {
     (TimeoutError, asyncio.TimeoutError): lambda p, _: (
         f"Request timed out for {p}. Check network latency or increase the HTTP timeout in config."
     ),
@@ -177,7 +181,7 @@ _EXCEPTION_TIPS = {
 
 def _get_type_based_tip(error: BaseException, provider_name: str) -> str | None:
     for types, tip_func in _EXCEPTION_TIPS.items():
-        if isinstance(error, types):
+        if isinstance(error, cast(type[Any] | tuple[type[Any], ...], types)):
             return tip_func(provider_name, error)
 
     if hasattr(error, "response") and error.response is not None:

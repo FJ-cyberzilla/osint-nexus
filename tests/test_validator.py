@@ -1,7 +1,7 @@
 from osint_nexus.core.validator import ExclusionPatternRule, ResultValidator
 
 
-def test_validation_logic_permissive():
+def test_validation_logic_permissive() -> None:
     # Setup validator with default rules
     validator = ResultValidator(target_username="testuser")
 
@@ -21,7 +21,7 @@ def test_validation_logic_permissive():
     assert result.evidence["ExclusionPatternRule"] == "invalid"
 
 
-def test_validation_logic_high_confidence_exclusion():
+def test_validation_logic_high_confidence_exclusion() -> None:
     # Setup validator
     validator = ResultValidator(target_username="testuser")
 
@@ -34,7 +34,7 @@ def test_validation_logic_high_confidence_exclusion():
     from osint_nexus.core.validator import ValidationVote
 
     class HighConfidenceExclusion(ExclusionPatternRule):
-        def evaluate(self, response_text, platform, username):
+        def evaluate(self, response_text: str, platform: str, username: str) -> tuple[ValidationVote, float]:
             return ValidationVote.INVALID, 0.99
 
     validator.add_rule(HighConfidenceExclusion(name="HighConfidenceExclusion"))

@@ -3,7 +3,7 @@ import os
 from osint_nexus.core.config import Config
 
 
-def test_config_from_env_basic():
+def test_config_from_env_basic() -> None:
     """Test basic environment variable parsing."""
     os.environ["OSINT_HTTP_TIMEOUT"] = "100"
     os.environ["OSINT_REQUIRE_PROXY"] = "true"
@@ -18,7 +18,7 @@ def test_config_from_env_basic():
     del os.environ["OSINT_REQUIRE_PROXY"]
 
 
-def test_config_from_env_json_list():
+def test_config_from_env_json_list() -> None:
     """Test environment variable parsing for list types (JSON)."""
     # Using a valid JSON string for a list
     os.environ["OSINT_USER_AGENTS"] = '["Mozilla/5.0", "Mozilla/6.0"]'
@@ -32,7 +32,7 @@ def test_config_from_env_json_list():
     del os.environ["OSINT_USER_AGENTS"]
 
 
-def test_config_from_env_invalid_json():
+def test_config_from_env_invalid_json() -> None:
     """Test handling of invalid JSON in environment variables."""
     # This should trigger the warning in Config.from_env
     os.environ["OSINT_USER_AGENTS"] = "invalid-json"

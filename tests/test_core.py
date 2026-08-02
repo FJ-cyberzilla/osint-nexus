@@ -5,7 +5,7 @@ from osint_nexus.core.evasion_agent import EvasionAgent
 
 
 @pytest.mark.asyncio
-async def test_evasion_manager():
+async def test_evasion_manager() -> None:
     config = Config()
     config.proxy_api_url = "http://proxy1:8080"
     manager = EvasionAgent(config)

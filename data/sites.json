@@ -1,0 +1,16 @@
+[
+  {
+    "name": "example",
+    "url_template": "https://example.com/{username}",
+    "error_indicator": "404 Not Found",
+    "headers": {"User-Agent": "Mozilla/5.0"},
+    "regex_pattern": null
+  },
+  {
+    "name": "Telegram",
+    "url_template": "https://t.me/{username}",
+    "error_indicator": "If you have <strong>Telegram</strong>, you can contact",
+    "headers": {"User-Agent": "Mozilla/5.0"},
+    "regex_pattern": null
+  }
+]

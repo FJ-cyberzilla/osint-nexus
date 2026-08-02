@@ -32,10 +32,11 @@ class TwoCaptchaSolver(CaptchaSolver):
     async def health_check(self) -> bool:
         """Check balance via getBalance API."""
         url = f"{self.BASE_URL}/res.php"
-        params = {
-            "key": self.config.two_captcha_key,
+        # Cast values to str to be compatible with aiohttp.ClientSession.get params requirements
+        params: dict[str, str] = {
+            "key": str(self.config.two_captcha_key),
             "action": "getbalance",
-            "json": 1,
+            "json": "1",
         }
         try:
             async with self._ensure_session().get(url, params=params) as resp:
@@ -119,11 +120,11 @@ class TwoCaptchaSolver(CaptchaSolver):
 
     async def _poll_for_result(self, session: aiohttp.ClientSession, captcha_id: str) -> str:
         """Poll 2captcha until result is ready."""
-        poll_params = {
-            "key": self.config.two_captcha_key,
+        poll_params: dict[str, str] = {
+            "key": str(self.config.two_captcha_key),
             "action": "get",
             "id": captcha_id,
-            "json": 1,
+            "json": "1",
         }
         start_time = time.monotonic()
         while True:
@@ -138,11 +139,11 @@ class TwoCaptchaSolver(CaptchaSolver):
     def _handle_poll_response(self, data: dict[str, Any], start_time: float) -> str | None:
         """Handle the poll response from 2captcha."""
         if data.get("status") == 1:
-            return data["request"]
+            return str(data["request"])
         if data.get("request") == "CAPCHA_NOT_READY":
             return None
         if "ERROR" in data.get("request", ""):
-            raise CaptchaServiceError(f"Solving error: {data['request']}")
+            raise CaptchaServiceError(f"Solving error: {str(data['request'])}")
         if time.monotonic() - start_time > self.config.solve_timeout:
             raise CaptchaTimeoutError("Polling timed out")
         # logger.warning("Unexpected poll response: %s", data) # logger needs to be imported or handled

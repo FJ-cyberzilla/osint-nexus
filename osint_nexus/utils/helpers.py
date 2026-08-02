@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import cast
 
 from osint_nexus.core.config import Config
 
@@ -61,7 +60,7 @@ def _get_log_file_path(config: Config | None, log_file: str | None) -> Path:
 
 def _get_log_level(config: Config | None) -> int:
     if config and hasattr(config, "log_level"):
-        return cast(int, config.log_level)
+        return config.log_level
     return logging.INFO
 
 
