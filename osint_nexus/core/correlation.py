@@ -34,32 +34,30 @@ class CorrelationEngine:
         """
         Analyzes a list of result metadata to find correlations.
         """
-        correlation_map: dict[str, list[str]] = {}
+        correlation_map = self._build_correlation_map(results)
+        self._log_correlation_extras_status()
+        correlations = self._filter_correlations(correlation_map)
 
+        logger.debug("Correlations found: %s", correlations)
+        return correlations
+
+    def _build_correlation_map(self, results: list[dict[str, Any]]) -> dict[str, list[str]]:
+        correlation_map: dict[str, list[str]] = {}
         for result in results:
             platform = result.get("platform", "unknown")
-            emails = result.get("emails", [])
-            links = result.get("links", [])
+            self._add_to_map(correlation_map, platform, "email", result.get("emails", []))
+            self._add_to_map(correlation_map, platform, "link", result.get("links", []))
+        return correlation_map
 
-            for email in emails:
-                correlation_map.setdefault(f"email:{email}", []).append(platform)
+    def _add_to_map(self, cmap: dict, platform: str, prefix: str, items: list[str]) -> None:
+        for item in items:
+            cmap.setdefault(f"{prefix}:{item}", []).append(platform)
 
-            for link in links:
-                correlation_map.setdefault(f"link:{link}", []).append(platform)
-
-        if HAS_CORRELATION_EXTRAS:
-            # Placeholder for visual correlation (pHash)
-            # await self._correlate_visuals(results)
-
-            # Placeholder for bio NLP correlation (fuzzywuzzy)
-            # await self._correlate_bios(results)
-            pass
-        else:
+    def _log_correlation_extras_status(self) -> None:
+        if not HAS_CORRELATION_EXTRAS:
             logger.warning(
                 "Correlation extras (imagehash, Pillow, rapidfuzz) not installed. Advanced correlation disabled."
             )
 
-        correlations = {k: v for k, v in correlation_map.items() if len(v) > 1}
-
-        logger.debug("Correlations found: %s", correlations)
-        return correlations
+    def _filter_correlations(self, correlation_map: dict[str, list[str]]) -> dict[str, list[str]]:
+        return {k: v for k, v in correlation_map.items() if len(v) > 1}

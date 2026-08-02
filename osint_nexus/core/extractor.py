@@ -83,45 +83,78 @@ class PivotExtractor:
         """Extract external links and identify potential connected social handles."""
         external_links = set()
         social_handles = []
-
-        source_domain = ""
-        if source_url:
-            parsed_source = urlparse(source_url)
-            source_domain = parsed_source.netloc.lower()
+        source_domain = self._get_source_domain(source_url)
 
         for a in soup.find_all("a", href=True):
-            href = a.get("href")
-            if not isinstance(href, str):
-                continue
-
-            if href.startswith(("http://", "https://")):
-                parsed_href = urlparse(href)
-                href_domain = parsed_href.netloc.lower()
-
-                # Filter out current platform domain
-                if source_domain and source_domain in href_domain:
-                    continue
-
-                external_links.add(href)
-
-                # Check for social handles
-                for dom, platform in self.social_domains.items():
-                    if dom in href_domain:
-                        # Extract the path (e.g. /username)
-                        path_parts = [p for p in parsed_href.path.split("/") if p]
-                        if path_parts:
-                            username = path_parts[0]
-                            # Avoid common non-username paths
-                            if username not in ("share", "home", "intent", "search", "p"):
-                                social_handles.append(
-                                    {"platform": platform, "username": username, "url": href}
-                                )
+            self._process_link(a, source_domain, external_links, social_handles)
 
         return {"external_links": list(external_links), "social_handles": social_handles}
+        
+    def _process_link(self, a: Any, source_domain: str, external_links: set, social_handles: list) -> None:
+        href = a.get("href")
+        if not self._is_external_http_url(href):
+            return
+
+        parsed_href = urlparse(href)
+        if self._is_internal_domain(parsed_href.netloc.lower(), source_domain):
+            return
+
+        external_links.add(href)
+        self._add_social_handle_if_found(parsed_href, href, social_handles)
+
+    def _is_external_http_url(self, href: Any) -> bool:
+        return isinstance(href, str) and href.startswith(("http://", "https://"))
+
+    def _is_internal_domain(self, href_domain: str, source_domain: str) -> bool:
+        if not source_domain:
+            return False
+        # Matches if it's the exact same domain, or a subdomain.
+        # This prevents prefix attacks like "not-example.com".
+        return href_domain == source_domain or href_domain.endswith("." + source_domain)
+
+    def _add_social_handle_if_found(self, parsed_href: Any, href: str, social_handles: list) -> None:
+        handle = self._get_social_handle(parsed_href, href)
+        if handle:
+            social_handles.append(handle)
+
+    def _get_source_domain(self, source_url: str | None) -> str:
+        if not source_url:
+            return ""
+        return urlparse(source_url).netloc.lower()
+        
+    def _get_social_handle(self, parsed_href: Any, href: str) -> dict[str, str] | None:
+        href_domain = parsed_href.netloc.lower()
+        for dom, platform in self.social_domains.items():
+            # Check for exact match or subdomain.
+            # This prevents prefix attacks like "not-twitter.com".
+            if href_domain == dom or href_domain.endswith("." + dom):
+                return self._parse_username(platform, href, parsed_href.path)
+        return None
+        
+    def _parse_username(self, platform: str, href: str, path: str) -> dict[str, str] | None:
+        path_parts = [p for p in path.split("/") if p]
+        if not path_parts:
+            return None
+        username = path_parts[0]
+        if username in ("share", "home", "intent", "search", "p"):
+            return None
+        return {"platform": platform, "username": username, "url": href}
 
     def _extract_bio(self, soup: BeautifulSoup) -> str:
         """Heuristic-based bio extraction."""
-        # 1. Try common meta description tags
+        
+        bio = self._get_meta_bio(soup)
+        if bio:
+            return bio
+
+        bio = self._get_element_bio(soup)
+        if bio:
+            return bio
+
+        return "Bio extraction not fully implemented."
+        
+    def _get_meta_bio(self, soup: BeautifulSoup) -> str | None:
+        """Extract bio from meta tags."""
         meta_desc = (
             soup.find("meta", attrs={"name": "description"})
             or soup.find("meta", attrs={"property": "og:description"})
@@ -129,7 +162,9 @@ class PivotExtractor:
         )
         if meta_desc and meta_desc.get("content"):
             return str(meta_desc["content"]).strip()
-
+        return None
+        
+    def _get_element_bio(self, soup: BeautifulSoup) -> str | None:
         # 2. Look for elements with common "bio" or "about" class/id
         # Define attributes explicitly as dict[str, Any]
         bio_selectors: list[dict[str, Any]] = [
@@ -144,5 +179,4 @@ class PivotExtractor:
                 text = element.get_text(strip=True)
                 if len(text) > 5:  # Avoid trivial matches
                     return text
-
-        return "Bio extraction not fully implemented."
+        return None

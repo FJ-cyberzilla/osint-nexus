@@ -105,17 +105,20 @@ def _instantiate_solvers(
 ) -> list[CaptchaSolver]:
     """Instantiate configured solvers."""
     solvers: list[CaptchaSolver] = []
-    if solver_configs:
-        if "two_captcha" in solver_configs:
-            solvers.append(TwoCaptchaSolver(config, session))
-        if "anti_captcha" in solver_configs:
-            solvers.append(AntiCaptchaSolver(config, session))
-    else:
-        # Fallback to existing logic if no specific solver_configs provided
-        if config.two_captcha_key:
-            solvers.append(TwoCaptchaSolver(config, session))
-        if config.anti_captcha_key:
-            solvers.append(AntiCaptchaSolver(config, session))
+    
+    # Define solver mapping: name -> (constructor, config_key_value)
+    mapping = {
+        "two_captcha": (TwoCaptchaSolver, config.two_captcha_key),
+        "anti_captcha": (AntiCaptchaSolver, config.anti_captcha_key),
+    }
+
+    for name, (cls, key) in mapping.items():
+        if solver_configs:
+            if name in solver_configs:
+                solvers.append(cls(config, session))
+        elif key:
+            solvers.append(cls(config, session))
+            
     return solvers
 
 

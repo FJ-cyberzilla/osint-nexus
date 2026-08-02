@@ -116,13 +116,20 @@ def inspect_database_schema() -> None:
 
 def print_latest_scan_results(limit: int = 10) -> None:
     console = Console()
-    conn = sqlite3.connect(DATABASE_PATH)
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT id, username, platform, found, timestamp FROM results ORDER BY id DESC LIMIT ?;", (limit,)
-    )
-    rows = cursor.fetchall()
+        cursor.execute(
+            "SELECT id, username, platform, found, timestamp FROM results ORDER BY id DESC LIMIT ?;", (limit,)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+    except sqlite3.OperationalError as e:
+        if "no such table: results" in str(e):
+            console.print("[dim]No scan logs recorded yet.[/dim]")
+            return
+        raise
 
     if not rows:
         console.print("[dim]No scan logs recorded yet.[/dim]")

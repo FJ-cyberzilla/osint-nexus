@@ -147,14 +147,15 @@ class CaptchaSolver(ABC):
 
         if isinstance(exc, (aiohttp.ClientError, asyncio.TimeoutError, CaptchaTimeoutError)):
             logger.warning("Solver %s attempt %d failed (transient): %s", self.name, attempt + 1, exc)
-        elif isinstance(exc, CaptchaError):
+            return
+
+        if isinstance(exc, CaptchaError):
             logger.warning("Solver %s attempt %d failed: %s", self.name, attempt + 1, exc)
-            if attempt == self.config.max_retries - 1:
-                raise
         else:
             logger.error("Unexpected error in solver %s: %s", self.name, exc, exc_info=True)
-            if attempt == self.config.max_retries - 1:
-                raise
+            
+        if attempt == self.config.max_retries - 1:
+            raise
 
     async def _perform_attempt(
         self, attempt: int, site_key: str, url: str, captcha_type: CaptchaType, kwargs: dict[str, Any]

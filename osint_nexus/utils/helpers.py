@@ -12,7 +12,7 @@ from pathlib import Path
 
 from rich.logging import RichHandler
 
-from osint_nexus.core.config import Config
+from osint_nexus.core.config import LOGS_DIR, Config
 
 # Global flag to prevent multiple root handler setup
 _logging_configured: bool = False
@@ -30,9 +30,8 @@ def setup_logger(
     configured logger without adding duplicate handlers.
 
     Args:
-        config: Optional Config instance. Uses ``db_path`` to derive
-            log file path and ``log_level`` for verbosity (INFO default).
-        log_file: Path to log file. Overrides any value derived from config.
+        config: Optional Config instance. Uses ``log_level`` for verbosity (INFO default).
+        log_file: Path to log file. Overrides any default value.
         logger_name: Name of the logger to return (default 'osint_nexus').
 
     Returns:
@@ -43,7 +42,7 @@ def setup_logger(
     if _logging_configured:
         return logging.getLogger(logger_name)
 
-    log_path = _get_log_file_path(config, log_file)
+    log_path = _get_log_file_path(log_file)
     log_level = _get_log_level(config)
     _configure_root_logger(log_path, log_level)
 
@@ -52,12 +51,10 @@ def setup_logger(
     return logging.getLogger(logger_name)
 
 
-def _get_log_file_path(config: Config | None, log_file: str | None) -> Path:
+def _get_log_file_path(log_file: str | None) -> Path:
     if log_file:
         return Path(log_file)
-    if config and config.db_path:
-        return Path(config.db_path).parent / "osint.log"
-    return Path("osint.log")
+    return LOGS_DIR / "osint.log"
 
 
 def _get_log_level(config: Config | None) -> int:
