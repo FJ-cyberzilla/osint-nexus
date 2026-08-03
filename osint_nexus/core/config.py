@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from osint_nexus.core import constants, bootstrap
+from osint_nexus.core import bootstrap, constants
 from osint_nexus.core.evasion import EvasionWeights
 
 # Guarantee directories exist at runtime before modules try to write to them

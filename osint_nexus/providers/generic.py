@@ -30,7 +30,7 @@ class SiteConfig(BaseModel):
     name: str = Field(..., description="The canonical name of the platform.")
     url_template: str = Field(..., description="URL template. Must contain the '{username}' placeholder.")
     error_indicator: str | None = Field(default=None, description="A substring that, if found, indicates the user does NOT exist.")
-    regex_pattern: re.Pattern | None = Field(default=None, description="A compiled regex pattern indicating user presence.")
+    regex_pattern: re.Pattern[str] | None = Field(default=None, description="A compiled regex pattern indicating user presence.")
     headers: dict[str, str] = Field(default_factory=dict, description="Custom HTTP headers to bypass basic blocks.")
     dork_query: str | None = Field(default=None, description="Custom Dork template containing '{username}'.")
     use_browser: bool = Field(default=False, description="Whether to route through a headless browser pool.")
@@ -46,7 +46,7 @@ class SiteConfig(BaseModel):
 
     @field_validator("regex_pattern", mode="before")
     @classmethod
-    def compile_regex(cls, v: str | re.Pattern | None) -> re.Pattern | None:
+    def compile_regex(cls, v: str | re.Pattern[str] | None) -> re.Pattern[str] | None:
         """Pre-compile regex for performance during high-volume async scans."""
         if isinstance(v, str):
             try:

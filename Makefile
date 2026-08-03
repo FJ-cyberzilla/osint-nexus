@@ -1,18 +1,30 @@
 # ==========================================================================
-# OSINT NEXUS - ADVANCED RECONNAISSANCE
+# FJ™ CYBERTRONIC SYSTEMS - ADVANCED OSINT RECONNAISSANCE
 # ==========================================================================
-# Base Theme: Orange
+# Developer   : FJ-cyberzilla
+# Base Theme  : Cyber-Orange & Purple Cyberpunk Gradient
+# Layout      : Mobile & Desktop Optimized (60-Column Grid)
 # ==========================================================================
 
-# Colors & Formatting
-ORANGE      := \033[38;5;208m
-BOLD        := \033[1m
-CYAN        := \033[36m
-GREEN       := \033[32m
-RESET       := \033[0m
-MARGIN      := "      "
+# --- Color Palette (Purple Gradient & Cyber-Orange) ---
+P_1      := \033[38;5;129m
+P_2      := \033[38;5;135m
+P_3      := \033[38;5;141m
+P_4      := \033[38;5;177m
+P_5      := \033[38;5;207m
+P_6      := \033[38;5;213m
 
-# Environment Settings
+ORG      := \033[38;5;208m
+ORG_L    := \033[38;5;214m
+WHT      := \033[1;37m
+GRY      := \033[38;5;242m
+GRN      := \033[1;32m
+CYN      := \033[1;36m
+RED      := \033[1;31m
+RST      := \033[0m
+B        := \033[1m
+
+# --- Environment Settings ---
 PYTHONPATH   := .
 SHELL        := /bin/bash
 UV_LINK_MODE := copy
@@ -20,80 +32,112 @@ export UV_LINK_MODE
 
 .PHONY: help install sync run health db-info test lint format clean
 
-# --- Help Menu ---
+# --- Interactive TUI Dashboard ---
 help:
 	@echo ""
-	@echo -e "$(ORANGE)$(BOLD)░█▀█░█▀▀░█░█░█░█░█▀▀░░░░░░░░░█▀█░█▀▀░▀█▀░█▀█░▀█▀$(RESET)"
-	@echo -e "$(ORANGE)$(BOLD)░█░█░█▀▀░▄▀▄░█░█░▀▀█░░░▄▄▄░░░█░█░▀▀█░░█░░█░█░░█░$(RESET)"
-	@echo -e "$(ORANGE)$(BOLD)░▀░▀░▀▀▀░▀░▀░▀▀▀░▀▀▀░░░░░░░░░▀▀▀░▀▀▀░▀▀▀░▀░▀░░▀░$(RESET)"
-	@echo ""
-	@echo -e "  $(ORANGE)============================================================$(RESET)"
-	@echo -e "  $(MARGIN)$(CYAN)$(BOLD)DEVELOPMENT & OPERATIONAL COMMANDS$(RESET)"
-	@echo -e "  $(ORANGE)============================================================$(RESET)"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)install$(RESET)   $(CYAN)•$(RESET)  Install dependencies with uv"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)sync$(RESET)      $(CYAN)•$(RESET)  Advanced synchronization of dependencies"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)run$(RESET)       $(CYAN)•$(RESET)  Execute OSINT scan (prompts for username)"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)health$(RESET)    $(CYAN)•$(RESET)  Check provider network status & circuit breakers"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)db-info$(RESET)   $(CYAN)•$(RESET)  Inspect schema architecture and database records"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)test$(RESET)      $(CYAN)•$(RESET)  Run comprehensive test suite"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)lint$(RESET)      $(CYAN)•$(RESET)  Verify code quality and complexity"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)format$(RESET)    $(CYAN)•$(RESET)  Apply consistent code formatting"
-	@echo -e "  $(MARGIN)$(ORANGE)$(BOLD)clean$(RESET)     $(CYAN)•$(RESET)  Purge caches and temporary artifacts"
-	@echo -e "  $(ORANGE)============================================================$(RESET)"
-	@echo -e "  $(MARGIN)$(CYAN)$(BOLD)Usage:$(RESET)  make run [USERNAME=<name>]"
+	@echo -e "  $(ORG)╭────────────────────────────────────────────────────────────╮$(RST)"
+	@echo -e "  $(ORG)│$(RST)  $(P_1)  ██████╗ ███████╗██╗███╗   ██╗████████╗$(RST)             $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)  $(P_2) ██╔═══██╗██╔════╝██║████╗  ██║╚══██╔══╝$(RST)             $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)  $(P_3) ╚██████╔╝███████║██║██║ ╚████║   ██║   $(RST)             $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)  $(P_4)  ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗$(RST)        $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)  $(P_5)  ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝$(RST)        $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)  $(P_6)  ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║$(RST)        $(ORG)│$(RST)"
+	@echo -e "  $(ORG)├────────────────────────────────────────────────────────────┤$(RST)"
+	@echo -e "  $(ORG)│$(RST) $(WHT)FJ™ Cybertronic Systems$(RST)  $(GRY)•$(RST)  $(ORG_L)$(B)Dev:$(RST) $(P_4)FJ-cyberzilla$(RST)          $(ORG)│$(RST)"
+	@echo -e "  $(ORG)├────────────────────────────────────────────────────────────┤$(RST)"
+	@echo -e "  $(ORG)│$(RST) $(ORG_L)$(B)SYSTEM COMMANDS & OPERATIONAL MENU$(RST)                        $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)                                                          $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST) $(P_3)📦 [SETUP]$(RST)                                                $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make install$(RST)   $(GRY)→$(RST) $(WHT)Install dependencies with uv          $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make sync$(RST)      $(GRY)→$(RST) $(WHT)Synchronize local environment state   $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)                                                          $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST) $(CYN)🎯 [EXECUTION]$(RST)                                           $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make run$(RST)       $(GRY)→$(RST) $(WHT)Initiate OSINT scan workflow          $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)                                                          $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST) $(GRN)📊 [TELEMETRY]$(RST)                                           $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make health$(RST)    $(GRY)→$(RST) $(WHT)Query provider network status         $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make db-info$(RST)   $(GRY)→$(RST) $(WHT)Inspect database & schema metrics     $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)                                                          $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST) $(ORG_L)🛠️  [DEV TOOLS]$(RST)                                           $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make test$(RST)      $(GRY)→$(RST) $(WHT)Execute test suite                    $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make lint$(RST)      $(GRY)→$(RST) $(WHT)Verify code quality and complexity    $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make format$(RST)    $(GRY)→$(RST) $(WHT)Apply automated code formatting       $(ORG)│$(RST)"
+	@echo -e "  $(ORG)│$(RST)   $(WHT)make clean$(RST)     $(GRY)→$(RST) $(WHT)Purge caches, artifacts & logs        $(ORG)│$(RST)"
+	@echo -e "  $(ORG)╰────────────────────────────────────────────────────────────╯$(RST)"
 	@echo ""
 
-# --- Implementation ---
+# --- Command Implementations ---
 
 install:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Installing dependencies with uv...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(P_3)📦 INSTALLATION$(ORG) ]─────────────────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Installing dependencies using uv...$(RST)"
 	@uv sync
-	@echo -e "$(GREEN)✔ Installation complete.$(RESET)"
+	@echo -e "$(ORG)│$(RST) $(GRN)✔ Dependencies successfully installed.$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"
 
 sync:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Synchronizing environment...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(P_3)📦 SYNCHRONIZATION$(ORG) ]────────────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Synchronizing environment state...$(RST)"
 	@uv sync
-	@echo -e "$(GREEN)✔ Environment up to date.$(RESET)"
+	@echo -e "$(ORG)│$(RST) $(GRN)✔ Environment up to date.$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"
 
 run:
-	@echo -e "$(ORANGE)┌────────────────────────────────────────────────────────────┐$(RESET)"
 	@if [ -z "$(USERNAME)" ]; then \
-		echo -ne "$(ORANGE)│ $(RESET) $(BOLD)Enter Target Username: $(RESET)"; \
+		echo -e "$(ORG)╭─[ $(CYN)🎯 TARGET ACQUISITION$(ORG) ]───────────────────────────────────╮$(RST)"; \
+		echo -ne "$(ORG)│$(RST) $(CYN)►$(RST) $(WHT)Enter Target Username: $(RST)"; \
 		read uname; \
-		echo -e "$(ORANGE)│ $(RESET) $(BOLD)Initiating scan for:$(RESET) $(CYAN)$$uname$(RESET)"; \
-		echo -e "$(ORANGE)└────────────────────────────────────────────────────────────┘$(RESET)"; \
+		echo -e "$(ORG)│$(RST) $(GRN)✔ Target Locked:$(RST) $(ORG_L)$$uname$(RST)"; \
+		echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"; \
+		echo -e "$(P_3)►$(RST) $(WHT)Initiating deep scan protocol...$(RST)\n"; \
 		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $$uname; \
 	else \
-		echo -e "$(ORANGE)│ $(RESET) $(BOLD)Initiating scan for:$(RESET) $(CYAN)$(USERNAME)$(RESET)"; \
-		echo -e "$(ORANGE)└────────────────────────────────────────────────────────────┘$(RESET)"; \
+		echo -e "$(ORG)╭─[ $(CYN)🎯 TARGET ACQUISITION$(ORG) ]───────────────────────────────────╮$(RST)"; \
+		echo -e "$(ORG)│$(RST) $(GRN)✔ Target Locked:$(RST) $(ORG_L)$(USERNAME)$(RST)"; \
+		echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"; \
+		echo -e "$(P_3)►$(RST) $(WHT)Initiating deep scan protocol...$(RST)\n"; \
 		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $(USERNAME); \
 	fi
 
 health:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Querying provider networks & circuit-breaker states...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(GRN)📊 NETWORK TELEMETRY$(ORG) ]────────────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Checking provider network status & circuit breakers...$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"
 	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main health
 
 db-info:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Accessing local telemetry database metrics...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(GRN)🗄️  DATABASE ARCHITECTURE$(ORG) ]───────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Inspecting local schema architecture and database records...$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"
 	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main db-info
 
 test:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Executing test suite...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(ORG_L)🧪 TEST SUITE EXECUTION$(ORG) ]─────────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Running comprehensive test suite via pytest...$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"
 	@export PYTHONPATH=$(PYTHONPATH) && pytest tests/
 
 lint:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Analyzing code quality...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(ORG_L)🔍 CODE QUALITY CHECK$(ORG) ]────────────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Analyzing code quality and complexity...$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"
 	@ruff check .
+	@echo -e "$(GRN)✔ Linting completed cleanly.$(RST)"
 
 format:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Formatting codebase...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(ORG_L)⚙️  AUTOMATED CODE FORMATTING$(ORG) ]─────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Applying standardized formatting across codebase...$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"
 	@ruff format .
+	@echo -e "$(GRN)✔ Formatting verified.$(RST)"
 
 clean:
-	@echo -e "$(ORANGE)>>$(RESET) $(BOLD)Purging artifacts and uv cache...$(RESET)"
+	@echo -e "$(ORG)╭─[ $(RED)🧹 SYSTEM PURGE$(ORG) ]────────────────────────────────────────────╮$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Purging temporary artifacts, cache files, and logs...$(RST)"
 	@rm -rf __pycache__ .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov *.egg-info *.egg build dist .venv
 	@rm -f data/*.db
 	@rm -rf logs/* log/*
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
-	@uv cache clean
-	@echo -e "$(GREEN)✔ Cleanup complete.$(RESET)"
+	@uv cache clean >/dev/null 2>&1 || true
+	@echo -e "$(ORG)│$(RST) $(GRN)✔ Cleanup completed successfully.$(RST)"
+	@echo -e "$(ORG)╰──────────────────────────────────────────────────────────╯$(RST)"

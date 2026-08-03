@@ -13,8 +13,8 @@ from typing import Any
 
 import aiosqlite
 
-from osint_nexus.core.config import Config
 from osint_nexus.core.bootstrap import DATABASE_PATH
+from osint_nexus.core.config import Config
 
 logger = logging.getLogger("osint_nexus.database")
 

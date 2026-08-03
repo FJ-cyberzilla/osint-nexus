@@ -10,12 +10,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 from osint_nexus.core.config import Config
 
 logger = logging.getLogger("osint_nexus.retry")
+
+T = TypeVar("T")
 
 
 class RetryHandler:
@@ -42,10 +44,10 @@ class RetryHandler:
 
     async def run(
         self,
-        func: Callable[..., Any],
+        func: Callable[..., Awaitable[T]],
         *args: Any,
         **kwargs: Any,
-    ) -> Any:
+    ) -> T:
         """
         Execute *func* with retries.
 
@@ -89,7 +91,7 @@ class RetryHandler:
         # Should never reach here; fallback raise
         if last_exception:
             raise last_exception
-        return None
+        raise RuntimeError("Retry loop finished without result or exception")
 
     async def health_check(self) -> bool:
         """Always healthy (stateless)."""

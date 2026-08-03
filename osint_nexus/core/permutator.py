@@ -136,11 +136,12 @@ class UsernamePermutator:
         """
         valid_set = set()
         for variant in variants:
-            # Rule 1: Length bounds
-            if self.config.min_length <= len(variant) <= self.config.max_length:
-                # Rule 2: Cannot start or end with a separator (violates most platform rules)
-                if not variant.startswith(self.config.separators) and not variant.endswith(self.config.separators):
-                    valid_set.add(variant)
+            # Rules: Length bounds and no separators at start
+            if (
+                self.config.min_length <= len(variant) <= self.config.max_length
+                and not variant.startswith(self.config.separators)
+            ):
+                valid_set.add(variant)
                     
         return valid_set
         

@@ -49,7 +49,7 @@ class CorrelationEngine:
             self._add_to_map(correlation_map, platform, "link", result.get("links", []))
         return correlation_map
 
-    def _add_to_map(self, cmap: dict, platform: str, prefix: str, items: list[str]) -> None:
+    def _add_to_map(self, cmap: dict[str, list[str]], platform: str, prefix: str, items: list[str]) -> None:
         for item in items:
             cmap.setdefault(f"{prefix}:{item}", []).append(platform)
 

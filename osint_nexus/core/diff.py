@@ -40,7 +40,7 @@ class DiffEngine:
     def _get_found_results(self, results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         return {r["platform"]: r for r in results if r.get("found")}
 
-    def _calculate_platform_changes(self, current: dict, last_known: dict) -> dict[str, Any]:
+    def _calculate_platform_changes(self, current: dict[str, Any], last_known: dict[str, Any]) -> dict[str, Any]:
         current_keys = set(current.keys())
         last_keys = set(last_known.keys())
         return {
@@ -48,14 +48,14 @@ class DiffEngine:
             "removed_platforms": list(last_keys - current_keys),
         }
 
-    def _calculate_content_changes(self, current: dict, last_known: dict) -> list[dict[str, str]]:
-        changes = []
+    def _calculate_content_changes(self, current: dict[str, Any], last_known: dict[str, Any]) -> list[dict[str, str]]:
+        changes: list[dict[str, str]] = []
         for platform, res in current.items():
             if platform in last_known:
                 self._check_result_diff(platform, res, last_known[platform], changes)
         return changes
 
-    def _check_result_diff(self, platform: str, new_res: dict, old_res: dict, changes: list) -> None:
+    def _check_result_diff(self, platform: str, new_res: dict[str, Any], old_res: dict[str, Any], changes: list[dict[str, str]]) -> None:
         for field in ("bio", "avatar_url"):
             if new_res.get(field) != old_res.get(field):
                 field_name = "avatar" if field == "avatar_url" else field

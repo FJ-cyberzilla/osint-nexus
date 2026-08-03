@@ -12,7 +12,7 @@ import asyncio
 import logging
 import random
 from types import TracebackType
-from typing import Any, cast, Self
+from typing import Any, Self, cast
 
 import curl_cffi.requests as curl_requests
 
@@ -187,34 +187,26 @@ class NetworkManager:
     async def _fetch_with_browser(self, url: str, **browser_options: Any) -> tuple[bool, str]:
         """Executes a request via the local BrowserPool ensuring strict memory boundaries."""
         try:
-            context = await self.browser_pool.get_context()
-        except Exception as e:
-            logger.error("Failed to acquire browser context: %s", e)
-            raise NetworkManagerError("Browser pool exhausted or dead.") from e
-
-        try:
-            page = await context.new_page()
-            # Dynamic timeout conversion for Playwright/Puppeteer (milliseconds)
-            timeout_ms = int(self._dynamic_timeout * 1000)
-            
-            response = await page.goto(url, timeout=timeout_ms, **browser_options)
-            content = await page.content()
-            
-            # None response usually means a navigation to a non-HTTP target (like about:blank) 
-            # or an intercepted request.
-            is_success = response is not None and response.status == 200
-            
-            if response:
-                await self._handle_response_status(response.status)
+            # use acquire_context as an async context manager
+            async with self.browser_pool.acquire_context() as context:
+                page = await context.new_page()
+                # Dynamic timeout conversion for Playwright/Puppeteer (milliseconds)
+                timeout_ms = int(self._dynamic_timeout * 1000)
                 
-            return is_success, content
-            
+                response = await page.goto(url, timeout=timeout_ms, **browser_options)
+                content = await page.content()
+                
+                # None response usually means a navigation to a non-HTTP target (like about:blank) 
+                # or an intercepted request.
+                is_success = response is not None and response.status == 200
+                
+                if response:
+                    await self._handle_response_status(response.status)
+                    
+                return is_success, content
         except Exception as exc:
             logger.warning("Browser navigation failed for %s: %s", url, exc)
             raise NetworkManagerError(f"Browser failure: {exc}") from exc
-        finally:
-            # Guarantee the context is closed to free up the RAM/Pool slot
-            await context.close()
 
     async def _handle_response_status(self, status_code: int) -> None:
         """

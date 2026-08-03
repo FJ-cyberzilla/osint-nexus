@@ -81,8 +81,8 @@ class PivotExtractor:
         self, soup: BeautifulSoup, source_url: str | None = None
     ) -> dict[str, list[Any]]:
         """Extract external links and identify potential connected social handles."""
-        external_links = set()
-        social_handles = []
+        external_links: set[str] = set()
+        social_handles: list[dict[str, str]] = []
         source_domain = self._get_source_domain(source_url)
 
         for a in soup.find_all("a", href=True):
@@ -90,7 +90,7 @@ class PivotExtractor:
 
         return {"external_links": list(external_links), "social_handles": social_handles}
         
-    def _process_link(self, a: Any, source_domain: str, external_links: set, social_handles: list) -> None:
+    def _process_link(self, a: Any, source_domain: str, external_links: set[str], social_handles: list[dict[str, str]]) -> None:
         href = a.get("href")
         if not self._is_external_http_url(href):
             return
@@ -112,7 +112,7 @@ class PivotExtractor:
         # This prevents prefix attacks like "not-example.com".
         return href_domain == source_domain or href_domain.endswith("." + source_domain)
 
-    def _add_social_handle_if_found(self, parsed_href: Any, href: str, social_handles: list) -> None:
+    def _add_social_handle_if_found(self, parsed_href: Any, href: str, social_handles: list[dict[str, str]]) -> None:
         handle = self._get_social_handle(parsed_href, href)
         if handle:
             social_handles.append(handle)

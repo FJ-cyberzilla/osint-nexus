@@ -1,8 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
+
 from osint_nexus.core.extractor import PivotExtractor
 
-def test_is_internal_domain_security():
+
+def test_is_internal_domain_security() -> None:
     extractor = PivotExtractor()
     source_domain = "example.com"
     
@@ -14,7 +15,7 @@ def test_is_internal_domain_security():
     assert extractor._is_internal_domain("not-example.com", source_domain) is False
     assert extractor._is_internal_domain("example.com.evil.com", source_domain) is False
 
-def test_get_social_handle_security():
+def test_get_social_handle_security() -> None:
     extractor = PivotExtractor()
     
     # Mocking parsed_href

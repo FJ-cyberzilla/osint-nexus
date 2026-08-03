@@ -23,6 +23,8 @@ try:
         BrowserContext,
         Playwright,
         async_playwright,
+    )
+    from playwright.async_api import (
         Error as PlaywrightError,
     )
 
@@ -118,7 +120,7 @@ class BrowserPoolManager:
         self, 
         proxy_url: str | None = None,
         extra_headers: dict[str, str] | None = None
-    ) -> AsyncGenerator[BrowserContext, None]:
+    ) -> AsyncGenerator[BrowserContext]:
         """
         Acquires a hardened browser context. Must be used as an async context manager
         to ensure the context is destroyed and memory is freed after use.

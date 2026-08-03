@@ -20,6 +20,7 @@ from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.report import TelemetryPayload
+from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
 logger = logging.getLogger("osint_nexus.orchestrator")
@@ -81,7 +82,7 @@ class ScanOrchestrator:
         self._abort_event.set()
 
     async def _execute_provider(
-        self, provider: ProviderProtocol, username: str, **microlink_options: Any
+        self, provider: BaseProvider, username: str, **microlink_options: Any
     ) -> IntelligenceObject:
         """
         Internal worker that executes provider logic with injected tools.
@@ -104,11 +105,11 @@ class ScanOrchestrator:
             return self._build_error_intel(provider.name, username, f"Error: {type(exc).__name__}")
 
     async def _perform_provider_check(
-        self, provider: ProviderProtocol, username: str, microlink_options: dict[str, Any]
+        self, provider: BaseProvider, username: str, microlink_options: dict[str, Any]
     ) -> IntelligenceObject:
         """Executes the provider check logic."""
         raw_found, content = await provider.check_username(
-            username, network=self.deps.network, mimicry=self.deps.mimicry, **microlink_options
+            username, **microlink_options
         )
         dork = provider.get_dork_query(username)
 
@@ -130,7 +131,7 @@ class ScanOrchestrator:
         return intel
 
     async def _infer_metadata(
-        self, provider: ProviderProtocol, username: str, content: Any, final_found: bool
+        self, provider: BaseProvider, username: str, content: Any, final_found: bool
     ) -> dict[str, Any]:
         """Infers metadata for a provider result."""
         metadata: dict[str, Any] = {}
@@ -142,7 +143,7 @@ class ScanOrchestrator:
 
     def _build_success_intel(
         self,
-        provider: ProviderProtocol,
+        provider: BaseProvider,
         username: str,
         final_found: bool,
         dork: str,
@@ -162,7 +163,7 @@ class ScanOrchestrator:
 
     async def _semaphored_worker(
         self,
-        provider: ProviderProtocol,
+        provider: BaseProvider,
         username: str,
         semaphore: asyncio.Semaphore,
         timeout: float | None = None,
@@ -185,7 +186,7 @@ class ScanOrchestrator:
     async def run_scan(
         self,
         username: str,
-        providers: list[ProviderProtocol],
+        providers: list[BaseProvider],
         timeout: float | None = 15.0,
         **microlink_options: Any,
     ) -> AsyncGenerator[IntelligenceObject]:

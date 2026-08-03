@@ -1,4 +1,4 @@
-from osint_nexus.core.permutator import Permutator
+from osint_nexus.core.permutator import UsernamePermutator as Permutator
 
 
 def test_permutator_basic() -> None:

@@ -122,7 +122,7 @@ class AntiCaptchaSolver(CaptchaSolver):
         start_time = time.monotonic()
         while True:
             await asyncio.sleep(self.config.poll_interval)
-            async with session.post(self.GET_TASK_RESULT_URL, json=poll_payload) as resp:
+            async with session.post(self.get_task_result_url, json=poll_payload) as resp:
                 data = await resp.json()
 
             token = self._handle_poll_response(data, start_time)
