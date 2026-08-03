@@ -23,6 +23,15 @@ classDiagram
         +infer()
     }
 
+    class DatabaseManager {
+        +save_result()
+        +save_batch()
+        +get_cached()
+        +set_cached()
+        +search()
+        +query_results()
+    }
+
     class ComplianceEngine {
         +sanitize(data)
     }
@@ -37,8 +46,10 @@ classDiagram
     AgentSubsystems o-- HealthTracker
     AgentSubsystems o-- ReportGenerator
     AgentSubsystems o-- DeviceInferenceService
+    AgentSubsystems o-- DatabaseManager
     AgentSubsystems o-- ComplianceEngine
     AgentSubsystems o-- Exporter
     ScanOrchestrator --> DeviceInferenceService
+    ScanOrchestrator --> DatabaseManager
     ReportGenerator --> ComplianceEngine
     ReportGenerator --> Exporter

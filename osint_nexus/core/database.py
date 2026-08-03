@@ -115,6 +115,24 @@ class DatabaseManager:
                 await db.execute("INSERT INTO schema_version (version) VALUES (2)")
                 current_version = 2
 
+            if current_version < 3:
+                # Cache table
+                await db.execute(
+                    "CREATE TABLE IF NOT EXISTS cache ("
+                    "key TEXT PRIMARY KEY,"
+                    "value TEXT,"
+                    "expires_at DATETIME"
+                    ")"
+                )
+                # FTS5 table
+                await db.execute("""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS content_search USING fts5(
+                        url, title, body, domain
+                    )
+                """)
+                await db.execute("INSERT INTO schema_version (version) VALUES (3)")
+                current_version = 3
+
             await db.commit()
 
     async def ensure_initialized(self) -> None:
@@ -137,6 +155,57 @@ class DatabaseManager:
             logger.debug("Saved result: %s / %s = %s", username, platform, found)
         except Exception as exc:
             logger.error("Failed to save result: %s", exc, exc_info=True)
+
+    async def save_batch(self, query: str, data: list[tuple]) -> None:
+        """Perform batch insertion."""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                await db.executemany(query, data)
+                await db.commit()
+        except Exception as exc:
+            logger.error("Failed to perform batch insert: %s", exc, exc_info=True)
+
+    async def get_cached(self, key: str) -> dict[str, Any] | None:
+        """Get cached item."""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                db.row_factory = aiosqlite.Row
+                cursor = await db.execute(
+                    "SELECT * FROM cache WHERE key = ? AND expires_at > datetime('now')",
+                    (key,)
+                )
+                row = await cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as exc:
+            logger.error("Failed to get cache: %s", exc, exc_info=True)
+            return None
+
+    async def set_cached(self, key: str, value: str, ttl_days: int = 1) -> None:
+        """Set cached item."""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                await db.execute(
+                    f"INSERT OR REPLACE INTO cache (key, value, expires_at) VALUES (?, ?, datetime('now', '+{ttl_days} day'))",
+                    (key, value)
+                )
+                await db.commit()
+        except Exception as exc:
+            logger.error("Failed to set cache: %s", exc, exc_info=True)
+
+    async def search(self, keyword: str) -> list[dict[str, Any]]:
+        """Perform FTS5 search."""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                db.row_factory = aiosqlite.Row
+                cursor = await db.execute(
+                    "SELECT url, title, snippet(content_search, 2, '<b>', '</b>', '...', 10) as body FROM content_search WHERE content_search MATCH ?",
+                    (keyword,)
+                )
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+        except Exception as exc:
+            logger.error("Search failed: %s", exc, exc_info=True)
+            return []
 
     async def query_results(
         self,

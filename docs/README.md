@@ -17,7 +17,7 @@ OSINT Nexus has been refactored to a modular, facade-based architecture, decoupl
 *   **`HealthTracker`**: Implements platform health monitoring with failure decay, circuit breaking, and auto-healing.
 *   **`ReportGenerator`**: Handles telemetry collection and scan summary generation.
 *   **`DeviceInferenceService`**: Provides intelligent device context (MAC OUI, port heuristics).
-*   **`DatabaseManager`**: Ensures thread-safe/async-safe persistence of scan results.
+*   **`DatabaseManager`**: Ensures thread-safe/async-safe persistence of scan results. Includes FTS5 support for full-text search, batch insertion methods, and persistent caching with automatic TTL.
 
 ## Key Improvements
 
