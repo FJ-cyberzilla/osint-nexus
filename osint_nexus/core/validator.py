@@ -9,110 +9,19 @@ collaborate to decide if a result is valid.
 from __future__ import annotations
 
 import logging
-import re
-from enum import Enum
-from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field
+from osint_nexus.core.validators.base import (
+    ValidationResult,
+    ValidationRule,
+    ValidationVote,
+)
+from osint_nexus.core.validators.rules import (
+    ExclusionPatternRule,
+    MinimumContentLengthRule,
+    UsernamePresenceRule,
+)
 
 logger = logging.getLogger("osint_nexus.validator")
-
-
-class ValidationVote(Enum):
-    VALID = "valid"
-    INVALID = "invalid"
-    NEUTRAL = "neutral"
-
-
-class ValidationResult(BaseModel):
-    """Detailed outcome of a validation check."""
-
-    model_config = ConfigDict(frozen=True)
-
-    is_valid: bool
-    confidence: float = Field(ge=0.0, le=1.0)
-    details: str = ""
-    rules_applied: list[str] = Field(default_factory=list)
-    evidence: dict[str, str] = Field(default_factory=dict)
-
-
-@runtime_checkable
-class ValidationRule(Protocol):
-    """Interface for all validation rules."""
-
-    @property
-    def name(self) -> str: ...
-
-    def evaluate(
-        self, response_text: str, platform: str, target_username: str
-    ) -> tuple[ValidationVote, float]:
-        """
-        Evaluate response text and return a vote with confidence.
-        Confidence: 0.0 to 1.0 (1.0 = absolute certainty).
-        """
-        ...
-
-
-class UsernamePresenceRule:
-    """Rule that checks if the username literally appears in the response."""
-
-    name = "UsernamePresenceRule"
-
-    def evaluate(
-        self, response_text: str, platform: str, target_username: str
-    ) -> tuple[ValidationVote, float]:
-        if not response_text or not target_username:
-            return ValidationVote.NEUTRAL, 0.0
-
-        if target_username.lower() in response_text.lower():
-            return ValidationVote.VALID, 0.8
-        return ValidationVote.NEUTRAL, 0.0
-
-
-class ExclusionPatternRule:
-    """Rule that checks for known 'Not Found' or 'Error' signatures."""
-
-    def __init__(self, patterns: list[str] | None = None, name: str | None = None) -> None:
-        self.name = name or "ExclusionPatternRule"
-        self._patterns = patterns or [
-            r"404 Not Found",
-            r"page not found",
-            r"doesn't exist",
-            r"user not found",
-            r"could not find",
-            r"profile not found",
-            r"no results found",
-        ]
-        self._compiled = [re.compile(p, re.IGNORECASE) for p in self._patterns]
-
-    def evaluate(
-        self, response_text: str, platform: str, target_username: str
-    ) -> tuple[ValidationVote, float]:
-        for pattern in self._compiled:
-            if pattern.search(response_text):
-                return ValidationVote.INVALID, 0.95
-        return ValidationVote.NEUTRAL, 0.0
-
-
-class MinimumContentLengthRule:
-    """Rule that flags very short responses as potentially invalid."""
-
-    name = "MinimumContentLengthRule"
-
-    def __init__(self, min_length: int = 50, max_length: int = 1_000_000) -> None:
-        self.min_length = min_length
-        self.max_length = max_length
-
-    def evaluate(
-        self, response_text: str, platform: str, target_username: str
-    ) -> tuple[ValidationVote, float]:
-        length = len(response_text)
-        if length < self.min_length:
-            return ValidationVote.INVALID, 0.9
-        if length > self.max_length:
-            # Unusually large – treat as suspicious but not necessarily invalid
-            return ValidationVote.NEUTRAL, 0.3
-        return ValidationVote.NEUTRAL, 0.0
 
 
 class ResultValidator:
@@ -135,7 +44,7 @@ class ResultValidator:
         self.target_username = target_username
         self._rules = rules or []
         if not self._rules:
-            # Default rule set (order can affect performance but not result)
+            # Default rule set
             self._rules = [
                 UsernamePresenceRule(),
                 ExclusionPatternRule(),

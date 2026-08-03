@@ -10,6 +10,7 @@ from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.core.mimicry import HumanMimicryEngine
+from osint_nexus.utils.limiter import AdaptiveRateLimiter, RateLimiter
 from osint_nexus.utils.retry import RetryHandler
 
 logger = logging.getLogger("osint_nexus.network")
@@ -87,6 +88,7 @@ class NetworkManager:
         evasion: EvasionAgent,
         mimicry: HumanMimicryEngine,
         browser_pool: BrowserPoolManager,
+        rate_limiter: RateLimiter | None = None,
     ) -> None:
         self.config = config
         self.evasion = evasion
@@ -95,19 +97,22 @@ class NetworkManager:
         self.retry = RetryHandler(config)
         self.monitor = NetworkMonitor(config, evasion)
         self.session_manager = SessionManager(config, evasion, self.monitor.dynamic_timeout)
+        self.rate_limiter = rate_limiter or AdaptiveRateLimiter()
 
     async def fetch(
         self,
         url: str,
         headers: dict[str, str] | None = None,
         use_browser: bool = False,
+        site_name: str | None = None,
         **browser_options: Any,
     ) -> tuple[bool, str]:
         async def _attempt() -> tuple[bool, str]:
+            await self.rate_limiter.wait(site_name)
             await self.mimicry.apply_jitter()
             if use_browser:
-                return await self._fetch_with_browser(url, **browser_options)
-            return await self._fetch_with_curl(url, headers)
+                return await self._fetch_with_browser(url, site_name, **browser_options)
+            return await self._fetch_with_curl(url, headers, site_name)
 
         try:
             return await self.retry.run(_attempt)
@@ -116,7 +121,9 @@ class NetworkManager:
             await self.session_manager.close()
             return False, ""
 
-    async def _fetch_with_curl(self, url: str, custom_headers: dict[str, str] | None) -> tuple[bool, str]:
+    async def _fetch_with_curl(
+        self, url: str, custom_headers: dict[str, str] | None, site_name: str | None
+    ) -> tuple[bool, str]:
         session = await self.session_manager.get_session()
         request_headers = {"Referer": "https://www.google.com/", "Accept-Language": "en-US,en;q=0.9"}
         if custom_headers:
@@ -127,21 +134,28 @@ class NetworkManager:
         start_time = asyncio.get_event_loop().time()
         try:
             response = await session.get(url, headers=request_headers, timeout=self.monitor.dynamic_timeout)
-            self.monitor.adapt(asyncio.get_event_loop().time() - start_time)
+            response_time = asyncio.get_event_loop().time() - start_time
+            await self.rate_limiter.report(site_name, response.status_code, response_time)
+            self.monitor.adapt(response_time)
             await self.monitor.handle_status(response.status_code)
             return response.status_code in (200, 201, 204), str(response.text)
         except curl_requests.RequestsError as exc:
             await self.session_manager.close()
             raise NetworkManagerError(f"cURL failure: {exc}") from exc
 
-    async def _fetch_with_browser(self, url: str, **browser_options: Any) -> tuple[bool, str]:
+    async def _fetch_with_browser(
+        self, url: str, site_name: str | None, **browser_options: Any
+    ) -> tuple[bool, str]:
         try:
             async with self.browser_pool.acquire_context() as context:
                 page = await context.new_page()
                 timeout_ms = int(self.monitor.dynamic_timeout * 1000)
+                start_time = asyncio.get_event_loop().time()
                 response = await page.goto(url, timeout=timeout_ms, **browser_options)
+                response_time = asyncio.get_event_loop().time() - start_time
                 content = await page.content()
                 if response:
+                    await self.rate_limiter.report(site_name, response.status, response_time)
                     await self.monitor.handle_status(response.status)
                 return (response is not None and response.status == 200), content
         except Exception as exc:

@@ -125,7 +125,7 @@ def print_latest_scan_results(limit: int = 10) -> None:
     _render_scan_results_table(console, rows)
 
 
-def _fetch_latest_scan_results(limit: int) -> list[tuple]:
+def _fetch_latest_scan_results(limit: int) -> list[tuple[Any, ...]]:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
@@ -142,7 +142,7 @@ def _fetch_latest_scan_results(limit: int) -> list[tuple]:
         raise
 
 
-def _render_scan_results_table(console: Console, rows: list[tuple]) -> None:
+def _render_scan_results_table(console: Console, rows: list[tuple[Any, ...]]) -> None:
     # Build clean columns matching your schema footprint
     table = Table(title="📊 Recent Footprint Discoveries", border_style="dim")
     table.add_column("ID", justify="center", style="dim")
