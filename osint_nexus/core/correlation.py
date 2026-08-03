@@ -61,3 +61,31 @@ class CorrelationEngine:
 
     def _filter_correlations(self, correlation_map: dict[str, list[str]]) -> dict[str, list[str]]:
         return {k: v for k, v in correlation_map.items() if len(v) > 1}
+
+
+class RelationMapper:
+    def generate_network_graph(self, username_data: Any) -> dict[str, Any]:
+        """
+        Generates a network graph based on username data.
+        """
+        nodes = [
+            {"id": username_data.username, "type": "primary"},
+            *[{"id": acc.username, "type": acc.type} for acc in username_data.accounts],
+            *[{"id": conn.email, "type": "email"} for conn in username_data.emails],
+            *[{"id": conn.phone, "type": "phone"} for conn in username_data.phones],
+        ]
+
+        edges = []
+        for acc in username_data.accounts:
+            edges.append({"source": username_data.username, "target": acc.username, "type": "owns"})
+            for conn in username_data.emails:
+                edges.append({"source": acc.username, "target": conn.email, "type": "uses_email"})
+            for conn in username_data.phones:
+                edges.append({"source": acc.username, "target": conn.phone, "type": "uses_phone"})
+
+        for acc1 in username_data.accounts:
+            for acc2 in username_data.accounts:
+                if acc1 != acc2:
+                    edges.append({"source": acc1.username, "target": acc2.username, "type": "interacts"})
+
+        return {"nodes": nodes, "edges": edges}

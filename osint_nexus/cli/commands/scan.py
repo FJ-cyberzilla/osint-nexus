@@ -26,12 +26,7 @@ async def async_main(args: argparse.Namespace) -> None:
         console.print("[yellow]Scan cancelled by system.[/]")
         raise
     finally:
-        # Assuming generate_report is moved or kept in cli/main.py
-        # For now, importing from a shared place or re-implementing if needed.
-        # As per plan, let's keep generate_report simple or move it too.
-        # Given I don't want to break too much, I'll keep it in main.py for now
-        # and re-import it here if necessary.
-        from osint_nexus.cli.main import generate_report
+        from osint_nexus.cli.scanner import generate_report
 
         generate_report(agent)
 

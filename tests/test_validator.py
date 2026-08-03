@@ -1,4 +1,6 @@
-from osint_nexus.core.validator import ExclusionPatternRule, ResultValidator
+from osint_nexus.core.validator import ResultValidator
+from osint_nexus.core.validators.base import ValidationVote
+from osint_nexus.core.validators.rules import ExclusionPatternRule
 
 
 def test_validation_logic_permissive() -> None:
@@ -31,7 +33,6 @@ def test_validation_logic_high_confidence_exclusion() -> None:
     # Actually, the rule itself returns the confidence.
 
     # Let's add a custom high-confidence exclusion rule
-    from osint_nexus.core.validator import ValidationVote
 
     class HighConfidenceExclusion(ExclusionPatternRule):
         def evaluate(self, response_text: str, platform: str, username: str) -> tuple[ValidationVote, float]:
