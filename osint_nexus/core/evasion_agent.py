@@ -53,7 +53,7 @@ class EvasionAgent:
 
     def get_user_agent(self) -> str:
         """Return a random User-Agent string from the pool."""
-        return random.choice(self.user_agents)
+        return random.choice(self.user_agents)  # nosec B311
 
     async def report_failure(self, status_code: int) -> None:
         """

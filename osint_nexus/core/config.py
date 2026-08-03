@@ -58,13 +58,15 @@ class Config(BaseSettings):
     click_observation_delay: tuple[float, float] = (0.5, 2.0)
     db_path: str = "osint_results.db"
     captcha: dict[str, Any] = Field(default_factory=dict)
-    service_urls: dict[str, str] = Field(default_factory=lambda: {
-        "anti_captcha": "https://api.anti-captcha.com",
-        "two_captcha": "https://2captcha.com",
-        "two_captcha_res": "https://2captcha.com/res.php",
-        "aparat": "https://www.aparat.com/{}",
-        "github": "https://github.com/{}"
-    })
+    service_urls: dict[str, str] = Field(
+        default_factory=lambda: {
+            "anti_captcha": "https://api.anti-captcha.com",
+            "two_captcha": "https://2captcha.com",
+            "two_captcha_res": "https://2captcha.com/res.php",
+            "aparat": "https://www.aparat.com/{}",
+            "github": "https://github.com/{}",
+        }
+    )
     tls_backend: str = "httpx"
     log_level: int = logging.INFO
     evasion_weights: EvasionWeights = field(default_factory=EvasionWeights)

@@ -87,7 +87,7 @@ def inspect_database_schema() -> None:
                 continue
 
             # Properly quote table name to prevent SQL injection, though already safe from sqlite_master
-            quoted_table_name = f'"{table_name.replace("\"", "\"\"")}"'
+            quoted_table_name = f'"{table_name.replace('"', '""')}"'
             cursor.execute(f"SELECT COUNT(*) FROM {quoted_table_name};")  # nosec
             row_count = cursor.fetchone()[0]
 
@@ -116,6 +116,16 @@ def inspect_database_schema() -> None:
 
 def print_latest_scan_results(limit: int = 10) -> None:
     console = Console()
+    rows = _fetch_latest_scan_results(limit)
+
+    if not rows:
+        console.print("[dim]No scan logs recorded yet.[/dim]")
+        return
+
+    _render_scan_results_table(console, rows)
+
+
+def _fetch_latest_scan_results(limit: int) -> list[tuple]:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
@@ -125,16 +135,14 @@ def print_latest_scan_results(limit: int = 10) -> None:
         )
         rows = cursor.fetchall()
         conn.close()
+        return rows
     except sqlite3.OperationalError as e:
         if "no such table: results" in str(e):
-            console.print("[dim]No scan logs recorded yet.[/dim]")
-            return
+            return []
         raise
 
-    if not rows:
-        console.print("[dim]No scan logs recorded yet.[/dim]")
-        return
 
+def _render_scan_results_table(console: Console, rows: list[tuple]) -> None:
     # Build clean columns matching your schema footprint
     table = Table(title="📊 Recent Footprint Discoveries", border_style="dim")
     table.add_column("ID", justify="center", style="dim")
@@ -149,7 +157,6 @@ def print_latest_scan_results(limit: int = 10) -> None:
         table.add_row(str(id_), username, platform, status, timestamp)
 
     console.print(table)
-    conn.close()
 
 
 def troubleshoot_agent_error(error: BaseException, provider_name: str = "") -> str:

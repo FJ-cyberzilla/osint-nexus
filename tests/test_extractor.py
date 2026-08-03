@@ -1,42 +1,46 @@
-from unittest.mock import MagicMock
+from bs4 import BeautifulSoup
 
-from osint_nexus.core.extractor import PivotExtractor
+from osint_nexus.core.extractor import LinkSocialExtractor
 
 
 def test_is_internal_domain_security() -> None:
-    extractor = PivotExtractor()
-    source_domain = "example.com"
-    
-    # Positive cases
-    assert extractor._is_internal_domain("example.com", source_domain) is True
-    assert extractor._is_internal_domain("sub.example.com", source_domain) is True
-    
-    # Negative cases (vulnerability fix check)
-    assert extractor._is_internal_domain("not-example.com", source_domain) is False
-    assert extractor._is_internal_domain("example.com.evil.com", source_domain) is False
+    extractor = LinkSocialExtractor()
+    source_url = "http://example.com"
+
+    def _test(href: str, should_be_internal: bool) -> None:
+        html = f'<a href="{href}">link</a>'
+        soup = BeautifulSoup(html, "html.parser")
+        result = extractor.extract(soup, source_url)
+        # If internal, it shouldn't be in external_links
+        is_internal = href not in result["external_links"]
+        assert is_internal == should_be_internal
+
+    _test("http://example.com", True)
+    _test("http://sub.example.com", True)
+    _test("http://not-example.com", False)
+    _test("http://example.com.evil.com", False)
+
 
 def test_get_social_handle_security() -> None:
-    extractor = PivotExtractor()
-    
-    # Mocking parsed_href
-    parsed_href = MagicMock()
-    
+    extractor = LinkSocialExtractor()
+
+    def _get_social(url: str) -> dict[str, str] | None:
+        html = f'<a href="{url}">link</a>'
+        soup = BeautifulSoup(html, "html.parser")
+        result = extractor.extract(soup)
+        handles = result["social_handles"]
+        return handles[0] if handles else None
+
     # Positive case
-    parsed_href.netloc = "twitter.com"
-    parsed_href.path = "/user"
-    result = extractor._get_social_handle(parsed_href, "https://twitter.com/user")
+    result = _get_social("https://twitter.com/user")
     assert result is not None
     assert result["platform"] == "Twitter"
-    
+
     # Subdomain case
-    parsed_href.netloc = "sub.twitter.com"
-    parsed_href.path = "/user"
-    result = extractor._get_social_handle(parsed_href, "https://sub.twitter.com/user")
+    result = _get_social("https://sub.twitter.com/user")
     assert result is not None
     assert result["platform"] == "Twitter"
 
     # Negative case (vulnerability fix check)
-    parsed_href.netloc = "not-twitter.com"
-    parsed_href.path = "/user"
-    result = extractor._get_social_handle(parsed_href, "https://not-twitter.com/user")
+    result = _get_social("https://not-twitter.com/user")
     assert result is None

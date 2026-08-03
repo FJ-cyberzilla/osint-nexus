@@ -105,7 +105,7 @@ def _instantiate_solvers(
 ) -> list[CaptchaSolver]:
     """Instantiate configured solvers."""
     solvers: list[CaptchaSolver] = []
-    
+
     # Define solver mapping: name -> (constructor, config_key_value)
     mapping = {
         "two_captcha": (TwoCaptchaSolver, config.two_captcha_key),
@@ -118,7 +118,7 @@ def _instantiate_solvers(
                 solvers.append(cls(config, session))
         elif key:
             solvers.append(cls(config, session))
-            
+
     return solvers
 
 

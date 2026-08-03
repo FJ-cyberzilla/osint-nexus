@@ -25,13 +25,20 @@ class SiteConfig(BaseModel):
     Schema for a generic site provider configuration.
     Immutable to ensure thread/async safety across the application lifecycle.
     """
+
     model_config = {"frozen": True}
 
     name: str = Field(..., description="The canonical name of the platform.")
     url_template: str = Field(..., description="URL template. Must contain the '{username}' placeholder.")
-    error_indicator: str | None = Field(default=None, description="A substring that, if found, indicates the user does NOT exist.")
-    regex_pattern: re.Pattern[str] | None = Field(default=None, description="A compiled regex pattern indicating user presence.")
-    headers: dict[str, str] = Field(default_factory=dict, description="Custom HTTP headers to bypass basic blocks.")
+    error_indicator: str | None = Field(
+        default=None, description="A substring that, if found, indicates the user does NOT exist."
+    )
+    regex_pattern: re.Pattern[str] | None = Field(
+        default=None, description="A compiled regex pattern indicating user presence."
+    )
+    headers: dict[str, str] = Field(
+        default_factory=dict, description="Custom HTTP headers to bypass basic blocks."
+    )
     dork_query: str | None = Field(default=None, description="Custom Dork template containing '{username}'.")
     use_browser: bool = Field(default=False, description="Whether to route through a headless browser pool.")
     timeout: float = Field(default=15.0, description="Network timeout in seconds.")
@@ -71,43 +78,44 @@ class GenericProvider(BaseProvider):
         super().__init__(config.name, network)
         self.config = config
         self.dork_engine = dork_engine or DorkEngine()
-        
+
         # Instance-specific logger for better observability in async traces
         self._logger = logging.getLogger(f"osint_nexus.providers.generic.{self.config.name}")
 
     async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
         """
         Fetch the profile page and return (found, content).
-
-        Args:
-            username: The target username to query.
-            **kwargs: Extensible kwargs passed down to the network manager.
-
-        Returns:
-            A tuple containing a boolean (True if found) and the raw response content/error.
         """
-        # Safely encode the username to prevent URL injection/malformation
         safe_username = quote(username)
         url = self.config.url_template.format(username=safe_username)
-        
+
         self._logger.debug("Executing check for target URL: %s", url)
 
-        try:
-            # Propagate config-level attributes down to the network layer
-            found, content = await self.network.fetch(
-                url, 
-                headers=self.config.headers, 
-                use_browser=self.config.use_browser,
-                timeout=self.config.timeout,
-                **kwargs
-            )
-        except Exception as e:
-            self._logger.error("Network constraint or exception occurred: %s", e, exc_info=True)
-            return False, f"NetworkError: {str(e)}"
+        found, content, error = await self._fetch(url, **kwargs)
+        if error:
+            return False, error
 
         # Ensure content is stringified safely for substring/regex matching
         content_str = str(content) if content else ""
+        return self._detect(found, content_str)
 
+    async def _fetch(self, url: str, **kwargs: Any) -> tuple[bool, str | None, str | None]:
+        """Fetch content from the network."""
+        try:
+            found, content = await self.network.fetch(
+                url,
+                headers=self.config.headers,
+                use_browser=self.config.use_browser,
+                timeout=self.config.timeout,
+                **kwargs,
+            )
+            return found, content, None
+        except Exception as e:
+            self._logger.error("Network constraint or exception occurred: %s", e, exc_info=True)
+            return False, None, f"NetworkError: {str(e)}"
+
+    def _detect(self, found: bool, content_str: str) -> tuple[bool, str]:
+        """Detect username existence based on rules."""
         # 1. Negative Detection: Check for explicit error strings (e.g., "Page not found")
         if self.config.error_indicator and self.config.error_indicator in content_str:
             self._logger.debug("Match: Negative error indicator '%s' found.", self.config.error_indicator)
@@ -122,7 +130,9 @@ class GenericProvider(BaseProvider):
             return True, content_str
 
         # 3. Fallback: Rely on the NetworkManager's heuristic (usually HTTP 200 vs 404)
-        self._logger.debug("Detection inconclusive based on rules, falling back to HTTP heuristic: found=%s", found)
+        self._logger.debug(
+            "Detection inconclusive based on rules, falling back to HTTP heuristic: found=%s", found
+        )
         return found, content_str
 
     def get_dork_query(self, username: str) -> str:
@@ -138,4 +148,3 @@ class GenericProvider(BaseProvider):
 
         # Fallback to the centralized DorkEngine if no custom query is defined
         return self.dork_engine.get_dork_query(username, self.name)
-        

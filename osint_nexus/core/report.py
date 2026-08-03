@@ -20,7 +20,7 @@ class AdvancedReportGenerator:
         """Generates the final report as a Rich Panel."""
         # In a real scenario, we would fetch data from db_manager
         # For now, we'll return a beautifully formatted summary panel
-        
+
         banner_content = (
             f"Target Identifier : [bold orange3]{target_username}[/bold orange3]\n"
             f"Hardware Integrity : [bold green]✅ CONSISTENT (AUTHENTIC)[/bold green]\n"

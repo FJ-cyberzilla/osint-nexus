@@ -153,7 +153,7 @@ class CaptchaSolver(ABC):
             logger.warning("Solver %s attempt %d failed: %s", self.name, attempt + 1, exc)
         else:
             logger.error("Unexpected error in solver %s: %s", self.name, exc, exc_info=True)
-            
+
         if attempt == self.config.max_retries - 1:
             raise
 

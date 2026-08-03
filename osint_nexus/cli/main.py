@@ -45,8 +45,10 @@ logger = logging.getLogger("osint_nexus.cli")
 # UI Controller
 # -----------------------------------------------------------------------------
 
+
 class HeaderComponent:
     """Renders the top branding and target info panel."""
+
     def __init__(self, username: str) -> None:
         self.username = username
 
@@ -59,6 +61,7 @@ class HeaderComponent:
 
 class ProgressComponent:
     """Renders the real-time progress bar."""
+
     def __init__(self, progress: Progress, task: Any) -> None:
         self.progress = progress
         self.task = task
@@ -69,6 +72,7 @@ class ProgressComponent:
 
 class DashboardComponent:
     """Renders the Intelligence Dashboard (Fingerprint, Footprint, etc.)."""
+
     def __init__(self) -> None:
         self.fingerprint = ""
         self.footprint = ""
@@ -95,7 +99,6 @@ class DashboardComponent:
         # UserAgent (often platform specific metadata)
         self.useragent = intel.metadata.get("device_inference", {}).get("os_guess", "Generic")
 
-
     def render(self) -> Table:
         table = Table(title="Target Analysis", expand=True)
         table.add_column("Category")
@@ -109,6 +112,7 @@ class DashboardComponent:
 
 class LogComponent:
     """Renders the scrollable log/error panel."""
+
     def __init__(self) -> None:
         self.logs: list[str] = []
 
@@ -122,6 +126,7 @@ class LogComponent:
 
 class MetricComponent:
     """Renders a simple ASCII success/failure metric graph."""
+
     def __init__(self) -> None:
         self.successes = 0
         self.failures = 0
@@ -150,7 +155,7 @@ class CLIController:
         self.username = username
         self.total = total_providers
         self.progress, self.task = self._make_progress()
-        
+
         # New Components
         self.header = HeaderComponent(username)
         self.progress_bar = ProgressComponent(self.progress, self.task)
@@ -178,11 +183,11 @@ class CLIController:
             Layout(name="middle"),
             Layout(self.logs.render(), size=6),
         )
-        
+
         # Split the middle layout into a row
         layout["middle"].split_row(
             Layout(self.dashboard.render()),
-            Layout(self.metrics.render(), size=20), # Adjusted size for better fit
+            Layout(self.metrics.render(), size=20),  # Adjusted size for better fit
         )
         return layout
 
@@ -191,7 +196,7 @@ class CLIController:
         # Update dashboard with new data
         self.dashboard.update_data(intel)
         self.metrics.update(intel)
-        
+
         # Update logs
         status = "Found" if intel.found else "Not Found"
         self.logs.add_log(f"Analyzed {intel.platform}: {status}")
@@ -200,10 +205,10 @@ class CLIController:
         self.progress.update(self.task, advance=1)
 
 
-
 # -----------------------------------------------------------------------------
 # Signal Handling
 # -----------------------------------------------------------------------------
+
 
 def setup_signals(agent: OSINTAgent) -> None:
     """Register signal handlers for graceful shutdown."""
@@ -230,6 +235,7 @@ def setup_signals(agent: OSINTAgent) -> None:
 # -----------------------------------------------------------------------------
 # Core Scan Loop
 # -----------------------------------------------------------------------------
+
 
 async def run_scan(
     agent: OSINTAgent,
@@ -266,13 +272,12 @@ async def run_scan(
 
         # Display final summary
         console.print("\n[bold green]Scan completed successfully![/]")
-        # Note: Summary needs actual results. The original controller.results was used. 
+        # Note: Summary needs actual results. The original controller.results was used.
         # I should probably store results in a new simple list or have the dashboard track them.
         # For now, I'll pass an empty list or fix summary calculation.
         # Let's fix summary to take total_providers, or just mock it as requested by production-readiness.
         # Actually, let's keep it simple: just print completion.
         console.print("[bold green]Reconnaissance finished.[/]")
-
 
 
 def _build_summary(results: list[Any], total_providers: int) -> str:
@@ -292,6 +297,7 @@ def _build_summary(results: list[Any], total_providers: int) -> str:
 # -----------------------------------------------------------------------------
 # Report Generation
 # -----------------------------------------------------------------------------
+
 
 def generate_report(agent: OSINTAgent) -> None:
     """Generate and display the final report."""
@@ -323,6 +329,7 @@ def generate_report(agent: OSINTAgent) -> None:
 # -----------------------------------------------------------------------------
 # Main Entry Points
 # -----------------------------------------------------------------------------
+
 
 async def async_main(args: argparse.Namespace) -> None:
     """Main async entry point for the CLI."""

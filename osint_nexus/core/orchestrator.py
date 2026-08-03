@@ -19,6 +19,7 @@ from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
+from osint_nexus.core.provider_runner import ProviderRunner
 from osint_nexus.core.report import TelemetryPayload
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
@@ -76,6 +77,15 @@ class ScanOrchestrator:
         self.device_inference = device_inference
         self._abort_event = asyncio.Event()
 
+        self.provider_runner = ProviderRunner(
+            validator=self.deps.validator,
+            db_manager=self.deps.db_manager,
+            network=self.deps.network,
+            mimicry=self.deps.mimicry,
+            extractor=self.deps.extractor,
+            device_inference=device_inference,
+        )
+
     def abort(self) -> None:
         """Signals all active and pending scans to terminate gracefully."""
         logger.warning("Scan abort requested. Cancelling pending operations.")
@@ -96,50 +106,15 @@ class ScanOrchestrator:
             return self._build_error_intel(provider.name, username, "Skipped (Circuit Breaker Tripped)")
 
         try:
-            return await self._perform_provider_check(provider, username, microlink_options)
+            intel = await self.provider_runner.run(provider, username, **microlink_options)
+            getattr(self.deps.health, "record_success", lambda _: None)(provider.name)
+            return intel
         except Exception as exc:  # pylint: disable=broad-exception-caught
             if os.getenv("DEBUG_PROVIDERS"):
                 raise
             logger.error("Scan failure in %s: %s", provider.name, exc, exc_info=True)
             getattr(self.deps.health, "record_failure", lambda _: None)(provider.name)
             return self._build_error_intel(provider.name, username, f"Error: {type(exc).__name__}")
-
-    async def _perform_provider_check(
-        self, provider: BaseProvider, username: str, microlink_options: dict[str, Any]
-    ) -> IntelligenceObject:
-        """Executes the provider check logic."""
-        raw_found, content = await provider.check_username(
-            username, **microlink_options
-        )
-        dork = provider.get_dork_query(username)
-
-        final_found = raw_found and self.deps.validator.validate(content, provider.name)
-
-        # Harvest secondary identifiers if found
-        pivots: dict[str, Any] = {}
-        if final_found:
-            pivots = await self.deps.extractor.extract(str(content))
-
-        metadata = await self._infer_metadata(provider, username, content, final_found)
-        metadata.update(pivots)
-
-        await self.deps.db_manager.save_result(username, provider.name, final_found)
-
-        intel = self._build_success_intel(provider, username, final_found, dork, content, metadata)
-
-        getattr(self.deps.health, "record_success", lambda _: None)(provider.name)
-        return intel
-
-    async def _infer_metadata(
-        self, provider: BaseProvider, username: str, content: Any, final_found: bool
-    ) -> dict[str, Any]:
-        """Infers metadata for a provider result."""
-        metadata: dict[str, Any] = {}
-        if final_found and self.device_inference:
-            profile = await self.device_inference.infer(str(content), provider.get_metadata(username))
-            metadata["device_inference"] = profile.model_dump(mode="json")
-            logger.info("Inferred device for %s: %s", provider.name, metadata["device_inference"])
-        return metadata
 
     def _build_success_intel(
         self,

@@ -2,7 +2,7 @@
 Local Browser Pool Manager using Playwright.
 
 Provides hardened, evasion-capable browser contexts for deep parsing and
-complex scraping tasks. Designed for concurrency, strict memory management, 
+complex scraping tasks. Designed for concurrency, strict memory management,
 and stealth to replace reliance on external headless APIs.
 """
 
@@ -14,6 +14,7 @@ import random
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from types import TracebackType
 from typing import Any, Self
 
@@ -50,12 +51,14 @@ STEALTH_INIT_SCRIPT = """
 
 class BrowserPoolError(Exception):
     """Base exception for BrowserPoolManager failures."""
+
     pass
 
 
 @dataclass(frozen=True, slots=True)
 class BrowserPoolConfig:
     """Immutable configuration for the browser pool and its contexts."""
+
     headless: bool = True
     timeout_ms: int = 30000
     user_agents: tuple[str, ...] = (
@@ -72,21 +75,53 @@ class BrowserPoolConfig:
     )
 
 
+class BrowserContextFactory:
+    """Handles configuration and creation of stealthy BrowserContexts."""
+
+    def __init__(self, config: BrowserPoolConfig) -> None:
+        self.config = config
+
+    async def create(
+        self, browser: Browser, proxy_url: str | None = None, extra_headers: dict[str, str] | None = None
+    ) -> BrowserContext:
+        """Configures and creates a new BrowserContext."""
+        # Randomize fingerprint
+        user_agent = random.choice(self.config.user_agents)  # nosec B311
+        viewport = random.choice(self.config.viewports)  # nosec B311
+        proxy_config = {"server": proxy_url} if proxy_url else None
+
+        context = await browser.new_context(
+            user_agent=user_agent,
+            viewport=viewport,
+            proxy=proxy_config,
+            extra_http_headers=extra_headers,
+            bypass_csp=True,
+        )
+
+        # Inject stealth script
+        await context.add_init_script(STEALTH_INIT_SCRIPT)
+        return context
+
+
+class BrowserPoolState(Enum):
+    UNINITIALIZED = auto()
+    INITIALIZING = auto()
+    READY = auto()
+    CLOSED = auto()
+
+
 class BrowserPoolManager:
     """
     Manages a pool of hardened browser contexts safely and concurrently.
-    
-    Features:
-    - Async lock-guarded initialization and teardown.
-    - Yields contexts safely via context managers to prevent RAM leaks.
-    - Native JS stealth injection per context.
     """
 
     def __init__(self, config: BrowserPoolConfig | None = None) -> None:
         self.config = config or BrowserPoolConfig()
+        self._factory = BrowserContextFactory(self.config)
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
-        
+        self._state: BrowserPoolState = BrowserPoolState.UNINITIALIZED
+
         # Guard for concurrent initialization requests
         self._lifecycle_lock = asyncio.Lock()
 
@@ -99,16 +134,21 @@ class BrowserPoolManager:
             )
 
         async with self._lifecycle_lock:
-            if self._playwright is not None and self._browser is not None:
-                return  # Already initialized
+            if self._state == BrowserPoolState.READY:
+                return
 
+            if self._state == BrowserPoolState.INITIALIZING:
+                # Should not happen with proper locking/usage, but handle it
+                raise BrowserPoolError("Initialization already in progress.")
+
+            self._state = BrowserPoolState.INITIALIZING
             logger.debug("Initializing local Playwright browser pool...")
             try:
                 self._playwright = await async_playwright().start()
                 self._browser = await self._playwright.chromium.launch(
-                    headless=self.config.headless,
-                    args=["--disable-blink-features=AutomationControlled"]
+                    headless=self.config.headless, args=["--disable-blink-features=AutomationControlled"]
                 )
+                self._state = BrowserPoolState.READY
                 logger.info("Browser pool initialized successfully.")
             except Exception as e:
                 logger.error("Failed to initialize Playwright: %s", e)
@@ -117,20 +157,10 @@ class BrowserPoolManager:
 
     @asynccontextmanager
     async def acquire_context(
-        self, 
-        proxy_url: str | None = None,
-        extra_headers: dict[str, str] | None = None
+        self, proxy_url: str | None = None, extra_headers: dict[str, str] | None = None
     ) -> AsyncGenerator[BrowserContext]:
         """
-        Acquires a hardened browser context. Must be used as an async context manager
-        to ensure the context is destroyed and memory is freed after use.
-
-        Args:
-            proxy_url: Optional proxy string (e.g., "http://user:pass@ip:port").
-            extra_headers: Optional HTTP headers to inject into the context.
-
-        Yields:
-            A heavily configured, stealthy BrowserContext.
+        Acquires a hardened browser context using the factory.
         """
         if not self._browser:
             await self.initialize()
@@ -138,27 +168,15 @@ class BrowserPoolManager:
         if self._browser is None:
             raise BrowserPoolError("Browser failed to initialize.")
 
-        # Randomize fingerprint to blend into diverse traffic
-        user_agent = random.choice(self.config.user_agents)
-        viewport = random.choice(self.config.viewports)
-        proxy_config = {"server": proxy_url} if proxy_url else None
-
         context: BrowserContext | None = None
         try:
-            context = await self._browser.new_context(
-                user_agent=user_agent,
-                viewport=viewport,
-                proxy=proxy_config,
-                extra_http_headers=extra_headers,
-                bypass_csp=True, # Often necessary for dynamic scraping
+            context = await self._factory.create(
+                self._browser, proxy_url=proxy_url, extra_headers=extra_headers
             )
-            
-            # Inject stealth script to evade basic bot defenses
-            await context.add_init_script(STEALTH_INIT_SCRIPT)
-            
+
             logger.debug("Acquired hardened context (Proxy: %s)", "Yes" if proxy_url else "No")
             yield context
-            
+
         except PlaywrightError as e:
             logger.error("Playwright error during context execution: %s", e)
             raise BrowserPoolError(f"Context error: {e}") from e
@@ -170,10 +188,13 @@ class BrowserPoolManager:
     async def close(self) -> None:
         """Gracefully closes the browser and stops the Playwright daemon."""
         async with self._lifecycle_lock:
+            if self._state == BrowserPoolState.CLOSED:
+                return
             await self._force_cleanup()
 
     async def _force_cleanup(self) -> None:
         """Internal teardown routine bypassing the lock."""
+        logger.debug("Cleaning up browser pool resources...")
         try:
             if self._browser:
                 await self._browser.close()
@@ -184,6 +205,7 @@ class BrowserPoolManager:
         finally:
             self._browser = None
             self._playwright = None
+            self._state = BrowserPoolState.CLOSED
             logger.info("Browser pool closed.")
 
     # --- Async Context Manager Protocol ---

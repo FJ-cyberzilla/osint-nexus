@@ -56,7 +56,7 @@ class HumanMimicryEngine:
         self._latency_provider = latency_provider
 
         # Consistent persona for the session
-        self.persona = random.choice(["focused", "distracted", "erratic"])
+        self.persona = random.choice(["focused", "distracted", "erratic"])  # nosec B311
 
         self._profiles: dict[Activity, TimingProfile] = {
             Activity.PAGE_LOAD: TimingProfile(1.0, 5.0, burstiness=0.1),

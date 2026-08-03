@@ -30,7 +30,16 @@ async def test_database_initialization(tmp_path: Any) -> None:
         "sqlite_sequence",
     }
 
-    for table in ["results", "schema_version", "entities", "pivots", "avatars", "historical_scans", "cache", "content_search"]:
+    for table in [
+        "results",
+        "schema_version",
+        "entities",
+        "pivots",
+        "avatars",
+        "historical_scans",
+        "cache",
+        "content_search",
+    ]:
         assert table in tables
 
 
@@ -57,11 +66,14 @@ async def test_database_migration(tmp_path: Any) -> None:
 
         # Check if new tables exist
         for table in ["entities", "cache", "content_search"]:
-            async with db.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'") as cur:
+            async with db.execute(
+                f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"
+            ) as cur:
                 assert await cur.fetchone() is not None
 
+
 @pytest.mark.asyncio
-async def test_database_refactor_features(tmp_path):
+async def test_database_refactor_features(tmp_path: Any) -> None:
     db_path = tmp_path / "test.db"
     db_manager = DatabaseManager(db_path=str(db_path))
     await db_manager.ensure_initialized()
@@ -69,27 +81,31 @@ async def test_database_refactor_features(tmp_path):
     # Test Cache
     await db_manager.set_cached("test_key", "test_value")
     cached = await db_manager.get_cached("test_key")
+    assert cached is not None
     assert cached["value"] == "test_value"
 
     # Test FTS5 Search
     async with aiosqlite.connect(str(db_path)) as db:
-        await db.execute("INSERT INTO content_search (url, title, body, domain) VALUES (?, ?, ?, ?)",
-                         ("http://test.com", "Test Title", "Test body content", "test.com"))
+        await db.execute(
+            "INSERT INTO content_search (url, title, body, domain) VALUES (?, ?, ?, ?)",
+            ("http://test.com", "Test Title", "Test body content", "test.com"),
+        )
         await db.commit()
-    
+
     results = await db_manager.search("body")
     assert len(results) == 1
     assert "<b>body</b>" in results[0]["body"]
 
     # Test Batch Insert
-    await db_manager.save_batch("INSERT INTO results (username, platform, found) VALUES (?, ?, ?)",
-                                [("u1", "p1", 1), ("u2", "p2", 0)])
-    
+    await db_manager.save_batch(
+        "INSERT INTO results (username, platform, found) VALUES (?, ?, ?)", [("u1", "p1", 1), ("u2", "p2", 0)]
+    )
+
     # Query results to verify batch
     results = await db_manager.query_results(username="u1")
     assert len(results) == 1
     assert results[0]["username"] == "u1"
-    
+
     results = await db_manager.query_results(username="u2")
     assert len(results) == 1
     assert results[0]["username"] == "u2"

@@ -1,7 +1,7 @@
 """
 Facade for the OSINT Nexus framework.
 
-Orchestrates the scan lifecycle across providers, browser management, 
+Orchestrates the scan lifecycle across providers, browser management,
 and reporting.
 """
 
@@ -50,14 +50,14 @@ class OSINTAgent:
         self.username = username
         self.config = Config()
         self.evasion_weights = EvasionWeights()
-        
+
         # Initialize subsystems
         self.health = HealthTracker()
         self.validator = ResultValidator(username)
         self.db = DatabaseManager(self.config)
         self.mimicry = HumanMimicryEngine(self.config)
         self.extractor = PivotExtractor()
-        
+
         self.evasion = EvasionAgent(self.config)
         self.browser_pool = BrowserPoolManager()
         self.network = NetworkManager(
@@ -66,7 +66,7 @@ class OSINTAgent:
             mimicry=self.mimicry,
             browser_pool=self.browser_pool,
         )
-        
+
         self.subsystems = AgentSubsystems(
             registry=ProviderRegistry(
                 evasion_manager=self.evasion,
