@@ -1,19 +1,16 @@
 # ==========================================================================
 # FJ™ CYBERTRONIC SYSTEMS - ADVANCED OSINT RECONNAISSANCE
 # ==========================================================================
-# Developer   : FJ-cyberzilla
-# Base Theme  : Cyber-Orange & Purple Cyberpunk Gradient
-# Layout      : Mobile & Desktop Optimized (60-Column Grid)
+# Refactored for better design and error handling
 # ==========================================================================
 
-# --- Color Palette (Purple Gradient & Cyber-Orange) ---
+# --- Colors ---
 P_1      := \033[38;5;129m
 P_2      := \033[38;5;135m
 P_3      := \033[38;5;141m
 P_4      := \033[38;5;177m
 P_5      := \033[38;5;207m
 P_6      := \033[38;5;213m
-
 ORG      := \033[38;5;208m
 ORG_L    := \033[38;5;214m
 WHT      := \033[1;37m
@@ -21,18 +18,29 @@ GRY      := \033[38;5;242m
 GRN      := \033[1;32m
 CYN      := \033[1;36m
 RED      := \033[1;31m
+YEL      := \033[38;5;226m
+PUR_L    := \033[38;5;183m
 RST      := \033[0m
 B        := \033[1m
 
-# --- Environment Settings ---
+# --- Configuration ---
 PYTHONPATH   := .
 SHELL        := /bin/bash
-UV_LINK_MODE := copy
-export UV_LINK_MODE
+UV           := $(shell command -v uv 2> /dev/null)
+PYTEST       := pytest
+RUFF         := ruff
+
+# --- Helper Functions ---
+define check_uv
+	@if [ -z "$(UV)" ]; then \
+		echo -e "$(RED)Error: uv is not installed. Please install it first.$(RST)"; \
+		exit 1; \
+	fi
+endef
 
 .PHONY: help install sync run health db-info test lint format clean
 
-# --- Interactive TUI Dashboard ---
+# --- Targets ---
 help:
 	@echo ""
 	@echo -e "  $(ORG)╭──────────────────────────────────────╮$(RST)"
@@ -66,78 +74,63 @@ help:
 	@echo -e "  $(ORG)╰──────────────────────────────────────╯$(RST)"
 	@echo ""
 
-# --- Command Implementations ---
-
 install:
-	@echo -e "$(ORG)╭─[ $(P_3)📦 INSTALLATION$(ORG) ]──────────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Installing dependencies...$(RST)"
-	@uv sync
-	@echo -e "$(ORG)│$(RST) $(GRN)✔ Installed successfully.$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
+	$(check_uv)
+	@echo -e "$(ORG)⚡ Installing dependencies...$(RST)"
+	@$(UV) sync || { echo -e "$(RED)Installation failed.$(RST)"; exit 1; }
+	@echo -e "$(GRN)✔ Installed successfully.$(RST)"
 
 sync:
-	@echo -e "$(ORG)╭─[ $(P_3)📦 SYNCHRONIZATION$(ORG) ]───────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Syncing environment...$(RST)"
-	@uv sync
-	@echo -e "$(ORG)│$(RST) $(GRN)✔ Environment updated.$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
+	$(check_uv)
+	@echo -e "$(ORG)⚡ Syncing environment...$(RST)"
+	@$(UV) sync || { echo -e "$(RED)Sync failed.$(RST)"; exit 1; }
+	@echo -e "$(GRN)✔ Environment updated.$(RST)"
 
 run:
-	@if [ -z "$(USERNAME)" ]; then \
-		echo -e "$(ORG)╭─[ $(CYN)🎯 TARGET ACQUISITION$(ORG) ]───────╮$(RST)"; \
-		echo -ne "$(ORG)│$(RST) $(CYN)►$(RST) $(WHT)Enter Username: $(RST)"; \
-		read uname; \
-		echo -e "$(ORG)│$(RST) $(GRN)✔ Locked:$(RST) $(ORG_L)$$uname$(RST)"; \
-		echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"; \
-		echo -e "$(P_3)►$(RST) $(WHT)Initiating scan...$(RST)\n"; \
-		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $$uname; \
-	else \
-		echo -e "$(ORG)╭─[ $(CYN)🎯 TARGET ACQUISITION$(ORG) ]───────╮$(RST)"; \
-		echo -e "$(ORG)│$(RST) $(GRN)✔ Locked:$(RST) $(ORG_L)$(USERNAME)$(RST)"; \
-		echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"; \
-		echo -e "$(P_3)►$(RST) $(WHT)Initiating scan...$(RST)\n"; \
-		export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $(USERNAME); \
-	fi
+	@uname="$(USERNAME)"; \
+	if [ -z "$$uname" ]; then \
+		echo -e "$(ORG)Enter Username $(PUR_L)(type 'q' to exit):$(RST)"; \
+		while [ -z "$$uname" ]; do \
+			echo -ne "$(ORG)► $(RST)"; \
+			read uname; \
+			if [ "$$uname" = "cancel" ] || [ "$$uname" = "q" ]; then \
+				echo -e "$(YEL)Operation cancelled.$(RST)"; \
+				exit 0; \
+			elif [ -z "$$uname" ]; then \
+				echo -e "$(RED)Username cannot be empty. Please try again.$(RST)"; \
+			fi; \
+		done; \
+	fi; \
+	echo -e "$(ORG)Initiating scan for:$(RST) $(B)$$uname$(RST)"; \
+	export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $$uname || { echo -e "$(RED)Scan failed.$(RST)"; exit 1; }
 
 health:
-	@echo -e "$(ORG)╭─[ $(GRN)📊 NETWORK TELEMETRY$(ORG) ]──────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Checking network status...$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
-	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main health
+	@echo -e "$(ORG)Checking network status...$(RST)"
+	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main health || { echo -e "$(RED)Health check failed.$(RST)"; exit 1; }
 
 db-info:
-	@echo -e "$(ORG)╭─[ $(GRN)🗄️  DATABASE ARCHITECTURE$(ORG) ]──────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Inspecting database...$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
-	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main db-info
+	@echo -e "$(ORG)Inspecting database...$(RST)"
+	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main db-info || { echo -e "$(RED)Database inspection failed.$(RST)"; exit 1; }
 
 test:
-	@echo -e "$(ORG)╭─[ $(ORG_L)🧪 TEST SUITE$(ORG) ]──────────────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Running tests with coverage...$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
-	@export PYTHONPATH=$(PYTHONPATH) && pytest --cov=osint_nexus tests/
+	@echo -e "$(ORG)Running tests...$(RST)"
+	@export PYTHONPATH=$(PYTHONPATH) && $(PYTEST) --cov=osint_nexus tests/ || { echo -e "$(RED)Tests failed.$(RST)"; exit 1; }
 
 lint:
-	@echo -e "$(ORG)╭─[ $(ORG_L)🔍 CODE QUALITY$(ORG) ]──────────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Checking quality...$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
-	@ruff check .
+	@echo -e "$(ORG)Checking quality...$(RST)"
+	@$(RUFF) check . || { echo -e "$(RED)Linting failed.$(RST)"; exit 1; }
 	@echo -e "$(GRN)✔ Linting clean.$(RST)"
 
 format:
-	@echo -e "$(ORG)╭─[ $(ORG_L)⚙️  FORMATTING$(ORG) ]──────────────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Applying formatting...$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
-	@ruff format .
+	@echo -e "$(ORG)Applying formatting...$(RST)"
+	@$(RUFF) format . || { echo -e "$(RED)Formatting failed.$(RST)"; exit 1; }
 	@echo -e "$(GRN)✔ Formatted.$(RST)"
 
 clean:
-	@echo -e "$(ORG)╭─[ $(RED)🧹 SYSTEM PURGE$(ORG) ]───────────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Purging artifacts...$(RST)"
+	@echo -e "$(RED)Purging artifacts...$(RST)"
 	@rm -rf __pycache__ .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov *.egg-info *.egg build dist .venv
 	@rm -f data/*.db
 	@rm -rf logs/* log/*
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
-	@uv cache clean >/dev/null 2>&1 || true
-	@echo -e "$(ORG)│$(RST) $(GRN)✔ Cleanup complete.$(RST)"
-	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
+	@$(UV) cache clean >/dev/null 2>&1 || true
+	@echo -e "$(GRN)✔ Cleanup complete.$(RST)"
