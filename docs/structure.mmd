@@ -1,17 +1,13 @@
 classDiagram
-    class OSINTAgent {
-        +AgentSubsystems subsystems
-        +run_scan()
-        +get_final_report()
-    }
+    direction TB
+    %% Branded Component Map
+    %% Author: FJ-cyberzilla
+    %% Org: FJ™ Cybertronic Systems
     
-    class AgentSubsystems {
-        +ScanOrchestrator orchestrator
-        +HealthTracker health
-        +ReportGenerator report
-        +DeviceInferenceService device_inference
-        +ComplianceEngine compliance
-        +List~Exporter~ exporters
+    class OSINTAgent {
+
+        +run_scan(username)
+        +get_final_report()
     }
     
     class ScanOrchestrator {
@@ -19,37 +15,44 @@ classDiagram
         +abort()
     }
     
-    class DeviceInferenceService {
-        +infer()
+    class HealthTracker {
+        +check_status()
+        +auto_heal()
     }
-
+    
+    class DeviceInferenceService {
+        +infer_context()
+    }
+    
     class DatabaseManager {
         +save_result()
         +save_batch()
         +get_cached()
         +set_cached()
         +search()
-        +query_results()
+    }
+    
+    class CaptchaSolver {
+        +solve()
+    }
+    
+    class Provider {
+        <<interface>>
+        +scan()
     }
 
     class ComplianceEngine {
         +sanitize(data)
     }
 
-    class Exporter {
-        <<interface>>
-        +export(data)
-    }
-    
-    OSINTAgent --> AgentSubsystems
-    AgentSubsystems o-- ScanOrchestrator
-    AgentSubsystems o-- HealthTracker
-    AgentSubsystems o-- ReportGenerator
-    AgentSubsystems o-- DeviceInferenceService
-    AgentSubsystems o-- DatabaseManager
-    AgentSubsystems o-- ComplianceEngine
-    AgentSubsystems o-- Exporter
+    OSINTAgent --> ScanOrchestrator
+    ScanOrchestrator --> HealthTracker
     ScanOrchestrator --> DeviceInferenceService
     ScanOrchestrator --> DatabaseManager
-    ReportGenerator --> ComplianceEngine
-    ReportGenerator --> Exporter
+    ScanOrchestrator --> CaptchaSolver
+    ScanOrchestrator --> Provider
+    ScanOrchestrator --> ComplianceEngine
+    
+    Provider <|-- GithubProvider
+    Provider <|-- GenericProvider
+    Provider <|-- AparatProvider

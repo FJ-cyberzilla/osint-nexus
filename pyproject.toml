@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "osint_nexus"
-version = "2.0.1"
+version = "3.1.7"
 description = "High-performance OSINT username finder"
 readme = "README.md"
 requires-python = ">=3.13"
