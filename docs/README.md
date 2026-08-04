@@ -4,7 +4,7 @@
 
 An adaptive, high-performance OSINT agent for verifying username presence across platforms with advanced evasion, validation, and device inference capabilities.
 
-## Version: 2.1.0
+## Version: 3.1.7
 
 ## Architecture Overview
 
@@ -18,15 +18,21 @@ OSINT Nexus has been refactored to a modular, facade-based architecture, decoupl
 *   **`ReportGenerator`**: Handles telemetry collection and scan summary generation.
 *   **`DeviceInferenceService`**: Provides intelligent device context (MAC OUI, port heuristics).
 *   **`DatabaseManager`**: Ensures thread-safe/async-safe persistence of scan results. Includes FTS5 support for full-text search, batch insertion methods, and persistent caching with automatic TTL.
+*   **`CaptchaRegistry`**: Adaptive captcha solving interface supporting multiple providers (e.g., AntiCaptcha, 2Captcha).
+*   **`BrowserPool`**: Manages browser instance lifecycle, recycling, and pooling to minimize resource usage, utilizing the modular `BrowserEngine` factory for platform-specific implementations.
+*   **`BrowserEngine` (Factory)**: Provides a unified interface, dynamically selecting between `PyQtBrowserEngine` (for desktop) and `PlaywrightBrowserEngine` (for Termux/Android fallback) based on the environment.
+*   **`TelemetryBridge`**: Collects platform-specific probes (DNS leaks, hardware metrics).
+*   **`DetectionEngine`**: Performs advanced analysis like timing-entropy detection.
+*   **`ExporterEngine`**: Supports data export in standardized formats like STIX.
 
 ## Key Improvements
 
 *   **Health Monitoring & Circuit Breaking**: Robust failure tracking with configurable thresholds and auto-healing.
-*   **Debugging**: Added developer-friendly `DEBUG_PROVIDERS` flag for graceful error handling.
+*   **Evasion**: Enhanced adaptive request handling and stealth via dedicated evasion agent.
 *   **CLI Enhancements**: Added a dedicated `health` command for monitoring provider status.
 *   **Concurrency**: Resolved database persistence race conditions in `run_scan`.
 *   **Modular Design**: Logic extracted into independent, testable subsystems.
-*   **Enhanced Capability**: Added `DeviceInferenceService` for production-grade device context.
+*   **Enhanced Capability**: Added `DeviceInferenceService`, `TelemetryBridge`, `DetectionEngine`, and `ExporterEngine`.
 *   **Termux Optimizations**: Automated TLS profile selection (`chrome120`) for Android/Termux stability.
 *   **Aesthetic Reporting**: Integrated `rich` for color-coded CLI tables and final summaries.
 

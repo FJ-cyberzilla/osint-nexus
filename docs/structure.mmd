@@ -5,7 +5,6 @@ classDiagram
     %% Org: FJ™ Cybertronic Systems
     
     class OSINTAgent {
-
         +run_scan(username)
         +get_final_report()
     }
@@ -32,8 +31,40 @@ classDiagram
         +search()
     }
     
-    class CaptchaSolver {
+    class CaptchaRegistry {
         +solve()
+        +register_solver()
+    }
+    
+    class BrowserPool {
+        +get_instance()
+        +recycle()
+    }
+    
+    class BrowserEngine {
+        <<interface>>
+        +run_navigation(url)
+    }
+    
+    class PyQtBrowserEngine {
+        +run_navigation(url)
+    }
+    
+    class PlaywrightBrowserEngine {
+        +run_navigation(url)
+    }
+    
+    class TelemetryBridge {
+        +collect_probes()
+        +report()
+    }
+    
+    class DetectionEngine {
+        +analyze_entropy()
+    }
+    
+    class ExporterEngine {
+        +export_stix()
     }
     
     class Provider {
@@ -49,7 +80,14 @@ classDiagram
     ScanOrchestrator --> HealthTracker
     ScanOrchestrator --> DeviceInferenceService
     ScanOrchestrator --> DatabaseManager
-    ScanOrchestrator --> CaptchaSolver
+    ScanOrchestrator --> CaptchaRegistry
+    ScanOrchestrator --> BrowserPool
+    BrowserPool --> BrowserEngine
+    BrowserEngine <|-- PyQtBrowserEngine
+    BrowserEngine <|-- PlaywrightBrowserEngine
+    ScanOrchestrator --> TelemetryBridge
+    ScanOrchestrator --> DetectionEngine
+    ScanOrchestrator --> ExporterEngine
     ScanOrchestrator --> Provider
     ScanOrchestrator --> ComplianceEngine
     

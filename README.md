@@ -17,14 +17,15 @@ _A high-performance reconnaissance engine by_ **[FJ-cyberzilla](https://github.c
 
 ## Overview
 
-OSINT Nexus is a modular, facade-based system designed to automate username reconnaissance across diverse web platforms. It focuses on reliability, stealth (evasion), and data integrity.
+OSINT Nexus is a modular, facade-based system designed to automate username reconnaissance across diverse web platforms. It focuses on reliability, stealth (evasion), and data integrity, with advanced capabilities for browser pooling, captcha handling, telemetry collection, and data export.
 
 ## Key Features
 
 *   **Modular Architecture**: Decoupled orchestration and subsystem design.
 *   **Intelligent Recon**: Advanced device inference, platform fingerprinting, and timing-entropy based detection.
-*   **Resilient Design**: Health tracking, automatic circuit breaking, and self-healing for robust scanning.
-*   **Stealth & Evasion**: Browser fingerprinting, captcha solving, and adaptive request handling (e.g., `curl_cffi`).
+*   **Resilient Design**: Health tracking, automatic circuit breaking, self-healing, and adaptive request handling (evasion agent).
+*   **Browser & Captcha Management**: Built-in browser pooling, recycling, and multi-provider captcha solving, featuring a cross-platform engine (PyQt6/Playwright) with automatic environment detection.
+*   **Telemetry & Data Integrity**: Comprehensive telemetry collection (DNS, hardware) and data export support (e.g., STIX).
 *   **Persistence**: Async-ready SQLite database with support for caching and FTS5 full-text search.
 *   **Aesthetic UI**: Color-coded, rich CLI interfaces for real-time monitoring and reporting.
 *   **Android/Termux Optimized**: Configured for high-performance mobile execution.
@@ -64,7 +65,7 @@ All operational commands are managed via `make`.
 
 ## Development
 
-- **Tech Stack**: Python 3.13, FastAPI, Pydantic, SQLite (aiosqlite), Rich, Playwright (optional).
+- **Tech Stack**: Python 3.13, FastAPI, Pydantic, SQLite (aiosqlite), Rich, Playwright.
 - **Standards**: Strict typing (`mypy`), linting (`ruff`), and comprehensive unit testing (`pytest`).
 
 ---

@@ -31,6 +31,7 @@ except ImportError:
 from osint_nexus.core.browser.config import BrowserPoolConfig
 from osint_nexus.core.browser.factory import BrowserContextFactory
 from osint_nexus.core.browser.monitor import PoolMonitor
+from osint_nexus.core.telemetry.bridge import WebViewBridge
 
 logger = logging.getLogger("osint_nexus.core.browser.pool")
 
@@ -53,10 +54,11 @@ class BrowserPoolManager:
     Manages a pool of hardened browser contexts safely and concurrently.
     """
 
-    def __init__(self, config: BrowserPoolConfig | None = None) -> None:
+    def __init__(self, config: BrowserPoolConfig | None = None, bridge: WebViewBridge | None = None) -> None:
         self.config = config or BrowserPoolConfig()
         self._factory = BrowserContextFactory(self.config)
         self._monitor = PoolMonitor()
+        self._bridge = bridge
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
         self._state: BrowserPoolState = BrowserPoolState.UNINITIALIZED
@@ -99,6 +101,11 @@ class BrowserPoolManager:
             context = await self._factory.create(
                 self._browser, proxy_url=proxy_url, extra_headers=extra_headers
             )
+            if self._bridge:
+                # Expose the bridge handler to the page
+                page = context.pages[0] if context.pages else await context.new_page()
+                await page.expose_function("webviewBridge", self._bridge.handle_message)
+
             self._monitor.record_acquisition()
             yield context
         except PlaywrightError as e:
