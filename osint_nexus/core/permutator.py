@@ -70,6 +70,20 @@ class SeparatorStrategy:
         return variants
 
 
+class PermutationStrategyFactory:
+    """Factory to create permutation strategies based on config."""
+
+    @staticmethod
+    def create_strategies(config: PermutationConfig) -> list[PermutationStrategy]:
+        strategies: list[PermutationStrategy] = [
+            SeparatorStrategy(),
+            AffixStrategy(),
+        ]
+        if config.use_leetspeak:
+            strategies.append(LeetSpeakStrategy())
+        return strategies
+
+
 class UsernamePermutator:
     """
     Advanced generator for target username permutations.
@@ -80,40 +94,37 @@ class UsernamePermutator:
         self.config = config or PermutationConfig()
         self._logger = logging.getLogger(f"osint_nexus.permutator.{self.__class__.__name__}")
         self._separator_re = re.compile(r"[\._-]")
-        self._strategies: list[PermutationStrategy] = [
-            SeparatorStrategy(),
-            AffixStrategy(),
-        ]
-        if self.config.use_leetspeak:
-            self._strategies.append(LeetSpeakStrategy())
+        self._strategies = PermutationStrategyFactory.create_strategies(self.config)
 
     def generate(self, username: str) -> set[str]:
-        if not username or not username.strip():
-            return set()
-
-        username = username.lower().strip()
-        parts = [p for p in self._separator_re.split(username) if p]
-
+        parts = self._get_parts(username)
         if not parts:
             return set()
 
         clean_base = "".join(parts)
-        raw_permutations: set[str] = {username, clean_base}
+        raw_permutations: set[str] = {username.lower().strip(), clean_base}
 
         # Apply strategies
         for strategy in self._strategies:
-            # Basic length guard to prevent explosion
-            if len(clean_base) < (self.config.max_length - 8):
-                raw_permutations.update(strategy.apply(clean_base, username, parts, self.config))
+            if self._should_apply_strategy(clean_base):
+                raw_permutations.update(
+                    strategy.apply(clean_base, username.lower().strip(), parts, self.config)
+                )
 
         return self._filter_valid(raw_permutations)
 
-    def _filter_valid(self, variants: Iterable[str]) -> set[str]:
-        valid_set = set()
-        for variant in variants:
-            if self.config.min_length <= len(variant) <= self.config.max_length and not variant.startswith(
-                self.config.separators
-            ):
-                valid_set.add(variant)
+    def _get_parts(self, username: str) -> list[str]:
+        if not username or not username.strip():
+            return []
+        return [p for p in self._separator_re.split(username.lower().strip()) if p]
 
-        return valid_set
+    def _should_apply_strategy(self, base: str) -> bool:
+        return len(base) < (self.config.max_length - 8)
+
+    def _filter_valid(self, variants: Iterable[str]) -> set[str]:
+        return {
+            variant
+            for variant in variants
+            if self.config.min_length <= len(variant) <= self.config.max_length
+            and not variant.startswith(self.config.separators)
+        }

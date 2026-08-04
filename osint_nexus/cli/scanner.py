@@ -1,9 +1,6 @@
 from rich.console import Console
 from rich.panel import Panel
 
-# Assuming UI components remain in cli/main.py, I might need to move them too.
-# For simplicity, move UI components here or into a separate 'cli/ui.py'.
-# Let's move UI components here.
 from osint_nexus.cli.ui import (
     OSINTApp,
 )
@@ -38,7 +35,7 @@ async def run_scan(
 
 def generate_report(agent: OSINTAgent) -> None:
     """Generate and display the final report."""
-    input("\n[bold orange1]Scan complete. Press Enter to generate final report...[/]")
+    # Simplified report generation
     console.print(
         Panel(
             "[bold white]Reconnaissance Complete![/]\n[orange1]Compiling intelligence report...[/]",
@@ -59,5 +56,4 @@ def generate_report(agent: OSINTAgent) -> None:
     except AttributeError:
         console.print("[yellow]Warning: Final report method not available.[/]")
     except NexusError as e:
-        # logger.error("Failed to generate final report: %s", e)
         console.print(f"[bold red]Error generating final report:[/] {e}")

@@ -48,24 +48,38 @@ class PgpExtractor:
 class SocialPlatformRegistry:
     """Registry for social platform identification and username extraction."""
 
-    def __init__(self) -> None:
-        self.platforms = {
-            "twitter.com": "Twitter",
-            "x.com": "Twitter",
-            "instagram.com": "Instagram",
-            "linkedin.com": "LinkedIn",
-            "github.com": "GitHub",
-            "facebook.com": "Facebook",
-            "youtube.com": "YouTube",
-        }
-        self.ignored_paths = {"share", "home", "intent", "search", "p"}
+    PLATFORMS = {
+        "twitter.com": "Twitter",
+        "x.com": "Twitter",
+        "instagram.com": "Instagram",
+        "linkedin.com": "LinkedIn",
+        "github.com": "GitHub",
+        "facebook.com": "Facebook",
+        "youtube.com": "YouTube",
+    }
+    IGNORED_PATHS = {"share", "home", "intent", "search", "p"}
 
     def identify(self, domain: str, path: str) -> dict[str, str] | None:
-        for dom, platform in self.platforms.items():
+        platform = self._get_platform(domain)
+        if not platform:
+            return None
+
+        username = self._extract_username(path)
+        if not username:
+            return None
+
+        return {"platform": platform, "username": username}
+
+    def _get_platform(self, domain: str) -> str | None:
+        for dom, name in self.PLATFORMS.items():
             if domain == dom or domain.endswith("." + dom):
-                path_parts = [p for p in path.split("/") if p]
-                if path_parts and path_parts[0] not in self.ignored_paths:
-                    return {"platform": platform, "username": path_parts[0]}
+                return name
+        return None
+
+    def _extract_username(self, path: str) -> str | None:
+        path_parts = [p for p in path.split("/") if p]
+        if path_parts and path_parts[0] not in self.IGNORED_PATHS:
+            return path_parts[0]
         return None
 
 
@@ -73,22 +87,23 @@ class LinkHarvester:
     """Harvests external links from a page, excluding the source domain."""
 
     def harvest(self, soup: BeautifulSoup, source_url: str | None = None) -> set[str]:
-        external_links: set[str] = set()
         source_domain = urlparse(source_url).netloc.lower() if source_url else ""
 
-        for a in soup.find_all("a", href=True):
-            href = a.get("href")
-            if not isinstance(href, str) or not href.startswith(("http://", "https://")):
-                continue
+        links = (a.get("href") for a in soup.find_all("a", href=True))
+        return {
+            str(link) for link in links if isinstance(link, str) and self._is_valid_link(link, source_domain)
+        }
 
-            parsed_href = urlparse(href)
-            href_domain = parsed_href.netloc.lower()
+    def _is_valid_link(self, link: Any, source_domain: str) -> bool:
+        if not isinstance(link, str) or not link.startswith(("http://", "https://")):
+            return False
+        return self._is_external(link, source_domain)
 
-            if source_domain and (href_domain == source_domain or href_domain.endswith("." + source_domain)):
-                continue
-
-            external_links.add(href)
-        return external_links
+    def _is_external(self, href: str, source_domain: str) -> bool:
+        href_domain = urlparse(href).netloc.lower()
+        if not source_domain:
+            return True
+        return not (href_domain == source_domain or href_domain.endswith("." + source_domain))
 
 
 class SocialIdentityExtractor:
