@@ -11,18 +11,34 @@ from osint_nexus.utils.network import NetworkManager
 
 
 class ProviderRegistry:
+    """Registry to manage and initialize all supported OSINT providers."""
+
     def __init__(
         self,
         evasion_manager: EvasionAgent,
         network_manager: NetworkManager,
         dork_engine: DorkEngine | None = None,
-    ):
+    ) -> None:
+        """
+        Initializes the ProviderRegistry.
+
+        Args:
+            evasion_manager: The evasion manager instance.
+            network_manager: The network manager instance.
+            dork_engine: Optional dork engine instance.
+        """
         self.evasion_manager = evasion_manager
         self.network_manager = network_manager
         self.dork_engine = dork_engine or DorkEngine()
         self.providers = self._load_providers()
 
     def _load_providers(self) -> list[BaseProvider]:
+        """
+        Loads and initializes all configured OSINT providers.
+
+        Returns:
+            A list of initialized provider instances.
+        """
         providers: list[BaseProvider] = []
 
         # Load dynamic providers
@@ -51,4 +67,10 @@ class ProviderRegistry:
         return providers
 
     def get_providers(self) -> list[BaseProvider]:
+        """
+        Returns the list of initialized providers.
+
+        Returns:
+            A list of provider instances.
+        """
         return self.providers

@@ -1,88 +1,35 @@
 from __future__ import annotations
 
 import asyncio
-import enum
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from typing import Any
 
 import aiohttp
 
-from osint_nexus.core.config import Config
+# Backwards compatibility imports
+from osint_nexus.core.captcha.config import CaptchaConfig
+from osint_nexus.core.captcha.exceptions import (
+    CaptchaBudgetExceeded,
+    CaptchaError,
+    CaptchaServiceError,
+    CaptchaTimeoutError,
+)
+from osint_nexus.core.captcha.models import CaptchaSolveResult, CaptchaType
 
 logger = logging.getLogger("osint_nexus.captcha")
 
-
-@dataclass
-class CaptchaConfig:
-    """Configuration for CAPTCHA solving."""
-
-    two_captcha_key: str | None = None
-    anti_captcha_key: str | None = None
-    request_timeout: float = 30.0
-    solve_timeout: float = 120.0
-    poll_interval: float = 2.0
-    max_cost_per_solve: float = 0.05
-    daily_budget: float = 1.0
-    cost_tracking: bool = True
-    cache_ttl: int = 300
-    max_retries: int = 3
-    retry_delay: float = 1.0
-    solver_priority: list[str] = field(default_factory=lambda: ["2captcha", "anti_captcha"])
-
-    @classmethod
-    def from_config(cls, config: Config) -> CaptchaConfig:
-        captcha_cfg = config.get("captcha", {})
-        return cls(
-            two_captcha_key=captcha_cfg.get("two_captcha_key"),
-            anti_captcha_key=captcha_cfg.get("anti_captcha_key"),
-            request_timeout=captcha_cfg.get("request_timeout", 30.0),
-            solve_timeout=captcha_cfg.get("solve_timeout", 120.0),
-            max_cost_per_solve=captcha_cfg.get("max_cost_per_solve", 0.05),
-            daily_budget=captcha_cfg.get("daily_budget", 1.0),
-            cache_ttl=captcha_cfg.get("cache_ttl", 300),
-            max_retries=captcha_cfg.get("max_retries", 3),
-            retry_delay=captcha_cfg.get("retry_delay", 1.0),
-        )
-
-
-class CaptchaError(Exception):
-    """Base CAPTCHA exception."""
-
-
-class CaptchaTimeoutError(CaptchaError):
-    """Solving took longer than allowed."""
-
-
-class CaptchaBudgetExceeded(CaptchaError):
-    """Cost limit or daily budget exceeded."""
-
-
-class CaptchaServiceError(CaptchaError):
-    """API error from the solving service."""
-
-
-class CaptchaType(enum.Enum):
-    RECAPTCHA_V2 = "recaptcha_v2"
-    RECAPTCHA_V3 = "recaptcha_v3"
-    HCAPTCHA = "hcaptcha"
-    TURNSTILE = "turnstile"
-    IMAGE_CAPTCHA = "image"
-    CUSTOM = "custom"
-
-
-@dataclass
-class CaptchaSolveResult:
-    token: str | None = None
-    error: str | None = None
-    cost: float = 0.0
-    solver_name: str | None = None
-    cached: bool = False
-
-    @property
-    def success(self) -> bool:
-        return self.token is not None and not self.error
+__all__ = [
+    "CaptchaSolver",
+    "CaptchaConfig",
+    "CaptchaError",
+    "CaptchaBudgetExceeded",
+    "CaptchaServiceError",
+    "CaptchaTimeoutError",
+    "CaptchaSolveResult",
+    "CaptchaType",
+    "ChainedCaptchaSolver",
+]
 
 
 class CaptchaSolver(ABC):
@@ -194,37 +141,5 @@ class CaptchaSolver(ABC):
             await self._session.close()
 
 
-class ChainedCaptchaSolver(CaptchaSolver):
-    def __init__(
-        self,
-        solvers: list[CaptchaSolver],
-        config: CaptchaConfig,
-        session: aiohttp.ClientSession | None = None,
-    ) -> None:
-        super().__init__("chain", config, session)
-        self.solvers = solvers
-
-    async def health_check(self) -> bool:
-        for solver in self.solvers:
-            if await solver.health_check():
-                return True
-        return False
-
-    def estimate_cost(self, _captcha_type: CaptchaType) -> float:
-        return min(s.estimate_cost(_captcha_type) for s in self.solvers)
-
-    async def _solve_impl(
-        self, site_key: str, url: str, captcha_type: CaptchaType, **kwargs: Any
-    ) -> CaptchaSolveResult:
-        last_error = None
-        for solver in self.solvers:
-            try:
-                result = await solver.solve(site_key, url, captcha_type, **kwargs)
-                if result.success:
-                    return result
-                last_error = result.error
-            except CaptchaError as e:
-                last_error = str(e)
-                logger.warning("Solver %s failed: %s", solver.name, e)
-                continue
-        return CaptchaSolveResult(error=f"All solvers failed. Last error: {last_error}")
+# Import ChainedCaptchaSolver here for backwards compatibility
+from osint_nexus.core.captcha.chained import ChainedCaptchaSolver  # noqa: E402

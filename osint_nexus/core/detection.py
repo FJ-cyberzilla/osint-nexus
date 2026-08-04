@@ -34,11 +34,27 @@ class DetectionEngine:
         weights: EvasionWeights,
         detectors: list[BaseDetector] | None = None,
     ) -> None:
+        """
+        Initializes the DetectionEngine.
+
+        Args:
+            weights: Evasion weights configuration.
+            detectors: Optional list of novel detectors to run.
+        """
         self.weights = weights
         self.detectors = detectors or []
 
     async def analyze(self, payload: TelemetryPayload, platforms: list[str]) -> DetectionResult:
-        """Runs signature checks + novel detectors concurrently."""
+        """
+        Runs signature checks and novel detectors concurrently.
+
+        Args:
+            payload: Telemetry data from the scan.
+            platforms: List of platforms found.
+
+        Returns:
+            A DetectionResult object with the evasion score and details.
+        """
         score = 0.0
         details: dict[str, float] = {}
 
@@ -57,7 +73,16 @@ class DetectionEngine:
         )
 
     async def _run_novel_detectors(self, payload: TelemetryPayload, details: dict[str, float]) -> float:
-        """Runs novel detectors and updates score and details."""
+        """
+        Runs novel detectors and updates score and details.
+
+        Args:
+            payload: Telemetry data.
+            details: Dictionary to update with detector scores.
+
+        Returns:
+            The total score contribution from novel detectors.
+        """
         score = 0.0
         tasks = [d.analyze(payload.raw_metadata) for d in self.detectors]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -74,7 +99,16 @@ class DetectionEngine:
         return score
 
     def _check_signatures(self, payload: TelemetryPayload, platforms: list[str]) -> float:
-        """Existing signature-based checks (regex, headless, webdriver)."""
+        """
+        Performs fast, signature-based checks.
+
+        Args:
+            payload: Telemetry data.
+            platforms: List of platforms found.
+
+        Returns:
+            The total score contribution from signatures.
+        """
         score = 0.0
 
         score += self._check_browser_signatures(payload)
@@ -87,7 +121,15 @@ class DetectionEngine:
         return score
 
     def _check_browser_signatures(self, payload: TelemetryPayload) -> float:
-        """Checks browser-related signatures."""
+        """
+        Checks browser-related signatures from telemetry.
+
+        Args:
+            payload: Telemetry data.
+
+        Returns:
+            The total score contribution from browser signatures.
+        """
         browser = payload.browser
         if not browser:
             return 0.0
@@ -106,7 +148,15 @@ class DetectionEngine:
         return score
 
     def _has_ai_user_agent(self, ua: str) -> bool:
-        """Check against AI footprint regex."""
+        """
+        Checks against AI footprint regex.
+
+        Args:
+            ua: User agent string.
+
+        Returns:
+            True if AI footprint is detected.
+        """
         pattern = re.compile(
             r"(openai|gptbot|claude|anthropic|cohere|"
             r"gemini|perplex|bytespider|ccbot|crawler)",

@@ -4,6 +4,8 @@ STIX 2.1 JSON Exporter.
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -16,15 +18,22 @@ class STIXExporter:
         """
         Converts internal representation to STIX 2.1.
         """
-        # Placeholder for actual STIX mapping logic
+        identity = self._create_identity(data)
+
         stix_payload = {
             "type": "bundle",
-            "objects": [
-                {
-                    "type": "identity",
-                    "name": data.get("username", "unknown"),
-                    "description": data.get("bio", ""),
-                }
-            ],
+            "id": f"bundle--{uuid.uuid4()}",
+            "objects": [identity],
         }
         return stix_payload
+
+    def _create_identity(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Creates a STIX 2.1 Identity object."""
+        return {
+            "type": "identity",
+            "id": f"identity--{uuid.uuid4()}",
+            "created": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "name": data.get("username", "unknown"),
+            "description": data.get("bio", ""),
+            "identity_class": "individual",
+        }

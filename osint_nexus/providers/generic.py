@@ -16,6 +16,7 @@ from urllib.parse import quote
 from pydantic import BaseModel, Field, field_validator
 
 from osint_nexus.core.dork import DorkEngine
+from osint_nexus.core.exceptions import NetworkError
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
@@ -84,7 +85,14 @@ class GenericProvider(BaseProvider):
 
     async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
         """
-        Fetch the profile page and return (found, content).
+        Fetch the profile page and return existence and content.
+
+        Args:
+            username: The target username to check.
+            **kwargs: Additional arguments passed to the network fetcher.
+
+        Returns:
+            A tuple (found, content_string).
         """
         safe_username = quote(username)
         url = self.config.url_template.format(username=safe_username)
@@ -100,7 +108,16 @@ class GenericProvider(BaseProvider):
         return self._detect(found, content_str)
 
     async def _fetch(self, url: str, **kwargs: Any) -> tuple[bool, str | None, str | None]:
-        """Fetch content from the network."""
+        """
+        Fetch content from the network with retry and evasion.
+
+        Args:
+            url: The URL to fetch.
+            **kwargs: Extra arguments for the request.
+
+        Returns:
+            A tuple (found, content_or_none, error_message_or_none).
+        """
         try:
             found, content = await self.network.fetch(
                 url,
@@ -112,10 +129,19 @@ class GenericProvider(BaseProvider):
             return found, content, None
         except Exception as e:
             self._logger.error("Network constraint or exception occurred: %s", e, exc_info=True)
-            return False, None, f"NetworkError: {str(e)}"
+            return False, None, f"{NetworkError.__name__}: {str(e)}"
 
     def _detect(self, found: bool, content_str: str) -> tuple[bool, str]:
-        """Detect username existence based on rules."""
+        """
+        Detect username existence based on rules: error strings, regex, or fallback.
+
+        Args:
+            found: The boolean found status returned by the NetworkManager.
+            content_str: The raw response content as a string.
+
+        Returns:
+            A tuple (detected_existence, content_string).
+        """
         # 1. Negative Detection: Check for explicit error strings (e.g., "Page not found")
         if self.config.error_indicator and self.config.error_indicator in content_str:
             self._logger.debug("Match: Negative error indicator '%s' found.", self.config.error_indicator)
@@ -138,6 +164,12 @@ class GenericProvider(BaseProvider):
     def get_dork_query(self, username: str) -> str:
         """
         Return a search engine dork query for the platform.
+
+        Args:
+            username: The target username.
+
+        Returns:
+            A formatted dork query string.
         """
         if self.config.dork_query:
             try:

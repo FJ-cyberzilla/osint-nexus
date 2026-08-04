@@ -12,6 +12,8 @@ import logging
 import os
 from typing import Any
 
+from osint_nexus.core.exceptions import DatabaseError
+
 logger = logging.getLogger("osint_nexus.core.sessions")
 
 
@@ -32,8 +34,9 @@ class SessionManager:
                 with open(self.storage_path) as f:
                     self._sessions = json.load(f)
                 logger.info("Loaded %d sessions from %s.", len(self._sessions), self.storage_path)
-            except Exception as e:
+            except (OSError, json.JSONDecodeError) as e:
                 logger.error("Failed to load sessions: %s", e)
+                raise DatabaseError(f"Failed to load sessions from {self.storage_path}") from e
         else:
             logger.debug("No session storage found at %s.", self.storage_path)
 

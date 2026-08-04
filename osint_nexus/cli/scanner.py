@@ -1,16 +1,15 @@
 from rich.console import Console
-from rich.live import Live
 from rich.panel import Panel
 
 # Assuming UI components remain in cli/main.py, I might need to move them too.
 # For simplicity, move UI components here or into a separate 'cli/ui.py'.
 # Let's move UI components here.
 from osint_nexus.cli.ui import (
-    CLIController,
-    setup_signals,
+    OSINTApp,
 )
 from osint_nexus.core import constants
 from osint_nexus.core.agent import OSINTAgent
+from osint_nexus.core.exceptions import NexusError
 
 console = Console()
 
@@ -28,29 +27,13 @@ async def run_scan(
         console.print("[bold red]Fatal:[/] No providers registered in the system.")
         return
 
-    controller = CLIController(username, total)
-    setup_signals(agent)
+    # Run TUI
+    app = OSINTApp(agent, username, total, timeout)
+    await app.run_async()
 
-    # Prepare live display
-    with Live(
-        controller.get_layout(console.width),
-        console=console,
-        refresh_per_second=10,
-    ) as live:
-        # Iterate over the asynchronous generator
-        async for intel in agent.run_scan(username=username, timeout=timeout):
-            controller.add_result(intel)
-            live.update(controller.get_layout(console.width))
-
-        # Ensure progress reaches total (in case some providers were skipped)
-        remaining = total - controller.progress.tasks[controller.task].completed
-        if remaining > 0:
-            controller.progress.update(controller.task, advance=remaining)
-            live.update(controller.get_layout(console.width))
-
-        # Display final summary
-        console.print("\n[bold green]Scan completed successfully![/]")
-        console.print("[bold green]Reconnaissance finished.[/]")
+    # Display final summary
+    console.print("\n[bold green]Scan completed successfully![/]")
+    console.print("[bold green]Reconnaissance finished.[/]")
 
 
 def generate_report(agent: OSINTAgent) -> None:
@@ -75,6 +58,6 @@ def generate_report(agent: OSINTAgent) -> None:
         )
     except AttributeError:
         console.print("[yellow]Warning: Final report method not available.[/]")
-    except Exception as e:
+    except NexusError as e:
         # logger.error("Failed to generate final report: %s", e)
         console.print(f"[bold red]Error generating final report:[/] {e}")

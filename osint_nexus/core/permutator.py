@@ -32,13 +32,13 @@ class PermutationConfig:
 class PermutationStrategy(Protocol):
     """Protocol for username generation strategies."""
 
-    def apply(self, base: str, original: str, config: PermutationConfig) -> set[str]: ...
+    def apply(self, base: str, original: str, parts: list[str], config: PermutationConfig) -> set[str]: ...
 
 
 class AffixStrategy:
     """Generates variants with common OSINT prefixes and suffixes."""
 
-    def apply(self, base: str, original: str, config: PermutationConfig) -> set[str]:
+    def apply(self, base: str, original: str, parts: list[str], config: PermutationConfig) -> set[str]:
         affixed = set()
         # Suffixes
         for suffix in config.common_suffixes:
@@ -55,23 +55,35 @@ class AffixStrategy:
 class LeetSpeakStrategy:
     """Translates variants into leetspeak format."""
 
-    def apply(self, base: str, original: str, config: PermutationConfig) -> set[str]:
-        # Note: 'base' is used as the target for translation,
-        # but in a more complex setup we might want to pass all current variants.
-        # For now, adhering to the protocol:
+    def apply(self, base: str, original: str, parts: list[str], config: PermutationConfig) -> set[str]:
         return {base.translate(config.leet_map)}
+
+
+class SeparatorStrategy:
+    """Generates variants by rotating separators between parts."""
+
+    def apply(self, base: str, original: str, parts: list[str], config: PermutationConfig) -> set[str]:
+        variants = set()
+        if len(parts) > 1:
+            for sep in config.separators:
+                variants.add(sep.join(parts))
+        return variants
 
 
 class UsernamePermutator:
     """
     Advanced generator for target username permutations.
+    Orchestrates multiple permutation strategies.
     """
 
     def __init__(self, config: PermutationConfig | None = None) -> None:
         self.config = config or PermutationConfig()
         self._logger = logging.getLogger(f"osint_nexus.permutator.{self.__class__.__name__}")
         self._separator_re = re.compile(r"[\._-]")
-        self._strategies: list[PermutationStrategy] = [AffixStrategy()]
+        self._strategies: list[PermutationStrategy] = [
+            SeparatorStrategy(),
+            AffixStrategy(),
+        ]
         if self.config.use_leetspeak:
             self._strategies.append(LeetSpeakStrategy())
 
@@ -85,25 +97,16 @@ class UsernamePermutator:
         if not parts:
             return set()
 
-        raw_permutations = self._generate_raw_permutations(username, parts)
-
-        return self._filter_valid(raw_permutations)
-
-    def _generate_raw_permutations(self, username: str, parts: list[str]) -> set[str]:
         clean_base = "".join(parts)
         raw_permutations: set[str] = {username, clean_base}
 
-        # 1. Separator Rotation
-        if len(parts) > 1:
-            for sep in self.config.separators:
-                raw_permutations.add(sep.join(parts))
+        # Apply strategies
+        for strategy in self._strategies:
+            # Basic length guard to prevent explosion
+            if len(clean_base) < (self.config.max_length - 8):
+                raw_permutations.update(strategy.apply(clean_base, username, parts, self.config))
 
-        # 2. Strategy Application
-        if len(clean_base) < (self.config.max_length - 8):
-            for strategy in self._strategies:
-                raw_permutations.update(strategy.apply(clean_base, username, self.config))
-
-        return raw_permutations
+        return self._filter_valid(raw_permutations)
 
     def _filter_valid(self, variants: Iterable[str]) -> set[str]:
         valid_set = set()

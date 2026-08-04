@@ -54,7 +54,8 @@ def setup_logger(
 
 def _get_log_file_path(log_file: str | None) -> Path:
     if log_file:
-        return Path(log_file)
+        path = Path(log_file)
+        return path if path.is_absolute() else bootstrap.LOGS_DIR / path
     return bootstrap.LOGS_DIR / "osint.log"
 
 

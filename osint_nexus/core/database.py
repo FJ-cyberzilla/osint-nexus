@@ -16,6 +16,7 @@ from osint_nexus.core.db.base import DatabaseConnection
 from osint_nexus.core.db.cache_repository import CacheRepository
 from osint_nexus.core.db.result_repository import ResultRepository
 from osint_nexus.core.db.schema_manager import SchemaManager
+from osint_nexus.core.exceptions import DatabaseError
 
 logger = logging.getLogger("osint_nexus.database")
 
@@ -68,7 +69,7 @@ class DatabaseManager:
                 return [dict(row) for row in rows]
         except Exception as exc:
             logger.error("Search failed: %s", exc, exc_info=True)
-            return []
+            raise DatabaseError(f"Search failed for '{keyword}': {exc}") from exc
 
     async def query_results(
         self,
@@ -94,4 +95,4 @@ class DatabaseManager:
             return True
         except Exception as exc:
             logger.error("Database health check failed: %s", exc)
-            return False
+            raise DatabaseError(f"Database health check failed: {exc}") from exc

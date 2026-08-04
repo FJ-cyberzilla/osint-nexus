@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from osint_nexus.core.config import Config
+from osint_nexus.core.exceptions import NexusError
 
 logger = logging.getLogger("osint_nexus.fingerprint")
 
@@ -84,7 +85,7 @@ class FingerprintAgent:
                 "agent_fingerprint": user_agent,
                 "scan_timestamp": datetime.now(UTC).isoformat(),
             }
-        except Exception as exc:  # pylint: disable=broad-except
+        except NexusError as exc:
             logger.error("Telemetry collection failed: %s", exc, exc_info=True)
             return {"error": "Telemetry collection failed"}
 
@@ -115,7 +116,7 @@ class FingerprintAgent:
                     break
 
             return result.to_dict()
-        except Exception as exc:  # pylint: disable=broad-except
+        except NexusError as exc:
             logger.error("Device inference failed: %s", exc, exc_info=True)
             return DeviceInfo(device_model="Error", os_family="Error").to_dict()
 

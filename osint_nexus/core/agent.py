@@ -47,6 +47,12 @@ class OSINTAgent:
     """
 
     def __init__(self, username: str) -> None:
+        """
+        Initialize the OSINT Agent for a specific target username.
+
+        Args:
+            username: The username to scan.
+        """
         self.username = username
         self.config = Config()
         self.evasion_weights = EvasionWeights()
@@ -91,20 +97,34 @@ class OSINTAgent:
 
     @property
     def orchestrator(self) -> ScanOrchestrator:
-        """Access the orchestrator."""
+        """Access the orchestrator subsystem."""
         return self.subsystems.orchestrator
 
     async def run_scan(self, username: str, timeout: float = 15.0) -> AsyncGenerator[IntelligenceObject]:
-        """Runs the scan."""
+        """
+        Runs the full scan process for a given username.
+
+        Args:
+            username: The username to scan.
+            timeout: The maximum time allowed for each provider scan in seconds.
+
+        Yields:
+            IntelligenceObject containing scan result metadata.
+        """
         await self.db.ensure_initialized()
         providers = self.subsystems.registry.get_providers()
         async for intel in self.subsystems.orchestrator.run_scan(username, providers, timeout=timeout):
             yield intel
 
     def get_final_report(self) -> Any:
-        """Generates the final report as a Rich object."""
+        """
+        Generates the final report based on gathered intelligence.
+
+        Returns:
+            The rich-formatted report object.
+        """
         return self.subsystems.report.generate(self.username)
 
     def abort_scan(self) -> None:
-        """Aborts the scan."""
+        """Aborts any currently running scan processes."""
         self.subsystems.orchestrator.abort()

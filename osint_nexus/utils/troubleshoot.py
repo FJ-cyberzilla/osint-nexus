@@ -23,6 +23,7 @@ from rich.table import Table
 
 from osint_nexus.core import constants
 from osint_nexus.core.bootstrap import DATABASE_PATH, LOG_FILE_PATH
+from osint_nexus.core.exceptions import DatabaseError
 
 logger = logging.getLogger("osint_nexus.troubleshoot")
 
@@ -110,7 +111,7 @@ def inspect_database_schema() -> None:
 
         conn.close()
 
-    except Exception as e:
+    except (sqlite3.Error, DatabaseError) as e:
         console.print(f"[bold red]❌ Failed to read database schema: {e}[/bold red]")
 
 

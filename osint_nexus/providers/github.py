@@ -11,7 +11,7 @@ class GitHubProvider(BaseProvider):
     Searches for user profiles on github.com.
     """
 
-    def __init__(self, network: NetworkManager):
+    def __init__(self, network: NetworkManager) -> None:
         """Initialize GitHub provider.
 
         Args:

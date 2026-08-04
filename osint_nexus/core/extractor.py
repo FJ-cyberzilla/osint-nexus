@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import re
 import typing
-from typing import Any
+from typing import Any, Protocol
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -45,9 +45,11 @@ class PgpExtractor:
         return [block.strip() for block in self.pgp_pattern.findall(content)]
 
 
-class LinkSocialExtractor:
+class SocialPlatformRegistry:
+    """Registry for social platform identification and username extraction."""
+
     def __init__(self) -> None:
-        self.social_domains = {
+        self.platforms = {
             "twitter.com": "Twitter",
             "x.com": "Twitter",
             "instagram.com": "Instagram",
@@ -56,10 +58,22 @@ class LinkSocialExtractor:
             "facebook.com": "Facebook",
             "youtube.com": "YouTube",
         }
+        self.ignored_paths = {"share", "home", "intent", "search", "p"}
 
-    def extract(self, soup: BeautifulSoup, source_url: str | None = None) -> dict[str, list[Any]]:
+    def identify(self, domain: str, path: str) -> dict[str, str] | None:
+        for dom, platform in self.platforms.items():
+            if domain == dom or domain.endswith("." + dom):
+                path_parts = [p for p in path.split("/") if p]
+                if path_parts and path_parts[0] not in self.ignored_paths:
+                    return {"platform": platform, "username": path_parts[0]}
+        return None
+
+
+class LinkHarvester:
+    """Harvests external links from a page, excluding the source domain."""
+
+    def harvest(self, soup: BeautifulSoup, source_url: str | None = None) -> set[str]:
         external_links: set[str] = set()
-        social_handles: list[dict[str, str]] = []
         source_domain = urlparse(source_url).netloc.lower() if source_url else ""
 
         for a in soup.find_all("a", href=True):
@@ -74,36 +88,91 @@ class LinkSocialExtractor:
                 continue
 
             external_links.add(href)
-
-            # Check social
-            for dom, platform in self.social_domains.items():
-                if href_domain == dom or href_domain.endswith("." + dom):
-                    path_parts = [p for p in parsed_href.path.split("/") if p]
-                    if path_parts and path_parts[0] not in ("share", "home", "intent", "search", "p"):
-                        social_handles.append({"platform": platform, "username": path_parts[0], "url": href})
-                        break
-
-        return {"external_links": list(external_links), "social_handles": social_handles}
+        return external_links
 
 
-class BioExtractor:
-    def extract(self, soup: BeautifulSoup) -> str:
-        # Meta tags
-        for attr in ["description", "og:description", "twitter:description"]:
-            meta = soup.find("meta", attrs={"name": attr} if "description" in attr else {"property": attr})
+class SocialIdentityExtractor:
+    """Extracts social handles from harvested links."""
+
+    def __init__(self, registry: SocialPlatformRegistry) -> None:
+        self.registry = registry
+
+    def extract(self, links: set[str]) -> list[dict[str, str]]:
+        social_handles = []
+        for link in links:
+            parsed = urlparse(link)
+            identity = self.registry.identify(parsed.netloc.lower(), parsed.path)
+            if identity:
+                identity["url"] = link
+                social_handles.append(identity)
+        return social_handles
+
+
+class LinkSocialExtractor:
+    """Orchestrates link harvesting and social identity extraction."""
+
+    def __init__(self) -> None:
+        self.harvester = LinkHarvester()
+        self.registry = SocialPlatformRegistry()
+        self.social_extractor = SocialIdentityExtractor(self.registry)
+
+    def extract(self, soup: BeautifulSoup, source_url: str | None = None) -> dict[str, list[Any]]:
+        links = self.harvester.harvest(soup, source_url)
+        social_handles = self.social_extractor.extract(links)
+        return {"external_links": list(links), "social_handles": social_handles}
+
+
+class BioExtractionStrategy(Protocol):
+    def extract(self, soup: BeautifulSoup) -> str | None: ...
+
+
+class MetaTagBioStrategy:
+    def __init__(self) -> None:
+        self.targets = [
+            ("name", "description"),
+            ("property", "og:description"),
+            ("property", "twitter:description"),
+        ]
+
+    def extract(self, soup: BeautifulSoup) -> str | None:
+        for attr, value in self.targets:
+            meta = soup.find("meta", attrs={attr: value})
             if meta and meta.get("content"):
                 return str(meta["content"]).strip()
+        return None
 
-        # Elements
-        for selector in [
+
+class HeuristicElementBioStrategy:
+    def __init__(self) -> None:
+        self.selectors = [
             {"class": re.compile(r"bio|profile-bio|user-bio|about|description|summary", re.I)},
             {"id": re.compile(r"bio|about|description|summary", re.I)},
-        ]:
+        ]
+
+    def extract(self, soup: BeautifulSoup) -> str | None:
+        for selector in self.selectors:
             element = soup.find(name=None, attrs=typing.cast(typing.Any, selector))
             if element:
                 text = element.get_text(strip=True)
                 if len(text) > 5:
                     return text
+        return None
+
+
+class BioExtractor:
+    """Orchestrates bio extraction using multiple strategies."""
+
+    def __init__(self) -> None:
+        self.strategies: list[BioExtractionStrategy] = [
+            MetaTagBioStrategy(),
+            HeuristicElementBioStrategy(),
+        ]
+
+    def extract(self, soup: BeautifulSoup) -> str:
+        for strategy in self.strategies:
+            bio = strategy.extract(soup)
+            if bio:
+                return bio
         return "Bio extraction not fully implemented."
 
 
@@ -113,6 +182,7 @@ class PivotExtractor:
     """
 
     def __init__(self) -> None:
+        """Initializes the PivotExtractor with all sub-extractors."""
         self.email_extractor = EmailExtractor()
         self.pgp_extractor = PgpExtractor()
         self.link_social_extractor = LinkSocialExtractor()
@@ -121,6 +191,13 @@ class PivotExtractor:
     async def extract(self, content: str, source_url: str | None = None) -> dict[str, Any]:
         """
         Parses the content and returns a dictionary of harvested identifiers.
+
+        Args:
+            content: The raw HTML content to parse.
+            source_url: Optional source URL of the content.
+
+        Returns:
+            A dictionary containing harvested emails, PGP keys, links, handles, and bio.
         """
         soup = BeautifulSoup(content, "html.parser")
 

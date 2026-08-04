@@ -31,11 +31,20 @@ class ComplianceEngine:
     def sanitize(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Scans a data dictionary and replaces detected PII with '[REDACTED]'.
+
+        Args:
+            data: The input dictionary containing scan results.
+
+        Returns:
+            A sanitized dictionary with PII redacted.
         """
         sanitized = data.copy()
 
         # Recursive function to handle nested dicts/lists
         def _scrub(item: Any) -> Any:
+            """
+            Recursively scans an item and redacts PII if found.
+            """
             if isinstance(item, dict):
                 return {k: _scrub(v) for k, v in item.items()}
             elif isinstance(item, list):

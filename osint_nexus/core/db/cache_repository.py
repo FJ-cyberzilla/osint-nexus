@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from osint_nexus.core.db.base import DatabaseConnection
+from osint_nexus.core.exceptions import DatabaseError
 
 logger = logging.getLogger("osint_nexus.db.cache_repository")
 
@@ -22,7 +23,7 @@ class CacheRepository:
                 return dict(row) if row else None
         except Exception as exc:
             logger.error("Failed to get cache: %s", exc, exc_info=True)
-            return None
+            raise DatabaseError(f"Cache get failed: {exc}") from exc
 
     async def set(self, key: str, value: str, ttl_days: int = 1) -> None:
         try:
@@ -34,3 +35,4 @@ class CacheRepository:
                 await db.commit()
         except Exception as exc:
             logger.error("Failed to set cache: %s", exc, exc_info=True)
+            raise DatabaseError(f"Cache set failed: {exc}") from exc

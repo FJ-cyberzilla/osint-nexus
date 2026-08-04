@@ -113,9 +113,9 @@ db-info:
 
 test:
 	@echo -e "$(ORG)╭─[ $(ORG_L)🧪 TEST SUITE$(ORG) ]──────────────────╮$(RST)"
-	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Running tests...$(RST)"
+	@echo -e "$(ORG)│$(RST) $(GRY)⚡ Running tests with coverage...$(RST)"
 	@echo -e "$(ORG)╰──────────────────────────────────────╯$(RST)"
-	@export PYTHONPATH=$(PYTHONPATH) && pytest tests/
+	@export PYTHONPATH=$(PYTHONPATH) && pytest --cov=osint_nexus tests/
 
 lint:
 	@echo -e "$(ORG)╭─[ $(ORG_L)🔍 CODE QUALITY$(ORG) ]──────────────╮$(RST)"

@@ -1,16 +1,7 @@
-"""
-Orchestrates the scan lifecycle across multiple providers.
-
-Production-hardened with bounded concurrency, strict timeouts,
-and immutable DTOs, this module integrates network evasion and
-behavioral mimicry into the provider execution loop.
-"""
-
 from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
@@ -24,7 +15,9 @@ from osint_nexus.core.report import TelemetryPayload
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
-logger = logging.getLogger("osint_nexus.orchestrator")
+from .workers import ProviderWorker
+
+logger = logging.getLogger("osint_nexus.orchestrator.core")
 
 
 @dataclass(frozen=True)
@@ -85,78 +78,12 @@ class ScanOrchestrator:
             extractor=self.deps.extractor,
             device_inference=device_inference,
         )
+        self.worker = ProviderWorker(self.deps, self.provider_runner)
 
     def abort(self) -> None:
         """Signals all active and pending scans to terminate gracefully."""
         logger.warning("Scan abort requested. Cancelling pending operations.")
         self._abort_event.set()
-
-    async def _execute_provider(
-        self, provider: BaseProvider, username: str, **microlink_options: Any
-    ) -> IntelligenceObject:
-        """
-        Internal worker that executes provider logic with injected tools.
-        This handles the full lifecycle of a single provider check.
-        """
-        if self._abort_event.is_set():
-            return self._build_error_intel(provider.name, username, "Scan aborted")
-
-        # Circuit breaker check
-        if not getattr(self.deps.health, "is_healthy", lambda _: True)(provider.name):
-            return self._build_error_intel(provider.name, username, "Skipped (Circuit Breaker Tripped)")
-
-        try:
-            intel = await self.provider_runner.run(provider, username, **microlink_options)
-            getattr(self.deps.health, "record_success", lambda _: None)(provider.name)
-            return intel
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            if os.getenv("DEBUG_PROVIDERS"):
-                raise
-            logger.error("Scan failure in %s: %s", provider.name, exc, exc_info=True)
-            getattr(self.deps.health, "record_failure", lambda _: None)(provider.name)
-            return self._build_error_intel(provider.name, username, f"Error: {type(exc).__name__}")
-
-    def _build_success_intel(
-        self,
-        provider: BaseProvider,
-        username: str,
-        final_found: bool,
-        dork: str,
-        content: Any,
-        metadata: dict[str, Any],
-    ) -> IntelligenceObject:
-        """Constructs an IntelligenceObject for a successful scan."""
-        return IntelligenceObject(
-            platform=provider.name,
-            username=username,
-            found=final_found,
-            dork=dork,
-            confidence=1.0 if final_found else 0.0,
-            metadata=metadata,
-            raw_data=str(content) if final_found else None,
-        )
-
-    async def _semaphored_worker(
-        self,
-        provider: BaseProvider,
-        username: str,
-        semaphore: asyncio.Semaphore,
-        timeout: float | None = None,
-        **microlink_options: Any,
-    ) -> IntelligenceObject:
-        """
-        Wraps execution in semaphore and timeout.
-        Ensures that concurrency limits are respected and hanging tasks are aborted.
-        """
-        async with semaphore:
-            try:
-                if timeout:
-                    return await asyncio.wait_for(
-                        self._execute_provider(provider, username, **microlink_options), timeout=timeout
-                    )
-                return await self._execute_provider(provider, username, **microlink_options)
-            except TimeoutError:
-                return self._build_error_intel(provider.name, username, "Timeout")
 
     async def run_scan(
         self,
@@ -167,14 +94,16 @@ class ScanOrchestrator:
     ) -> AsyncGenerator[IntelligenceObject]:
         """
         Executes a bounded scan across providers.
-
-        Yields IntelligenceObject instances as soon as each provider finishes.
         """
         self._abort_event.clear()
         semaphore = asyncio.Semaphore(self.max_concurrency)
 
         tasks = [
-            asyncio.create_task(self._semaphored_worker(p, username, semaphore, timeout, **microlink_options))
+            asyncio.create_task(
+                self.worker.semaphored_execute(
+                    p, username, semaphore, self._abort_event, timeout, **microlink_options
+                )
+            )
             for p in providers
         ]
 
@@ -212,14 +141,3 @@ class ScanOrchestrator:
 
         detection_result = await self.detection.analyze(telemetry, platforms)
         logger.info("Detection score: %f", detection_result.evasion_score)
-
-    def _build_error_intel(self, platform: str, username: str, error_msg: str) -> IntelligenceObject:
-        """Helper to safely construct an IntelligenceObject representing a failure."""
-        return IntelligenceObject(
-            platform=platform,
-            username=username,
-            found=False,
-            dork="",
-            confidence=0.0,
-            metadata={"error": error_msg},
-        )

@@ -11,7 +11,7 @@ class AparatProvider(BaseProvider):
     Searches for user profiles on aparat.com.
     """
 
-    def __init__(self, network: NetworkManager):
+    def __init__(self, network: NetworkManager) -> None:
         """Initialize Aparat provider.
 
         Args:
@@ -28,7 +28,7 @@ class AparatProvider(BaseProvider):
             **kwargs: Additional arguments.
 
         Returns:
-            A tuple containing a boolean (exists or not) and a message.
+            A tuple containing a boolean (exists or not) and the raw response content.
         """
         url = self.url_template.format(username)
         return await self.network.fetch(url)
@@ -43,3 +43,14 @@ class AparatProvider(BaseProvider):
             A string containing the Google dork query.
         """
         return f"site:aparat.com {username}"
+
+    def get_metadata(self, username: str) -> dict[str, Any]:
+        """Get Aparat-specific metadata.
+
+        Args:
+            username: The username to search for.
+
+        Returns:
+            A dictionary containing provider-specific metadata.
+        """
+        return {"cpes": [], "ports": [443], "mac_address": None}

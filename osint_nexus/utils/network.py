@@ -9,17 +9,12 @@ import curl_cffi.requests as curl_requests
 from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
+from osint_nexus.core.exceptions import NetworkError
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.utils.limiter import AdaptiveRateLimiter, RateLimiter
 from osint_nexus.utils.retry import RetryHandler
 
 logger = logging.getLogger("osint_nexus.network")
-
-
-class NetworkManagerError(Exception):
-    """Base exception for network operations."""
-
-    pass
 
 
 class SessionManager:
@@ -116,7 +111,7 @@ class NetworkManager:
 
         try:
             return await self.retry.run(_attempt)
-        except Exception as exc:
+        except NetworkError as exc:
             logger.error("Request totally failed for %s: %s", url, exc)
             await self.session_manager.close()
             return False, ""
@@ -141,7 +136,7 @@ class NetworkManager:
             return response.status_code in (200, 201, 204), str(response.text)
         except curl_requests.RequestsError as exc:
             await self.session_manager.close()
-            raise NetworkManagerError(f"cURL failure: {exc}") from exc
+            raise NetworkError(f"cURL failure: {exc}") from exc
 
     async def _fetch_with_browser(
         self, url: str, site_name: str | None, **browser_options: Any
@@ -159,7 +154,7 @@ class NetworkManager:
                     await self.monitor.handle_status(response.status)
                 return (response is not None and response.status == 200), content
         except Exception as exc:
-            raise NetworkManagerError(f"Browser failure: {exc}") from exc
+            raise NetworkError(f"Browser failure: {exc}") from exc
 
     async def close_all(self) -> None:
         await self.session_manager.close()
