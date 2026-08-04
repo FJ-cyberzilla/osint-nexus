@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 from types import TracebackType
-from typing import Any, Self, cast
+from typing import Any, Self
 
 import curl_cffi.requests as curl_requests
 
@@ -39,7 +39,7 @@ class SessionManager:
                 self._current_profile = random.choice(profiles)  # nosec B311
                 self._current_proxy = new_proxy
                 self._session = curl_requests.AsyncSession(
-                    impersonate=cast(Any, self._current_profile),
+                    impersonate=str(self._current_profile),
                     proxy=self._current_proxy,
                     timeout=self.dynamic_timeout,
                 )

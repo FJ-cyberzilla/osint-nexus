@@ -11,6 +11,12 @@ from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.provider_runner import ProviderRunner
+from osint_nexus.core.provider_types import (
+    DatabaseManagerProtocol,
+    DeviceInferenceProtocol,
+    MetadataDict,
+    ValidatorProtocol,
+)
 from osint_nexus.core.report import TelemetryPayload
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
@@ -20,13 +26,18 @@ from .workers import ProviderWorker
 logger = logging.getLogger("osint_nexus.orchestrator.core")
 
 
+@runtime_checkable
+class HealthCheckProtocol(Protocol):
+    async def is_healthy(self) -> bool: ...
+
+
 @dataclass(frozen=True)
 class OrchestratorDeps:
     """Container for core service dependencies to reduce orchestrator bloat."""
 
-    health: Any
-    validator: Any
-    db_manager: Any
+    health: HealthCheckProtocol
+    validator: ValidatorProtocol
+    db_manager: DatabaseManagerProtocol
     network: NetworkManager
     mimicry: HumanMimicryEngine
     extractor: PivotExtractor
@@ -39,8 +50,12 @@ class ProviderProtocol(Protocol):
     name: str
 
     async def check_username(
-        self, username: str, network: NetworkManager, mimicry: HumanMimicryEngine, **kwargs: Any
-    ) -> tuple[bool, Any]:
+        self,
+        username: str,
+        network: NetworkManager,
+        mimicry: HumanMimicryEngine,
+        **kwargs: Any,
+    ) -> tuple[bool, MetadataDict]:
         """Check if username exists on provider."""
         ...
 
@@ -48,7 +63,7 @@ class ProviderProtocol(Protocol):
         """Get the dork query for this provider."""
         ...
 
-    def get_metadata(self, username: str) -> dict[str, Any]:
+    def get_metadata(self, username: str) -> MetadataDict:
         """Get provider-specific metadata."""
         ...
 
@@ -61,7 +76,7 @@ class ScanOrchestrator:
         deps: OrchestratorDeps,
         detection_engine: DetectionEngine,
         max_concurrency: int = 5,
-        device_inference: Any | None = None,
+        device_inference: DeviceInferenceProtocol | None = None,
     ) -> None:
         """Initialize the orchestrator with dependencies and configuration."""
         self.deps = deps

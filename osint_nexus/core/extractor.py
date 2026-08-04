@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import logging
 import re
-import typing
-from typing import Any, Protocol
+from typing import Protocol, TypedDict
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger("osint_nexus.core.extractor")
+
+# Define a specific type for extracted pivots
+type ExtractedPivots = dict[str, list[str] | list[dict[str, str]] | str | None]
 
 
 class EmailExtractor:
@@ -94,7 +96,7 @@ class LinkHarvester:
             str(link) for link in links if isinstance(link, str) and self._is_valid_link(link, source_domain)
         }
 
-    def _is_valid_link(self, link: Any, source_domain: str) -> bool:
+    def _is_valid_link(self, link: str, source_domain: str) -> bool:
         if not isinstance(link, str) or not link.startswith(("http://", "https://")):
             return False
         return self._is_external(link, source_domain)
@@ -123,6 +125,11 @@ class SocialIdentityExtractor:
         return social_handles
 
 
+class LinkHarvestResult(TypedDict):
+    external_links: list[str]
+    social_handles: list[dict[str, str]]
+
+
 class LinkSocialExtractor:
     """Orchestrates link harvesting and social identity extraction."""
 
@@ -131,7 +138,7 @@ class LinkSocialExtractor:
         self.registry = SocialPlatformRegistry()
         self.social_extractor = SocialIdentityExtractor(self.registry)
 
-    def extract(self, soup: BeautifulSoup, source_url: str | None = None) -> dict[str, list[Any]]:
+    def extract(self, soup: BeautifulSoup, source_url: str | None = None) -> LinkHarvestResult:
         links = self.harvester.harvest(soup, source_url)
         social_handles = self.social_extractor.extract(links)
         return {"external_links": list(links), "social_handles": social_handles}
@@ -159,14 +166,14 @@ class MetaTagBioStrategy:
 
 class HeuristicElementBioStrategy:
     def __init__(self) -> None:
-        self.selectors = [
+        self.selectors: list[dict[str, re.Pattern[str]]] = [
             {"class": re.compile(r"bio|profile-bio|user-bio|about|description|summary", re.I)},
             {"id": re.compile(r"bio|about|description|summary", re.I)},
         ]
 
     def extract(self, soup: BeautifulSoup) -> str | None:
         for selector in self.selectors:
-            element = soup.find(name=None, attrs=typing.cast(typing.Any, selector))
+            element = soup.find(name=None, attrs=selector)
             if element:
                 text = element.get_text(strip=True)
                 if len(text) > 5:
@@ -203,7 +210,7 @@ class PivotExtractor:
         self.link_social_extractor = LinkSocialExtractor()
         self.bio_extractor = BioExtractor()
 
-    async def extract(self, content: str, source_url: str | None = None) -> dict[str, Any]:
+    async def extract(self, content: str, source_url: str | None = None) -> ExtractedPivots:
         """
         Parses the content and returns a dictionary of harvested identifiers.
 
@@ -221,7 +228,7 @@ class PivotExtractor:
         links_info = self.link_social_extractor.extract(soup, source_url)
         bio = self.bio_extractor.extract(soup)
 
-        extracted = {
+        extracted: ExtractedPivots = {
             "emails": emails,
             "pgp_keys": pgp_keys,
             "external_links": links_info["external_links"],
@@ -229,4 +236,4 @@ class PivotExtractor:
             "bio": bio,
         }
         logger.debug("Extracted pivots: %s", extracted)
-        return dict(extracted)
+        return extracted

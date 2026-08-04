@@ -1,12 +1,21 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Protocol
+from collections.abc import Callable
+from typing import Any, Protocol, cast
 
 from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
     DeviceProfile,
 )
+from osint_nexus.core.telemetry.registry import TelemetryRegistry
+
+
+# Define a protocol for QObject-like behavior to avoid 'Any' in type hints
+class QObjectProtocol(Protocol):
+    def connect(self, slot: Callable[..., Any]) -> None: ...
+    def disconnect(self, slot: Callable[..., Any]) -> None: ...
+
 
 try:
     from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -14,26 +23,24 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
-    from collections.abc import Callable
-    from typing import TypeVar
 
-    _F = TypeVar("_F", bound=Callable[..., Any])
-
-    class QObject:  # type: ignore
+    # Define mocks that are more type-compliant
+    class QObject:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
     def pyqtSignal(*args: Any, **kwargs: Any) -> Any:
         return None
 
-    def pyqtSlot(*args: Any, **kwargs: Any) -> Callable[[_F], _F]:
-        def decorator(func: _F) -> _F:
+    def pyqtSlot(*args: Any, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             return func
 
         return decorator
 
 
 logger = logging.getLogger("osint_nexus.telemetry.bridge")
+...
 
 
 class TelemetryLoggerProtocol(Protocol):
@@ -42,22 +49,22 @@ class TelemetryLoggerProtocol(Protocol):
 
 class WebViewAction(ABC):
     @abstractmethod
-    def execute(self, telemetry_registry: Any, data: dict[str, Any]) -> Any:
+    async def execute(self, telemetry_registry: TelemetryRegistry, data: dict[str, Any]) -> Any:
         pass
 
 
 class TelemetryAction(WebViewAction):
-    def execute(self, telemetry_registry: Any, data: dict[str, Any]) -> Any:
-        return telemetry_registry.run_all()
+    async def execute(self, telemetry_registry: TelemetryRegistry, data: dict[str, Any]) -> Any:
+        return await telemetry_registry.run_all()
 
 
-class WebViewBridge(QObject):  # type: ignore[misc]
+class WebViewBridge(QObject):
     # Define signal if PyQt is available
-    telemetry_received = pyqtSignal(dict) if PYQT_AVAILABLE else None
+    telemetry_received: Any = pyqtSignal(dict) if PYQT_AVAILABLE else None
 
     def __init__(
         self,
-        telemetry_registry: Any | None = None,
+        telemetry_registry: TelemetryRegistry | None = None,
         telemetry_client: TelemetryLoggerProtocol | None = None,
     ) -> None:
         super().__init__()
@@ -66,31 +73,31 @@ class WebViewBridge(QObject):  # type: ignore[misc]
         self.inference_engine = DeviceInferenceEngine()
         self._actions: dict[str, WebViewAction] = {"run_telemetry": TelemetryAction()}
 
-    @pyqtSlot(str)  # type: ignore[untyped-decorator]
+    @pyqtSlot(str)
     def submit_telemetry(self, raw_json_data: str) -> None:
         """Slot called directly from JavaScript when telemetry is pushed."""
         try:
-            data: dict[str, Any] = json.loads(raw_json_data)
+            data: dict[str, Any] = cast(dict[str, Any], json.loads(raw_json_data))
 
             if self.telemetry_client is not None:
                 self.telemetry_client.log(data)
 
             inferred_profile: DeviceProfile = self.inference_engine.analyze(data)
 
-            if PYQT_AVAILABLE and self.telemetry_received:
+            if PYQT_AVAILABLE and self.telemetry_received is not None:
                 self.telemetry_received.emit(inferred_profile)
             else:
-                logger.info(f"Telemetry inferred: {inferred_profile}")
+                logger.info("Telemetry inferred: %s", inferred_profile)
 
         except (json.JSONDecodeError, TypeError, KeyError) as e:
-            logger.error(f"Failed to parse incoming telemetry: {e}")
+            logger.error("Failed to parse incoming telemetry: %s", e)
 
     async def handle_message(self, message: str) -> str:
         """Handle messages coming from the WebView (Async/Playwright style)."""
-        logger.debug(f"Received message: {message}")
+        logger.debug("Received message: %s", message)
         try:
-            data = json.loads(message)
-            action_name = data.get("action")
+            data = cast(dict[str, Any], json.loads(message))
+            action_name = cast(str, data.get("action", ""))
 
             if action_name not in self._actions:
                 return json.dumps({"status": "error", "message": f"Unknown action: {action_name}"})
@@ -100,7 +107,7 @@ class WebViewBridge(QObject):  # type: ignore[misc]
             if self.telemetry_registry is None:
                 return json.dumps({"status": "error", "message": "Telemetry registry not initialized"})
 
-            results = action.execute(self.telemetry_registry, data)
+            results = await action.execute(self.telemetry_registry, data)
 
             return json.dumps({"status": "success", "results": results})
         except json.JSONDecodeError:

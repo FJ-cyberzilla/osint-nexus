@@ -9,8 +9,8 @@ except ImportError:
     Browser = Any
     BrowserContext = Any
 
-# Import configuration from pool - need to be careful of circular dependencies
 from osint_nexus.core.browser.config import BrowserPoolConfig
+from osint_nexus.core.browser.monitor import BrowserProtocol
 
 STEALTH_INIT_SCRIPT = """
     Object.defineProperty(navigator, 'webdriver', {
@@ -27,7 +27,10 @@ class BrowserContextFactory:
         self.config = config
 
     async def create(
-        self, browser: Browser, proxy_url: str | None = None, extra_headers: dict[str, str] | None = None
+        self,
+        browser: Browser | BrowserProtocol,
+        proxy_url: str | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> BrowserContext:
         """Configures and creates a new BrowserContext."""
         user_agent = random.choice(self.config.user_agents)  # nosec B311

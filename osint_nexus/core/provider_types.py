@@ -29,7 +29,12 @@ class DatabaseManagerProtocol(Protocol):
     async def save_result(self, username: str, provider: str, found: bool) -> None: ...
 
 
+# Common dictionary type for metadata and options
+type JSONValue = str | int | float | bool | None | dict[str, "JSONValue"] | list["JSONValue"]
+type MetadataDict = dict[str, JSONValue]
+
+
 class DeviceInferenceProtocol(Protocol):
     """Interface for device inference."""
 
-    async def infer(self, content: str, metadata: dict[str, Any]) -> Any: ...
+    async def infer(self, content: str, metadata: MetadataDict) -> Any: ...

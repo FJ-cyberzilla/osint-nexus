@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 from pydantic import BaseModel, Field, field_validator
@@ -19,6 +19,9 @@ from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.exceptions import NetworkError
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
+
+if TYPE_CHECKING:
+    from osint_nexus.core.provider_types import JSONValue
 
 
 class SiteConfig(BaseModel):
@@ -83,7 +86,7 @@ class GenericProvider(BaseProvider):
         # Instance-specific logger for better observability in async traces
         self._logger = logging.getLogger(f"osint_nexus.providers.generic.{self.config.name}")
 
-    async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
+    async def check_username(self, username: str, **kwargs: JSONValue) -> tuple[bool, str]:
         """
         Fetch the profile page and return existence and content.
 
@@ -107,7 +110,7 @@ class GenericProvider(BaseProvider):
         content_str = str(content) if content else ""
         return self._detect(found, content_str)
 
-    async def _fetch(self, url: str, **kwargs: Any) -> tuple[bool, str | None, str | None]:
+    async def _fetch(self, url: str, **kwargs: JSONValue) -> tuple[bool, str | None, str | None]:
         """
         Fetch content from the network with retry and evasion.
 

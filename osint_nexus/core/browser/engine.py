@@ -1,7 +1,6 @@
-from abc import ABC, abstractmethod
+from typing import Protocol, runtime_checkable
 
 
-class BrowserEngine(ABC):
-    @abstractmethod
-    def run_navigation(self, url: str) -> None:
-        pass
+@runtime_checkable
+class BrowserEngineProtocol(Protocol):
+    async def run_navigation(self, url: str) -> None: ...

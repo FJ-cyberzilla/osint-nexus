@@ -62,7 +62,6 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=5.0.0",
-    # "ruff>=0.15.22",
 ]
 
 [tool.setuptools]
@@ -94,8 +93,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["F841"]  # unused variable in tests
-"__init__.py" = ["F401"]  # unused import (re-exported)
+"tests/*" = ["F841"]
+"__init__.py" = ["F401"]
 "tests/test_network.py" = ["E402"]
 
 [tool.ruff.lint.isort]
@@ -120,7 +119,6 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 exclude = ["build"]
 
-# Per-module overrides for problematic libraries or files
 [[tool.mypy.overrides]]
 module = ["curl_cffi.*", "httpx.*"]
 ignore_missing_imports = true

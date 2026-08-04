@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Protocol, runtime_checkable
 
-try:
-    from playwright.async_api import Browser
-except ImportError:
-    Browser = Any
+
+@runtime_checkable
+class BrowserProtocol(Protocol):
+    def is_connected(self) -> bool: ...
 
 
 class PoolMonitor:
@@ -20,5 +20,5 @@ class PoolMonitor:
     def record_release(self) -> None:
         self.active_contexts = max(0, self.active_contexts - 1)
 
-    def check_health(self, browser: Browser | None) -> bool:
+    def check_health(self, browser: BrowserProtocol | None) -> bool:
         return browser is not None and browser.is_connected()

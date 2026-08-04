@@ -1,6 +1,7 @@
 import asyncio
+import logging
 import time
-from typing import Any
+from typing import Any, TypedDict
 
 import aiohttp
 
@@ -14,6 +15,31 @@ from osint_nexus.core.captcha.base import (
     CaptchaType,
 )
 from osint_nexus.core.config import get_config
+
+
+class AntiCaptchaBalanceResponse(TypedDict):
+    errorId: int
+    balance: float
+    errorCode: str | None
+    errorDescription: str | None
+
+
+class AntiCaptchaTaskResponse(TypedDict):
+    errorId: int
+    taskId: int | None
+    errorCode: str | None
+    errorDescription: str | None
+
+
+class AntiCaptchaResultResponse(TypedDict):
+    errorId: int
+    status: str
+    solution: dict[str, str] | None
+    errorCode: str | None
+    errorDescription: str | None
+
+
+logger = logging.getLogger(__name__)
 
 
 class AntiCaptchaSolver(CaptchaSolver):
@@ -37,10 +63,10 @@ class AntiCaptchaSolver(CaptchaSolver):
         payload = {"clientKey": self.config.anti_captcha_key}
         try:
             async with self._ensure_session().post(url, json=payload) as resp:
-                data = await resp.json()
-                balance = float(data.get("balance", 0))
-                return balance > 0.01
-        except Exception:  # pylint: disable=broad-except
+                data: AntiCaptchaBalanceResponse = await resp.json()
+                return data.get("balance", 0.0) > 0.01
+        except aiohttp.ClientError as e:
+            logger.error("Anti-Captcha health check failed: %s", e, exc_info=True)
             return False
 
     def estimate_cost(self, captcha_type: CaptchaType) -> float:
@@ -71,9 +97,11 @@ class AntiCaptchaSolver(CaptchaSolver):
             "task": task_data,
         }
         async with session.post(self.create_task_url, json=payload) as resp:
-            data = await resp.json()
+            data: AntiCaptchaTaskResponse = await resp.json()
         if data.get("errorId") != 0:
             raise CaptchaServiceError(f"Task creation failed: {data.get('errorDescription', 'unknown')}")
+        if data.get("taskId") is None:
+            raise CaptchaServiceError("Task creation failed: no taskId")
         task_id = data["taskId"]
 
         # Poll for result
@@ -87,7 +115,7 @@ class AntiCaptchaSolver(CaptchaSolver):
         url: str,
         captcha_type: CaptchaType,
         extra: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> dict[str, str | float]:
         """Build the task data for Anti‑Captcha."""
         type_map = {
             CaptchaType.RECAPTCHA_V2: "NoCaptchaTaskProxyless",
@@ -96,7 +124,7 @@ class AntiCaptchaSolver(CaptchaSolver):
             CaptchaType.TURNSTILE: "TurnstileTaskProxyless",
         }
         task_type = type_map.get(captcha_type, "NoCaptchaTaskProxyless")
-        task = {
+        task: dict[str, str | float] = {
             "type": task_type,
             "websiteURL": url,
         }
@@ -104,11 +132,11 @@ class AntiCaptchaSolver(CaptchaSolver):
             task["websiteKey"] = site_key
         elif captcha_type == CaptchaType.RECAPTCHA_V3:
             task["websiteKey"] = site_key
-            task["pageAction"] = extra.get("action", "verify")
-            task["minScore"] = extra.get("min_score", 0.3)
+            task["pageAction"] = str(extra.get("action", "verify"))
+            task["minScore"] = float(extra.get("min_score", 0.3))
         elif captcha_type == CaptchaType.HCAPTCHA:
             task["websiteKey"] = site_key
-            task["data"] = extra.get("data_s", "")
+            task["data"] = str(extra.get("data_s", ""))
         elif captcha_type == CaptchaType.TURNSTILE:
             task["websiteKey"] = site_key
         return task
@@ -123,21 +151,22 @@ class AntiCaptchaSolver(CaptchaSolver):
         while True:
             await asyncio.sleep(self.config.poll_interval)
             async with session.post(self.get_task_result_url, json=poll_payload) as resp:
-                data = await resp.json()
+                data: AntiCaptchaResultResponse = await resp.json()
 
             token = self._handle_poll_response(data, start_time)
             if token:
                 return token
 
-    def _handle_ready_response(self, data: dict[str, Any]) -> str:
+    def _handle_ready_response(self, data: AntiCaptchaResultResponse) -> str:
         """Handle the ready poll response."""
-        solution = data.get("solution", {})
-        token = solution.get("gRecaptchaResponse") or solution.get("token")
-        if token:
-            return str(token)
+        solution = data.get("solution")
+        if solution:
+            token = solution.get("gRecaptchaResponse") or solution.get("token")
+            if token:
+                return str(token)
         raise CaptchaServiceError("No token in solution")
 
-    def _raise_poll_error(self, data: dict[str, Any]) -> None:
+    def _raise_poll_error(self, data: AntiCaptchaResultResponse) -> None:
         """Raise appropriate exception for poll error responses."""
         error_code = data.get("errorCode")
         if error_code == "ERROR_ZERO_BALANCE":
@@ -147,7 +176,7 @@ class AntiCaptchaSolver(CaptchaSolver):
 
         raise CaptchaServiceError(f"Polling error: {data.get('errorDescription')}")
 
-    def _handle_poll_response(self, data: dict[str, Any], start_time: float) -> str | None:
+    def _handle_poll_response(self, data: AntiCaptchaResultResponse, start_time: float) -> str | None:
         """Handle the poll response from Anti-Captcha."""
         if data.get("status") == "ready":
             return self._handle_ready_response(data)

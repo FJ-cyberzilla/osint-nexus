@@ -6,7 +6,22 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TypedDict
+
+
+class STIXIdentity(TypedDict):
+    type: str
+    id: str
+    created: str
+    name: str
+    description: str
+    identity_class: str
+
+
+class STIXBundle(TypedDict):
+    type: str
+    id: str
+    objects: list[STIXIdentity]
 
 
 class STIXExporter:
@@ -14,20 +29,20 @@ class STIXExporter:
     Exports scan data to STIX 2.1 format.
     """
 
-    def export(self, data: dict[str, Any]) -> dict[str, Any]:
+    def export(self, data: dict[str, str]) -> STIXBundle:
         """
         Converts internal representation to STIX 2.1.
         """
         identity = self._create_identity(data)
 
-        stix_payload = {
+        stix_payload: STIXBundle = {
             "type": "bundle",
             "id": f"bundle--{uuid.uuid4()}",
             "objects": [identity],
         }
         return stix_payload
 
-    def _create_identity(self, data: dict[str, Any]) -> dict[str, Any]:
+    def _create_identity(self, data: dict[str, str]) -> STIXIdentity:
         """Creates a STIX 2.1 Identity object."""
         return {
             "type": "identity",

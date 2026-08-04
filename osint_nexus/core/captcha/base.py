@@ -3,11 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 import aiohttp
 
-# Backwards compatibility imports
 from osint_nexus.core.captcha.config import CaptchaConfig
 from osint_nexus.core.captcha.exceptions import (
     CaptchaBudgetExceeded,
@@ -29,10 +28,20 @@ __all__ = [
     "CaptchaSolveResult",
     "CaptchaType",
     "ChainedCaptchaSolver",
+    "CaptchaSolverProtocol",
 ]
 
 
-class CaptchaSolver(ABC):
+@runtime_checkable
+class CaptchaSolverProtocol(Protocol):
+    async def health_check(self) -> bool: ...
+    async def solve(
+        self, site_key: str, url: str, captcha_type: CaptchaType = CaptchaType.RECAPTCHA_V2, **kwargs: Any
+    ) -> CaptchaSolveResult: ...
+    async def close(self) -> None: ...
+
+
+class CaptchaSolver(CaptchaSolverProtocol, ABC):
     def __init__(
         self, name: str, config: CaptchaConfig, session: aiohttp.ClientSession | None = None
     ) -> None:

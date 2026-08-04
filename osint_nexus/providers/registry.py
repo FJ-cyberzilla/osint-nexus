@@ -1,5 +1,7 @@
 import json
+import logging
 from pathlib import Path
+from typing import Any
 
 from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.evasion_agent import EvasionAgent
@@ -8,6 +10,8 @@ from osint_nexus.providers.base import BaseProvider
 from osint_nexus.providers.generic import GenericProvider, SiteConfig
 from osint_nexus.providers.github import GitHubProvider
 from osint_nexus.utils.network import NetworkManager
+
+logger = logging.getLogger("osint_nexus.registry")
 
 
 class ProviderRegistry:
@@ -46,7 +50,7 @@ class ProviderRegistry:
         if sites_file.exists():
             with open(sites_file) as f:
                 try:
-                    sites_data = json.load(f)
+                    sites_data: list[dict[str, Any]] = json.load(f)
                     for site_entry in sites_data:
                         config = SiteConfig(**site_entry)
                         providers.append(
@@ -57,9 +61,7 @@ class ProviderRegistry:
                             )
                         )
                 except Exception as e:
-                    import logging
-
-                    logging.getLogger("osint_nexus.registry").error(f"Failed to load sites.json: {e}")
+                    logger.error("Failed to load sites.json: %s", e)
 
         # Add specialized providers
         providers.append(GitHubProvider(self.network_manager))

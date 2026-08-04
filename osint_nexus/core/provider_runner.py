@@ -5,14 +5,16 @@ Handles the execution lifecycle of provider-specific OSINT checks.
 from __future__ import annotations
 
 import logging
-from typing import Any
+import typing
 
-from osint_nexus.core.extractor import PivotExtractor
+from osint_nexus.core.extractor import ExtractedPivots, PivotExtractor
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.provider_types import (
     DatabaseManagerProtocol,
     DeviceInferenceProtocol,
+    JSONValue,
+    MetadataDict,
     ProviderExecutionResult,
     ValidatorProtocol,
 )
@@ -42,7 +44,7 @@ class ProviderRunner:
         self._device_inference = device_inference
 
     async def run(
-        self, provider: BaseProvider, username: str, **microlink_options: Any
+        self, provider: BaseProvider, username: str, **microlink_options: JSONValue
     ) -> IntelligenceObject:
         """Executes the provider check logic."""
         result = await self._perform_check(provider, username, **microlink_options)
@@ -50,12 +52,13 @@ class ProviderRunner:
         final_found = result.found and self._validator.validate(result.content, provider.name)
 
         # Harvest secondary identifiers if found
-        pivots: dict[str, Any] = {}
+        pivots: ExtractedPivots = {}
         if final_found:
             pivots = await self._extractor.extract(result.content)
 
         metadata = await self._infer_metadata(provider, username, result.content, final_found)
-        metadata.update(pivots)
+        # Cast pivots to MetadataDict for update, ensuring compatibility with JSONValue
+        metadata.update(typing.cast(MetadataDict, pivots))
 
         await self._db_manager.save_result(username, provider.name, final_found)
 
@@ -70,7 +73,7 @@ class ProviderRunner:
         )
 
     async def _perform_check(
-        self, provider: BaseProvider, username: str, **microlink_options: Any
+        self, provider: BaseProvider, username: str, **microlink_options: JSONValue
     ) -> ProviderExecutionResult:
         """Executes the provider-specific check."""
         try:
@@ -82,9 +85,9 @@ class ProviderRunner:
 
     async def _infer_metadata(
         self, provider: BaseProvider, username: str, content: str, final_found: bool
-    ) -> dict[str, Any]:
+    ) -> MetadataDict:
         """Infers metadata for a provider result."""
-        metadata: dict[str, Any] = {}
+        metadata: MetadataDict = {}
         if final_found and self._device_inference:
             profile = await self._device_inference.infer(content, provider.get_metadata(username))
             metadata["device_inference"] = profile.model_dump(mode="json")

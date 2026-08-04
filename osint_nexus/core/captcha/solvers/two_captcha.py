@@ -1,6 +1,8 @@
 import asyncio
+import json
+import logging
 import time
-from typing import Any
+from typing import TypedDict, cast
 
 import aiohttp
 
@@ -13,6 +15,25 @@ from osint_nexus.core.captcha.base import (
     CaptchaType,
 )
 from osint_nexus.core.config import get_config
+
+logger = logging.getLogger(__name__)
+
+
+class TwoCaptchaResponse(TypedDict):
+    status: int
+    request: str
+
+
+class TwoCaptchaSubmitParams(TypedDict, total=False):
+    key: str
+    method: str
+    googlekey: str
+    pageurl: str
+    json: str
+    version: str
+    action: str
+    data_s: str
+    sitekey: str
 
 
 class TwoCaptchaSolver(CaptchaSolver):
@@ -33,7 +54,6 @@ class TwoCaptchaSolver(CaptchaSolver):
     async def health_check(self) -> bool:
         """Check balance via getBalance API."""
         url = f"{self.base_url}/res.php"
-        # Cast values to str to be compatible with aiohttp.ClientSession.get params requirements
         params: dict[str, str] = {
             "key": str(self.config.two_captcha_key),
             "action": "getbalance",
@@ -41,10 +61,11 @@ class TwoCaptchaSolver(CaptchaSolver):
         }
         try:
             async with self._ensure_session().get(url, params=params) as resp:
-                data = await resp.json()
-                balance = float(data.get("balance", 0))
+                data = cast(TwoCaptchaResponse, json.loads(await resp.text()))
+                balance = float(data.get("request", "0"))
                 return balance > 0.01
-        except Exception:  # pylint: disable=broad-except
+        except (aiohttp.ClientError, ValueError) as e:
+            logger.error("2Captcha health check failed: %s", e, exc_info=True)
             return False
 
     def estimate_cost(self, captcha_type: CaptchaType) -> float:
@@ -64,7 +85,7 @@ class TwoCaptchaSolver(CaptchaSolver):
         site_key: str,
         url: str,
         captcha_type: CaptchaType,
-        **kwargs: Any,
+        **kwargs: str,
     ) -> CaptchaSolveResult:
         session = self._ensure_session()
         method = self._get_method(captcha_type)
@@ -73,7 +94,7 @@ class TwoCaptchaSolver(CaptchaSolver):
         # 1. Submit captcha
         submit_url = f"{self.base_url}/in.php"
         async with session.post(submit_url, data=submit_params) as resp:
-            data = await resp.json()
+            data = cast(TwoCaptchaResponse, json.loads(await resp.text()))
         if data.get("status") != 1:
             raise CaptchaServiceError(f"Submission failed: {data.get('request', 'unknown error')}")
         captcha_id = data["request"]
@@ -100,21 +121,21 @@ class TwoCaptchaSolver(CaptchaSolver):
         url: str,
         captcha_type: CaptchaType,
         method: str,
-        extra: dict[str, Any],
-    ) -> dict[str, Any]:
+        extra: dict[str, str],
+    ) -> TwoCaptchaSubmitParams:
         """Build the submit payload for 2captcha."""
-        params = {
-            "key": self.config.two_captcha_key,
+        params: TwoCaptchaSubmitParams = {
+            "key": str(self.config.two_captcha_key),
             "method": method,
             "googlekey": site_key,
             "pageurl": url,
-            "json": 1,
+            "json": "1",
         }
         if captcha_type == CaptchaType.RECAPTCHA_V3:
             params["version"] = "v3"
             params["action"] = extra.get("action", "verify")
         elif captcha_type == CaptchaType.HCAPTCHA:
-            params["data-s"] = extra.get("data_s", "")
+            params["data_s"] = extra.get("data_s", "")
         elif captcha_type == CaptchaType.TURNSTILE:
             params["sitekey"] = site_key
         return params
@@ -131,21 +152,22 @@ class TwoCaptchaSolver(CaptchaSolver):
         while True:
             await asyncio.sleep(self.config.poll_interval)
             async with session.get(self.poll_url, params=poll_params) as resp:
-                data = await resp.json()
+                data = cast(TwoCaptchaResponse, json.loads(await resp.text()))
 
             result = self._handle_poll_response(data, start_time)
             if result:
                 return result
 
-    def _handle_poll_response(self, data: dict[str, Any], start_time: float) -> str | None:
+    def _handle_poll_response(self, data: TwoCaptchaResponse, start_time: float) -> str | None:
         """Handle the poll response from 2captcha."""
         if data.get("status") == 1:
-            return str(data["request"])
+            return data["request"]
         if data.get("request") == "CAPCHA_NOT_READY":
             return None
         if "ERROR" in data.get("request", ""):
-            raise CaptchaServiceError(f"Solving error: {str(data['request'])}")
+            raise CaptchaServiceError(f"Solving error: {data['request']}")
         if time.monotonic() - start_time > self.config.solve_timeout:
             raise CaptchaTimeoutError("Polling timed out")
-        # logger.warning("Unexpected poll response: %s", data) # logger needs to be imported or handled
-        return None
+
+        # Unexpected response
+        raise CaptchaServiceError(f"Unexpected poll response: {data}")

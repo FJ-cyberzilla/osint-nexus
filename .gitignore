@@ -45,3 +45,5 @@ htmlcov/
 # Logs
 logs/
 log/
+error_distribution.txt
+mypy_report.txt

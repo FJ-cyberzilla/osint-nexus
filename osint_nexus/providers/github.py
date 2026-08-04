@@ -1,8 +1,11 @@
-from typing import Any
+from typing import TYPE_CHECKING
 
 from osint_nexus.core.config import get_config
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
+
+if TYPE_CHECKING:
+    from osint_nexus.core.provider_types import JSONValue, MetadataDict
 
 
 class GitHubProvider(BaseProvider):
@@ -20,7 +23,7 @@ class GitHubProvider(BaseProvider):
         super().__init__("GitHub", network)
         self.url_template = get_config().service_urls["github"]
 
-    async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
+    async def check_username(self, username: str, **kwargs: JSONValue) -> tuple[bool, str]:
         """Check if a username exists on GitHub.
 
         Args:
@@ -46,7 +49,7 @@ class GitHubProvider(BaseProvider):
         """
         return f"site:github.com {username}"
 
-    def get_metadata(self, username: str) -> dict[str, Any]:
+    def get_metadata(self, username: str) -> MetadataDict:
         """Get GitHub-specific metadata.
 
         Args:

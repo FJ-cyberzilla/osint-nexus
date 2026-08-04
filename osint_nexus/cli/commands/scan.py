@@ -1,13 +1,16 @@
 import argparse
 import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 
 from osint_nexus.cli.scanner import run_scan
 from osint_nexus.core.agent import OSINTAgent
 from osint_nexus.utils.security import SecurityUtility
+
+if TYPE_CHECKING:
+    from argparse import _SubParsersAction
 
 console = Console()
 
@@ -36,7 +39,7 @@ def handle_scan_command(args: argparse.Namespace) -> None:
     asyncio.run(async_main(args))
 
 
-def setup_scan_parser(subparsers: Any) -> None:
+def setup_scan_parser(subparsers: _SubParsersAction[argparse.ArgumentParser]) -> None:
     """Configure the scan command parser."""
     scan_parser = subparsers.add_parser("scan", help="Scan a target username")
     scan_parser.add_argument("--username", required=True, help="Target username to investigate")

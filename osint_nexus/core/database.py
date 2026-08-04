@@ -8,15 +8,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import aiosqlite
-
 from osint_nexus.core.bootstrap import DATABASE_PATH
 from osint_nexus.core.config import Config
 from osint_nexus.core.db.base import DatabaseConnection
 from osint_nexus.core.db.cache_repository import CacheRepository
+from osint_nexus.core.db.health_manager import HealthManager
 from osint_nexus.core.db.result_repository import ResultRepository
 from osint_nexus.core.db.schema_manager import SchemaManager
-from osint_nexus.core.exceptions import DatabaseError
+from osint_nexus.core.db.search_repository import SearchRepository
 
 logger = logging.getLogger("osint_nexus.database")
 
@@ -35,6 +34,8 @@ class DatabaseManager:
         self.results = ResultRepository(self.connection)
         self.cache = CacheRepository(self.connection)
         self.schema = SchemaManager(self.connection)
+        self.search_repo = SearchRepository(self.connection)
+        self.health = HealthManager(self.db_path)
 
     async def _init_db(self) -> None:
         await self.schema.initialize()
@@ -59,17 +60,7 @@ class DatabaseManager:
 
     async def search(self, keyword: str) -> list[dict[str, Any]]:
         """Perform FTS5 search."""
-        try:
-            async with self.connection.connect() as db:
-                cursor = await db.execute(
-                    "SELECT url, title, snippet(content_search, 2, '<b>', '</b>', '...', 10) as body FROM content_search WHERE content_search MATCH ?",
-                    (keyword,),
-                )
-                rows = await cursor.fetchall()
-                return [dict(row) for row in rows]
-        except Exception as exc:
-            logger.error("Search failed: %s", exc, exc_info=True)
-            raise DatabaseError(f"Search failed for '{keyword}': {exc}") from exc
+        return await self.search_repo.search(keyword)
 
     async def query_results(
         self,
@@ -82,17 +73,8 @@ class DatabaseManager:
 
     async def health_check(self) -> bool:
         """Verify that the database is accessible and writable."""
-        try:
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute(
-                    "INSERT INTO results (username, platform, found) VALUES ('__health__', '__test__', 0)"
-                )
-                await db.commit()
-                await db.execute(
-                    "DELETE FROM results WHERE username = '__health__' AND platform = '__test__'"
-                )
-                await db.commit()
-            return True
-        except Exception as exc:
-            logger.error("Database health check failed: %s", exc)
-            raise DatabaseError(f"Database health check failed: {exc}") from exc
+        return await self.health.check()
+
+    async def close(self) -> None:
+        """Closes the database connection."""
+        await self.connection.close()

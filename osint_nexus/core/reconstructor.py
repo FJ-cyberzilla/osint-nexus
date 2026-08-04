@@ -9,7 +9,38 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol, TypedDict
+
+
+# Type Aliases for domain entities
+class Account(TypedDict, total=False):
+    id: str
+    username: str
+    platform: str
+    email: str | None
+    phone: str | None
+    device_id: str | None
+    last_seen: str | None
+
+
+class RelationshipGraph(TypedDict):
+    nodes: list[str]
+    edges: list[dict[str, str]]
+
+
+class TimelineEntry(TypedDict):
+    event: str
+    timestamp: str
+    description: str
+
+
+class Correlations(TypedDict, total=False):
+    confidence: float
+    reasoning: str
+    related_accounts: list[str]
+
+
+type Timeline = list[TimelineEntry]
 
 logger = logging.getLogger("osint_nexus.core.reconstructor")
 
@@ -17,15 +48,15 @@ logger = logging.getLogger("osint_nexus.core.reconstructor")
 @dataclass
 class IdentityProfile:
     username: str
-    accounts: list[Any]
-    relationships: dict[str, Any]
-    timeline: Any
-    correlations: Any
+    accounts: list[Account]
+    relationships: RelationshipGraph
+    timeline: Timeline | None
+    correlations: Correlations | None
     confidence_score: float
 
 
 class Neo4jConnection:
-    def add_relationship(self, rel_type: str, account: Any) -> None:
+    def add_relationship(self, rel_type: str, account: Account) -> None:
         pass
 
 
@@ -34,37 +65,37 @@ class LLMInterface:
 
 
 class TemporalAnalysis:
-    def create_timeline(self, accounts: list[Any]) -> Any:
+    def create_timeline(self, accounts: list[Account]) -> Timeline | None:
         return None
 
 
 class RelationshipInferenceStrategy(Protocol):
-    def infer(self, account: Any, accounts: list[Any], graph_db: Neo4jConnection) -> None: ...
+    def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None: ...
 
 
 class SharedEmailStrategy:
-    def infer(self, account: Any, accounts: list[Any], graph_db: Neo4jConnection) -> None:
+    def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None:
         # Mock logic matching original has_shared_email
         if any(acc != account for acc in accounts):
             graph_db.add_relationship("SAME_EMAIL", account)
 
 
 class SharedPhoneStrategy:
-    def infer(self, account: Any, accounts: list[Any], graph_db: Neo4jConnection) -> None:
+    def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None:
         # Mock logic matching original has_shared_phone
         if any(acc != account for acc in accounts):
             graph_db.add_relationship("SAME_PHONE", account)
 
 
 class SharedDeviceStrategy:
-    def infer(self, account: Any, accounts: list[Any], graph_db: Neo4jConnection) -> None:
+    def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None:
         # Mock logic matching original has_shared_device
         if any(acc != account for acc in accounts):
             graph_db.add_relationship("SAME_DEVICE", account)
 
 
 class InteractionStrategy:
-    def infer(self, account: Any, accounts: list[Any], graph_db: Neo4jConnection) -> None:
+    def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None:
         # Mock logic matching original has_cross_platform_interactions
         if any(acc != account for acc in accounts):
             graph_db.add_relationship("INTERACTS", account)
@@ -105,7 +136,7 @@ class DigitalFootprintReconstructor:
             confidence_score=self.calculate_confidence(graph, timeline),
         )
 
-    def build_relationship_graph(self, accounts: list[Any]) -> dict[str, Any]:
+    def build_relationship_graph(self, accounts: list[Account]) -> RelationshipGraph:
         """
         Builds the relationship network using configured inference strategies.
         """
@@ -115,11 +146,11 @@ class DigitalFootprintReconstructor:
 
         return {"nodes": [], "edges": []}
 
-    def discover_all_accounts(self, username: str) -> list[Any]:
+    def discover_all_accounts(self, username: str) -> list[Account]:
         return []
 
-    def correlate_accounts(self, accounts: list[Any], graph: dict[str, Any]) -> Any:
+    def correlate_accounts(self, accounts: list[Account], graph: RelationshipGraph) -> Correlations | None:
         return None
 
-    def calculate_confidence(self, graph: dict[str, Any], timeline: Any) -> float:
+    def calculate_confidence(self, graph: RelationshipGraph, timeline: Timeline | None) -> float:
         return 0.0

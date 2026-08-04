@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, cast
+from typing import cast
 
 logger = logging.getLogger("osint_nexus.core.compliance")
+
+type Scrubbable = dict[str, "Scrubbable"] | list["Scrubbable"] | str | int | float | bool | None
 
 
 class ComplianceEngine:
@@ -28,7 +30,7 @@ class ComplianceEngine:
             ),
         }
 
-    def sanitize(self, data: dict[str, Any]) -> dict[str, Any]:
+    def sanitize(self, data: dict[str, Scrubbable]) -> dict[str, Scrubbable]:
         """
         Scans a data dictionary and replaces detected PII with '[REDACTED]'.
 
@@ -41,7 +43,7 @@ class ComplianceEngine:
         sanitized = data.copy()
 
         # Recursive function to handle nested dicts/lists
-        def _scrub(item: Any) -> Any:
+        def _scrub(item: Scrubbable) -> Scrubbable:
             """
             Recursively scans an item and redacts PII if found.
             """
@@ -56,4 +58,4 @@ class ComplianceEngine:
                         return "[REDACTED]"
             return item
 
-        return cast(dict[str, Any], _scrub(sanitized))
+        return cast(dict[str, Scrubbable], _scrub(sanitized))

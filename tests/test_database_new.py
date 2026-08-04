@@ -11,6 +11,7 @@ async def test_database_initialization(tmp_path: Any) -> None:
     db_path = tmp_path / "test.db"
     db_manager = DatabaseManager(db_path=str(db_path))
     await db_manager.ensure_initialized()
+    await db_manager.close()
 
     async with (
         aiosqlite.connect(db_path) as db,
@@ -58,6 +59,7 @@ async def test_database_migration(tmp_path: Any) -> None:
 
     db_manager = DatabaseManager(db_path=str(db_path))
     await db_manager.ensure_initialized()
+    await db_manager.close()
 
     async with aiosqlite.connect(db_path) as db:
         async with db.execute("SELECT MAX(version) FROM schema_version") as cur:
@@ -109,3 +111,5 @@ async def test_database_refactor_features(tmp_path: Any) -> None:
     results = await db_manager.query_results(username="u2")
     assert len(results) == 1
     assert results[0]["username"] == "u2"
+
+    await db_manager.close()

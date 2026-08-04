@@ -76,8 +76,8 @@ class ProviderWorker:
         username: str,
         final_found: bool,
         dork: str,
-        content: Any,
-        metadata: dict[str, Any],
+        content: str | None,
+        metadata: dict[str, str | int | float | bool],
     ) -> IntelligenceObject:
         """Constructs an IntelligenceObject for a successful scan."""
         return IntelligenceObject(
@@ -87,7 +87,7 @@ class ProviderWorker:
             dork=dork,
             confidence=1.0 if final_found else 0.0,
             metadata=metadata,
-            raw_data=str(content) if final_found else None,
+            raw_data=content if final_found else None,
         )
 
     def _build_error_intel(self, platform: str, username: str, error_msg: str) -> IntelligenceObject:

@@ -1,7 +1,12 @@
 import re
-from typing import Any, TypedDict
+from typing import TypedDict
 
 from pydantic import BaseModel, Field
+
+
+class PortMapping(TypedDict):
+    os: list[str]
+    role: str
 
 
 class InferenceResult(BaseModel):
@@ -19,14 +24,14 @@ class DeviceProfile(TypedDict):
     hardware_tier: str
     anomaly_detected: bool
     throttle_status: str | None
-    raw_telemetry: dict[str, Any]
+    raw_telemetry: dict[str, str | float | int | bool]
 
 
 class DeviceInferenceService:
     """Provides production-grade device context signatures based on network heuristics."""
 
     # Static SOTA fingerprint matrices for performance mapping
-    COMMON_PORT_MAP: dict[int, dict[str, Any]] = {
+    COMMON_PORT_MAP: dict[int, PortMapping] = {
         21: {"os": ["Linux", "Unix"], "role": "File Transfer (FTP)"},
         22: {"os": ["Linux", "Unix"], "role": "Remote Management (SSH)"},
         25: {"os": ["Linux", "Unix"], "role": "Mail Transfer (SMTP)"},
@@ -50,17 +55,17 @@ class DeviceInferenceService:
     def __init__(self) -> None:
         pass
 
-    def _get_os_from_mappings(self, mappings: list[dict[str, Any]]) -> list[str]:
+    def _get_os_from_mappings(self, mappings: list[PortMapping]) -> list[str]:
         """Extract OS from mappings."""
-        inferred = {os for m in mappings for os in m["os"]}
+        inferred = {os_name for m in mappings for os_name in m["os"]}
         return list(inferred) or ["Unknown OS"]
 
-    def _get_roles_from_mappings(self, mappings: list[dict[str, Any]]) -> list[str]:
+    def _get_roles_from_mappings(self, mappings: list[PortMapping]) -> list[str]:
         """Extract roles from mappings."""
         roles = [m["role"] for m in mappings]
         return roles or ["No clear exposed roles"]
 
-    def _calculate_confidence(self, mappings: list[dict[str, Any]], open_ports: list[int]) -> int:
+    def _calculate_confidence(self, mappings: list[PortMapping], open_ports: list[int]) -> int:
         """Calculate confidence score."""
         if not mappings:
             return 0
@@ -78,11 +83,11 @@ class DeviceInferenceService:
             confidence_score=self._calculate_confidence(mappings, open_ports),
         )
 
-    async def infer(self, content: str, metadata: dict[str, Any]) -> InferenceResult:
+    async def infer(self, content: str, metadata: dict[str, list[int] | str]) -> InferenceResult:
         """Helper to infer device profile based on metadata presence."""
-        if "ports" in metadata:
+        if "ports" in metadata and isinstance(metadata["ports"], list):
             return await self.infer_by_ports("target", metadata["ports"])
-        if "mac_address" in metadata:
+        if "mac_address" in metadata and isinstance(metadata["mac_address"], str):
             # Fallback for now if mac_address is present
             return InferenceResult(
                 target="target", manufacturer=await self.infer_by_mac(metadata["mac_address"])
@@ -123,7 +128,7 @@ class DeviceInferenceEngine:
             },
         }
 
-    def analyze(self, telemetry_data: dict[str, Any]) -> DeviceProfile:
+    def analyze(self, telemetry_data: dict[str, str | float | int | bool]) -> DeviceProfile:
         result: DeviceProfile = {
             "device_model": "Unknown",
             "hardware_tier": "Unknown",
@@ -140,7 +145,8 @@ class DeviceInferenceEngine:
                 result["hardware_tier"] = details["tier"]
                 break
 
-        cpu_time = float(telemetry_data.get("cpu_benchmark_ms", 0.0))
+        cpu_time_val = telemetry_data.get("cpu_benchmark_ms", 0.0)
+        cpu_time = float(cpu_time_val) if isinstance(cpu_time_val, (int, float)) else 0.0
         if cpu_time > 50.0:
             result["anomaly_detected"] = True
             result["throttle_status"] = "Active thermal or power saving state detected"

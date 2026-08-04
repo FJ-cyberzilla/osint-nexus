@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from osint_nexus.core.agent import OSINTAgent
+from osint_nexus.core.intelligence import IntelligenceObject
 
 app = FastAPI(title="OSINT Nexus API")
 
@@ -17,13 +18,16 @@ class ScanRequest(BaseModel):
     timeout: float = 15.0
 
 
-@app.post("/scan")
+@app.post("/scan", response_model=dict[str, Any])
 async def trigger_scan(request: ScanRequest) -> dict[str, Any]:
     """Triggers an OSINT scan."""
     agent = OSINTAgent(request.username)
 
-    results = []
+    results: list[IntelligenceObject] = []
     async for intel in agent.run_scan(request.username, timeout=request.timeout):
         results.append(intel)
 
-    return {"username": request.username, "results": results}
+    # Use model_dump to serialize IntelligenceObject records
+    serialized_results = [intel.model_dump() for intel in results]
+
+    return {"username": request.username, "results": serialized_results}
