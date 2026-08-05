@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Code Quality & Formatting
+    name: Code Quality & Type Checking
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -28,10 +28,18 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Install project & dev dependencies
+        run: |
+          uv pip install --system -e ".[dev]"
+
       - name: Run Ruff Check & Format
         run: |
           uv run ruff check .
           uv run ruff format --check .
+
+      - name: Run MyPy Type Check
+        run: |
+          uv run mypy osint_nexus
 
   test:
     name: Run Tests (Python ${{ matrix.python-version }})
@@ -68,4 +76,3 @@ jobs:
         with:
           name: coverage-python-${{ matrix.python-version }}
           path: coverage.xml
-          
