@@ -12,30 +12,52 @@ license = { text = "MIT" }
 authors = [
     { name = "FJ-cyberzilla", email = "cyberzilla.systems@gmail.com" }
 ]
+
+# Core dependencies (Pure Python / Universal) - Works natively on Termux, Linux, Windows, macOS
 dependencies = [
     "httpx>=0.27.0",
-    "rich>=13.7.0",
-    "tqdm>=4.66.0",
     "aiohttp>=3.9.0",
     "pydantic>=2.0.0",
-    "curl_cffi>=0.7.0",
+    "pydantic-settings>=2.0.0",
+    "rich>=13.7.0",
+    "textual>=8.2.8",
+    "tqdm>=4.66.0",
     "fastapi>=0.110.0",
     "uvicorn>=0.29.0",
-    "imagehash>=4.3.0",
-    "Pillow>=10.0.0",
-    "rapidfuzz>=3.5.0",
-    "pydantic-settings>=2.0.0",
     "aiosqlite>=0.20.0",
-    "textual>=8.2.8",
     "beautifulsoup4>=4.12.0",
-    "PyQt6>=6.6.0; sys_platform != 'android'",
-    "PyQt6-WebEngine>=6.6.0; sys_platform != 'android'",
 ]
 
+[project.urls]
+Homepage = "https://github.com/FJ-cyberzilla/osint-nexus"
+Repository = "https://github.com/FJ-cyberzilla/osint-nexus.git"
+"Bug Tracker" = "https://github.com/FJ-cyberzilla/osint-nexus/issues"
+
 [project.optional-dependencies]
+# C-accelerated networking, fuzzy matching, and image hashing
+speedups = [
+    "curl_cffi>=0.7.0",
+    "rapidfuzz>=3.5.0",
+    "imagehash>=4.3.0",
+    "Pillow>=10.0.0",
+]
+
+# Desktop GUI features
+gui = [
+    "PyQt6>=6.6.0",
+    "PyQt6-WebEngine>=6.6.0",
+]
+
+# Headless browser automation
 browser = [
     "playwright>=1.40.0",
 ]
+
+# All-in-one target for Desktop Linux / Workstations
+full = [
+    "osint_nexus[speedups,gui,browser]",
+]
+
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -76,7 +98,6 @@ ignore = [
 "__init__.py" = ["F401"]  # unused import (re-exported)
 "tests/test_network.py" = ["E402"]
 
-
 [tool.ruff.lint.isort]
 known-first-party = ["osint_nexus"]
 
@@ -98,6 +119,7 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 exclude = ["build"]
+
 # Per-module overrides for problematic libraries or files
 [[tool.mypy.overrides]]
 module = ["curl_cffi.*", "httpx.*"]
