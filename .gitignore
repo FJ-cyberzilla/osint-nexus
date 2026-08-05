@@ -42,8 +42,18 @@ htmlcov/
 .nox/
 .cache
 
-# Logs
+# Logs & Diagnostics
 logs/
 log/
 error_distribution.txt
 mypy_report.txt
+
+# Database files
+data/*.db
+*.sqlite
+*.sqlite3
+
+# OS / IDE junk
+.DS_Store
+.vscode/
+.idea/
