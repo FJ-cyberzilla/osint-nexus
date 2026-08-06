@@ -30,7 +30,7 @@ jobs:
 
       - name: Install project & dev dependencies
         run: |
-          uv pip install --system -e ".[dev,speedups]"
+          uv sync --all-extras
 
       - name: Run Ruff Check & Format
         run: |
