@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from osint_nexus.core.exceptions import ProviderError
 from osint_nexus.core.intelligence import IntelligenceObject
@@ -23,7 +23,7 @@ class ProviderWorker:
         self.provider_runner = provider_runner
 
     async def execute(
-        self, provider: BaseProvider, username: str, abort_event: asyncio.Event, **microlink_options: Any
+        self, provider: BaseProvider, username: str, abort_event: asyncio.Event, **microlink_options: object
     ) -> IntelligenceObject:
         """
         Executes provider logic with injected tools.
@@ -55,7 +55,7 @@ class ProviderWorker:
         semaphore: asyncio.Semaphore,
         abort_event: asyncio.Event,
         timeout: float | None = None,
-        **microlink_options: Any,
+        **microlink_options: object,
     ) -> IntelligenceObject:
         """
         Wraps execution in semaphore and timeout.

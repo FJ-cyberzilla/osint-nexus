@@ -749,16 +749,10 @@ dependencies = [
     { name = "aiohttp" },
     { name = "aiosqlite" },
     { name = "beautifulsoup4" },
-    { name = "curl-cffi" },
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "imagehash" },
-    { name = "pillow" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pyqt6", marker = "sys_platform != 'android'" },
-    { name = "pyqt6-webengine", marker = "sys_platform != 'android'" },
-    { name = "rapidfuzz" },
     { name = "rich" },
     { name = "textual" },
     { name = "tqdm" },
@@ -774,32 +768,52 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
 ]
+full = [
+    { name = "curl-cffi" },
+    { name = "imagehash" },
+    { name = "pillow" },
+    { name = "playwright" },
+    { name = "pyqt6" },
+    { name = "pyqt6-webengine" },
+    { name = "rapidfuzz" },
+]
+gui = [
+    { name = "pyqt6" },
+    { name = "pyqt6-webengine" },
+]
+speedups = [
+    { name = "curl-cffi" },
+    { name = "imagehash" },
+    { name = "pillow" },
+    { name = "rapidfuzz" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9.0" },
     { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "beautifulsoup4", specifier = ">=4.12.0" },
-    { name = "curl-cffi", specifier = ">=0.7.0" },
+    { name = "curl-cffi", marker = "extra == 'speedups'", specifier = ">=0.7.0" },
     { name = "fastapi", specifier = ">=0.110.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "imagehash", specifier = ">=4.3.0" },
-    { name = "pillow", specifier = ">=10.0.0" },
+    { name = "imagehash", marker = "extra == 'speedups'", specifier = ">=4.3.0" },
+    { name = "osint-nexus", extras = ["speedups", "gui", "browser"], marker = "extra == 'full'" },
+    { name = "pillow", marker = "extra == 'speedups'", specifier = ">=10.0.0" },
     { name = "playwright", marker = "extra == 'browser'", specifier = ">=1.40.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
-    { name = "pyqt6", marker = "sys_platform != 'android'", specifier = ">=6.6.0" },
-    { name = "pyqt6-webengine", marker = "sys_platform != 'android'", specifier = ">=6.6.0" },
+    { name = "pyqt6", marker = "extra == 'gui'", specifier = ">=6.6.0" },
+    { name = "pyqt6-webengine", marker = "extra == 'gui'", specifier = ">=6.6.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
-    { name = "rapidfuzz", specifier = ">=3.5.0" },
+    { name = "rapidfuzz", marker = "extra == 'speedups'", specifier = ">=3.5.0" },
     { name = "rich", specifier = ">=13.7.0" },
     { name = "textual", specifier = ">=8.2.8" },
     { name = "tqdm", specifier = ">=4.66.0" },
     { name = "uvicorn", specifier = ">=0.29.0" },
 ]
-provides-extras = ["browser", "dev"]
+provides-extras = ["speedups", "gui", "browser", "full", "dev"]
 
 [[package]]
 name = "packaging"

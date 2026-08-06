@@ -13,13 +13,17 @@ from osint_nexus.core.captcha.base import (
 from osint_nexus.core.captcha.solvers.anti_captcha import AntiCaptchaSolver
 from osint_nexus.core.captcha.solvers.two_captcha import TwoCaptchaSolver
 from osint_nexus.core.config import get_config
+from osint_nexus.core.db.cache_repository import CacheRepository
 
 
 class CaptchaSolverRegistry:
     """Registry with priority ordering and dynamic selection."""
 
-    def __init__(self, config: CaptchaConfig) -> None:
+    def __init__(
+        self, config: CaptchaConfig, cache_repository: CacheRepository | None = None
+    ) -> None:
         self.config = config
+        self.cache_repository = cache_repository
         self._solvers: dict[str, CaptchaSolver] = {}
         self._session: aiohttp.ClientSession | None = None
 
@@ -68,13 +72,22 @@ class CaptchaSolverRegistry:
         """
         Solve using preferred solver or auto‑select the best available.
         """
+        cache_key = f"{site_key}:{url}"
+        if self.cache_repository:
+            cached = await self.cache_repository.get(cache_key)
+            if cached and "token" in cached:
+                return CaptchaSolveResult(token=cached["token"], cost=0.0, solver_name="cache")
+
         solver = await self._select_solver(captcha_type, preferred_solver)
 
         if solver is None:
             return CaptchaSolveResult(error="No healthy solver available")
 
         try:
-            return await solver.solve(site_key, url, captcha_type, **kwargs)
+            result = await solver.solve(site_key, url, captcha_type, **kwargs)
+            if result.success and self.cache_repository:
+                await self.cache_repository.set(cache_key, result.token)
+            return result
         except CaptchaError as e:
             return CaptchaSolveResult(error=str(e))
 

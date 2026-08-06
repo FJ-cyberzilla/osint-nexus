@@ -126,7 +126,7 @@ def print_latest_scan_results(limit: int = 10) -> None:
     _render_scan_results_table(console, rows)
 
 
-def _fetch_latest_scan_results(limit: int) -> list[tuple[Any, ...]]:
+def _fetch_latest_scan_results(limit: int) -> list[tuple[int, str, str, int, str]]:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
@@ -134,7 +134,7 @@ def _fetch_latest_scan_results(limit: int) -> list[tuple[Any, ...]]:
         cursor.execute(
             "SELECT id, username, platform, found, timestamp FROM results ORDER BY id DESC LIMIT ?;", (limit,)
         )
-        rows = cursor.fetchall()
+        rows: list[tuple[int, str, str, int, str]] = cursor.fetchall()
         conn.close()
         return rows
     except sqlite3.OperationalError as e:
@@ -143,7 +143,7 @@ def _fetch_latest_scan_results(limit: int) -> list[tuple[Any, ...]]:
         raise
 
 
-def _render_scan_results_table(console: Console, rows: list[tuple[Any, ...]]) -> None:
+def _render_scan_results_table(console: Console, rows: list[tuple[int, str, str, int, str]]) -> None:
     # Build clean columns matching your schema footprint
     table = Table(title="📊 Recent Footprint Discoveries", border_style="dim")
     table.add_column("ID", justify="center", style="dim")

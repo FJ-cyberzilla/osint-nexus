@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol
+
+from osint_nexus.core.types import JSONValue, MetadataDict
 
 
 @dataclass(frozen=True)
@@ -29,12 +31,17 @@ class DatabaseManagerProtocol(Protocol):
     async def save_result(self, username: str, provider: str, found: bool) -> None: ...
 
 
-# Common dictionary type for metadata and options
-type JSONValue = str | int | float | bool | None | dict[str, "JSONValue"] | list["JSONValue"]
-type MetadataDict = dict[str, JSONValue]
+__all__ = [
+    "ProviderExecutionResult",
+    "ValidatorProtocol",
+    "DatabaseManagerProtocol",
+    "JSONValue",
+    "MetadataDict",
+    "DeviceInferenceProtocol",
+]
 
 
 class DeviceInferenceProtocol(Protocol):
     """Interface for device inference."""
 
-    async def infer(self, content: str, metadata: MetadataDict) -> Any: ...
+    async def infer(self, content: str, metadata: MetadataDict) -> object: ...

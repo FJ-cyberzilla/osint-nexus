@@ -1,3 +1,4 @@
+from typing import cast
 from unittest.mock import MagicMock
 
 from osint_nexus.core.platform_fingerprinter import PlatformFingerprinter
@@ -14,7 +15,7 @@ def test_platform_fingerprinter() -> None:
     # Test fingerprint structure
     assert "twitter" in fingerprinter.fingerprints
     assert "github" in fingerprinter.fingerprints
-    twitter_fingerprint = fingerprinter.fingerprints["twitter"]
+    twitter_fingerprint = cast(dict[str, dict[str, str]], fingerprinter.fingerprints["twitter"])
     assert isinstance(twitter_fingerprint, dict)
     assert twitter_fingerprint["headers"]["Authorization"] == "Bearer fake_twitter"
 
