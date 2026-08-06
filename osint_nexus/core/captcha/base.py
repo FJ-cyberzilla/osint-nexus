@@ -169,5 +169,10 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
             await self._session.close()
 
 
-# Import ChainedCaptchaSolver here for backwards compatibility
-from osint_nexus.core.captcha.chained import ChainedCaptchaSolver  # noqa: E402
+# Backwards-compatible lazy export to avoid module-level cyclic import.
+def __getattr__(name: str) -> Any:
+    if name == "ChainedCaptchaSolver":
+        from osint_nexus.core.captcha.chained import ChainedCaptchaSolver
+
+        return ChainedCaptchaSolver
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
