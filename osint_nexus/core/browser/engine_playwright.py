@@ -53,7 +53,7 @@ class PlaywrightBrowserEngine:
                 # Expose backend binding mimicking PyQt window.backendBridge
                 page.expose_binding(
                     "__playwright_submit_telemetry",
-                    lambda source, data: self.handle_submit_telemetry(source, data),
+                    self.handle_submit_telemetry,
                 )
 
                 page.add_init_script(
