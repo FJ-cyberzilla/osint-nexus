@@ -4,7 +4,16 @@ import random
 from types import TracebackType
 from typing import Any, Self
 
-import curl_cffi.requests as curl_requests
+try:
+    import curl_cffi.requests as curl_requests
+
+    HAS_CURL_CFFI = True
+    NETWORK_EXCEPTION = curl_requests.RequestsError
+except ImportError:
+    import httpx
+
+    HAS_CURL_CFFI = False
+    NETWORK_EXCEPTION = httpx.HTTPError
 
 from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.config import Config
@@ -18,37 +27,49 @@ logger = logging.getLogger("osint_nexus.network")
 
 
 class SessionManager:
-    """Manages curl_cffi sessions and proxy rotation."""
+    """Manages HTTP sessions and proxy rotation."""
 
     def __init__(self, config: Config, evasion: EvasionAgent, dynamic_timeout: float) -> None:
         self.config = config
         self.evasion = evasion
         self.dynamic_timeout = dynamic_timeout
-        self._session: curl_requests.AsyncSession | None = None
+        self._session: Any | None = None
         self._current_proxy: str | None = None
         self._current_profile: str | None = None
         self._session_lock = asyncio.Lock()
 
-    async def get_session(self) -> curl_requests.AsyncSession:
+    async def get_session(self) -> Any:
         new_proxy = self.evasion.get_proxy()
         async with self._session_lock:
             if self._session is None or new_proxy != self._current_proxy:
                 if self._session is not None:
-                    await self._session.close()
-                profiles = getattr(self.config, "TLS_PROFILES", ["chrome120", "edge114", "safari15_3"])
-                self._current_profile = random.choice(profiles)  # nosec B311
+                    await self._session.aclose() if not HAS_CURL_CFFI else await self._session.close()
+
                 self._current_proxy = new_proxy
-                self._session = curl_requests.AsyncSession(
-                    impersonate=str(self._current_profile),
-                    proxy=self._current_proxy,
-                    timeout=self.dynamic_timeout,
-                )
+
+                if HAS_CURL_CFFI:
+                    profiles = getattr(self.config, "TLS_PROFILES", ["chrome120", "edge114", "safari15_3"])
+                    self._current_profile = random.choice(profiles)  # nosec B311
+                    self._session = curl_requests.AsyncSession(
+                        impersonate=str(self._current_profile),
+                        proxy=self._current_proxy,
+                        timeout=self.dynamic_timeout,
+                    )
+                else:
+                    proxies = (
+                        {"http://": self._current_proxy, "https://": self._current_proxy}
+                        if self._current_proxy
+                        else None
+                    )
+                    self._session = httpx.AsyncClient(
+                        proxies=proxies, timeout=self.dynamic_timeout, follow_redirects=True
+                    )
             return self._session
 
     async def close(self) -> None:
         async with self._session_lock:
             if self._session:
-                await self._session.close()
+                await self._session.aclose() if not HAS_CURL_CFFI else await self._session.close()
                 self._session = None
 
 
@@ -107,7 +128,7 @@ class NetworkManager:
             await self.mimicry.apply_jitter()
             if use_browser:
                 return await self._fetch_with_browser(url, site_name, **browser_options)
-            return await self._fetch_with_curl(url, headers, site_name)
+            return await self._fetch_http(url, headers, site_name)
 
         try:
             return await self.retry.run(_attempt)
@@ -116,7 +137,7 @@ class NetworkManager:
             await self.session_manager.close()
             return False, ""
 
-    async def _fetch_with_curl(
+    async def _fetch_http(
         self, url: str, custom_headers: dict[str, str] | None, site_name: str | None
     ) -> tuple[bool, str]:
         session = await self.session_manager.get_session()
@@ -128,15 +149,23 @@ class NetworkManager:
 
         start_time = asyncio.get_event_loop().time()
         try:
-            response = await session.get(url, headers=request_headers, timeout=self.monitor.dynamic_timeout)
+            if HAS_CURL_CFFI:
+                response = await session.get(
+                    url, headers=request_headers, timeout=self.monitor.dynamic_timeout
+                )
+            else:
+                response = await session.get(
+                    url, headers=request_headers, timeout=self.monitor.dynamic_timeout
+                )
+
             response_time = asyncio.get_event_loop().time() - start_time
             await self.rate_limiter.report(site_name, response.status_code, response_time)
             self.monitor.adapt(response_time)
             await self.monitor.handle_status(response.status_code)
             return response.status_code in (200, 201, 204), str(response.text)
-        except curl_requests.RequestsError as exc:
+        except NETWORK_EXCEPTION as exc:
             await self.session_manager.close()
-            raise NetworkError(f"cURL failure: {exc}") from exc
+            raise NetworkError(f"HTTP failure: {exc}") from exc
 
     async def _fetch_with_browser(
         self, url: str, site_name: str | None, **browser_options: Any

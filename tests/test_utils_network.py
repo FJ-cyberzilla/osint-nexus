@@ -91,7 +91,7 @@ async def test_network_manager_fetch_curl(mock_config, mock_evasion):
 
     manager = NetworkManager(mock_config, mock_evasion, mock_mimicry, mock_browser_pool, mock_rate_limiter)
 
-    with patch.object(manager, "_fetch_with_curl", new_callable=AsyncMock) as mock_fetch:
+    with patch.object(manager, "_fetch_http", new_callable=AsyncMock) as mock_fetch:
         mock_fetch.return_value = (True, "<html></html>")
 
         success, content = await manager.fetch("http://example.com")

@@ -30,7 +30,7 @@ jobs:
 
       - name: Install project & dev dependencies
         run: |
-          uv pip install --system -e ".[dev]"
+          uv pip install --system -e ".[dev,speedups]"
 
       - name: Run Ruff Check & Format
         run: |
@@ -65,7 +65,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system -e ".[dev]"
+          uv pip install --system -e ".[dev,speedups]"
 
       - name: Execute pytest with coverage
         run: |
