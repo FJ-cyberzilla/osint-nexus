@@ -15,6 +15,7 @@ from osint_nexus.core.captcha.base import (
     CaptchaType,
 )
 from osint_nexus.core.config import get_config
+from osint_nexus.utils.security import SecurityUtility
 
 
 class AntiCaptchaBalanceResponse(TypedDict):
@@ -66,7 +67,9 @@ class AntiCaptchaSolver(CaptchaSolver):
                 data: AntiCaptchaBalanceResponse = await resp.json()
                 return data.get("balance", 0.0) > 0.01
         except aiohttp.ClientError as e:
-            logger.error("Anti-Captcha health check failed: %s", e, exc_info=True)
+            logger.error(
+                "Anti-Captcha health check failed: %s", SecurityUtility.sanitize_for_log(e), exc_info=True
+            )
             return False
 
     def estimate_cost(self, captcha_type: CaptchaType) -> float:

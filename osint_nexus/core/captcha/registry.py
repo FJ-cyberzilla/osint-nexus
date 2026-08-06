@@ -19,9 +19,7 @@ from osint_nexus.core.db.cache_repository import CacheRepository
 class CaptchaSolverRegistry:
     """Registry with priority ordering and dynamic selection."""
 
-    def __init__(
-        self, config: CaptchaConfig, cache_repository: CacheRepository | None = None
-    ) -> None:
+    def __init__(self, config: CaptchaConfig, cache_repository: CacheRepository | None = None) -> None:
         self.config = config
         self.cache_repository = cache_repository
         self._solvers: dict[str, CaptchaSolver] = {}

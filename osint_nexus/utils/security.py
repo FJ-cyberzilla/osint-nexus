@@ -36,6 +36,23 @@ class SecurityUtility:
         return html.escape(sanitized)
 
     @staticmethod
+    def sanitize_for_log(log_input: str | object) -> str:
+        """
+        Sanitize input for logging to prevent CRLF injection (log forging).
+
+        Replaces carriage returns and newlines with spaces.
+
+        Args:
+            log_input: The input string or object to be logged.
+
+        Returns:
+            A safe string suitable for log entries.
+        """
+        if not isinstance(log_input, str):
+            log_input = str(log_input)
+        return log_input.replace("\r", " ").replace("\n", " ")
+
+    @staticmethod
     async def health_check() -> bool:
         """Security utility is stateless – always healthy."""
         return True

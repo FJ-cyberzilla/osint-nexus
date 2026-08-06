@@ -7,6 +7,8 @@ import contextlib
 import logging
 from typing import Any, Protocol, cast, runtime_checkable
 
+from osint_nexus.utils.security import SecurityUtility
+
 logger = logging.getLogger("osint_nexus.hierarchy")
 
 
@@ -43,16 +45,18 @@ class HierarchyManager:
 
     def register(self, name: str, subsystem: Any) -> None:
         if name in self._subsystems:
-            logger.warning("Subsystem '%s' already registered. Replacing.", name)
+            logger.warning(
+                "Subsystem '%s' already registered. Replacing.", SecurityUtility.sanitize_for_log(name)
+            )
         self._subsystems[name] = SubsystemStatus(subsystem)
-        logger.info("Subsystem '%s' registered.", name)
+        logger.info("Subsystem '%s' registered.", SecurityUtility.sanitize_for_log(name))
 
     async def unregister(self, name: str) -> None:
         """Unregisters and safely shuts down a subsystem. (Now async)"""
         status = self._subsystems.pop(name, None)
         if status:
             await self._shutdown_one(name, status.subsystem)
-            logger.info("Subsystem '%s' unregistered.", name)
+            logger.info("Subsystem '%s' unregistered.", SecurityUtility.sanitize_for_log(name))
 
     def get_status(self, name: str) -> SubsystemStatus | None:
         return self._subsystems.get(name)

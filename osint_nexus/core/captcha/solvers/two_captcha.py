@@ -15,6 +15,7 @@ from osint_nexus.core.captcha.base import (
     CaptchaType,
 )
 from osint_nexus.core.config import get_config
+from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,9 @@ class TwoCaptchaSolver(CaptchaSolver):
                 balance = float(data.get("request", "0"))
                 return balance > 0.01
         except (aiohttp.ClientError, ValueError) as e:
-            logger.error("2Captcha health check failed: %s", e, exc_info=True)
+            logger.error(
+                "2Captcha health check failed: %s", SecurityUtility.sanitize_for_log(e), exc_info=True
+            )
             return False
 
     def estimate_cost(self, captcha_type: CaptchaType) -> float:

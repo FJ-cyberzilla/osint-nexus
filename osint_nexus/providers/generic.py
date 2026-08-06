@@ -10,18 +10,21 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
 from pydantic import BaseModel, Field, field_validator
 
-from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.exceptions import NetworkError
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
 if TYPE_CHECKING:
+    from osint_nexus.core.dork import DorkEngine
     from osint_nexus.core.provider_types import JSONValue
+else:
+    JSONValue = Any
+    from typing import Any
 
 
 class SiteConfig(BaseModel):
@@ -79,9 +82,11 @@ class GenericProvider(BaseProvider):
         network: NetworkManager,
         dork_engine: DorkEngine | None = None,
     ) -> None:
+        from osint_nexus.core.dork import DorkEngine as LazyDorkEngine
+
         super().__init__(config.name, network)
         self.config = config
-        self.dork_engine = dork_engine or DorkEngine()
+        self.dork_engine = dork_engine or LazyDorkEngine()
 
         # Instance-specific logger for better observability in async traces
         self._logger = logging.getLogger(f"osint_nexus.providers.generic.{self.config.name}")

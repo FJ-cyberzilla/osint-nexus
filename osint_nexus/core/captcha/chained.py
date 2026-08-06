@@ -9,6 +9,7 @@ from osint_nexus.core.captcha.base import CaptchaSolver
 from osint_nexus.core.captcha.config import CaptchaConfig
 from osint_nexus.core.captcha.exceptions import CaptchaError
 from osint_nexus.core.captcha.models import CaptchaSolveResult, CaptchaType
+from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger("osint_nexus.captcha")
 
@@ -44,6 +45,10 @@ class ChainedCaptchaSolver(CaptchaSolver):
                 last_error = result.error
             except CaptchaError as e:
                 last_error = str(e)
-                logger.warning("Solver %s failed: %s", solver.name, e)
+                logger.warning(
+                    "Solver %s failed: %s",
+                    SecurityUtility.sanitize_for_log(solver.name),
+                    SecurityUtility.sanitize_for_log(e),
+                )
                 continue
         return CaptchaSolveResult(error=f"All solvers failed. Last error: {last_error}")

@@ -15,6 +15,7 @@ from osint_nexus.core.captcha.exceptions import (
     CaptchaTimeoutError,
 )
 from osint_nexus.core.captcha.models import CaptchaSolveResult, CaptchaType
+from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger("osint_nexus.captcha")
 
@@ -98,17 +99,32 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
     def _handle_attempt_error(self, exc: Exception, attempt: int) -> None:
         """Handle errors during captcha attempt."""
         if isinstance(exc, CaptchaBudgetExceeded):
-            logger.error("Fatal solver error: %s", exc)
+            logger.error("Fatal solver error: %s", SecurityUtility.sanitize_for_log(exc))
             raise exc
 
         if isinstance(exc, (aiohttp.ClientError, asyncio.TimeoutError, CaptchaTimeoutError)):
-            logger.warning("Solver %s attempt %d failed (transient): %s", self.name, attempt + 1, exc)
+            logger.warning(
+                "Solver %s attempt %d failed (transient): %s",
+                SecurityUtility.sanitize_for_log(self.name),
+                attempt + 1,
+                SecurityUtility.sanitize_for_log(exc),
+            )
             return
 
         if isinstance(exc, CaptchaError):
-            logger.warning("Solver %s attempt %d failed: %s", self.name, attempt + 1, exc)
+            logger.warning(
+                "Solver %s attempt %d failed: %s",
+                SecurityUtility.sanitize_for_log(self.name),
+                attempt + 1,
+                SecurityUtility.sanitize_for_log(exc),
+            )
         else:
-            logger.error("Unexpected error in solver %s: %s", self.name, exc, exc_info=True)
+            logger.error(
+                "Unexpected error in solver %s: %s",
+                SecurityUtility.sanitize_for_log(self.name),
+                SecurityUtility.sanitize_for_log(exc),
+                exc_info=True,
+            )
 
         if attempt == self.config.max_retries - 1:
             raise
@@ -124,7 +140,10 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
                 return self._handle_successful_attempt(result)
 
             logger.warning(
-                "Solver %s returned no token on attempt %d: %s", self.name, attempt + 1, result.error
+                "Solver %s returned no token on attempt %d: %s",
+                SecurityUtility.sanitize_for_log(self.name),
+                attempt + 1,
+                SecurityUtility.sanitize_for_log(result.error),
             )
             await asyncio.sleep(self.config.retry_delay * (1.5**attempt))
         except Exception as exc:
