@@ -2,8 +2,6 @@
 FastAPI application entry point for OSINT Nexus API layer.
 """
 
-from typing import Any
-
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -18,8 +16,8 @@ class ScanRequest(BaseModel):
     timeout: float = 15.0
 
 
-@app.post("/scan", response_model=dict[str, Any])
-async def trigger_scan(request: ScanRequest) -> dict[str, Any]:
+@app.post("/scan", response_model=dict[str, object])
+async def trigger_scan(request: ScanRequest) -> dict[str, object]:
     """Triggers an OSINT scan."""
     agent = OSINTAgent(request.username)
 

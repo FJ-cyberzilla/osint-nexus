@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Any
 
 
 class BaseDetector(ABC):
@@ -12,6 +11,6 @@ class BaseDetector(ABC):
         pass
 
     @abstractmethod
-    async def analyze(self, telemetry: dict[str, Any]) -> float:
+    async def analyze(self, telemetry: dict[str, object]) -> float:
         """Analyze telemetry data and return a detection score [0.0, 1.0]."""
         pass

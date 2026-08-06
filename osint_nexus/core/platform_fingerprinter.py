@@ -5,19 +5,28 @@ Platform Fingerprinter for detecting and generating platform-specific scraping p
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Protocol
 
 logger = logging.getLogger("osint_nexus.core.platform_fingerprinter")
 
 
+class MLModelProtocol(Protocol):
+    """Protocol for machine learning models used in pattern detection."""
+
+    def predict_pattern(self, username: str) -> object: ...
+
+
 class PlatformFingerprinter:
     def __init__(
-        self, twitter_token: str | None = None, github_token: str | None = None, ml_model: Any = None
+        self,
+        twitter_token: str | None = None,
+        github_token: str | None = None,
+        ml_model: MLModelProtocol | None = None,
     ) -> None:
         self.twitter_token = twitter_token
         self.github_token = github_token
         self.ml_model = ml_model
-        self.fingerprints: dict[str, dict[str, Any]] = {
+        self.fingerprints: dict[str, dict[str, object]] = {
             "twitter": {
                 "url_pattern": "twitter.com/{username}",
                 "api": "https://api.twitter.com/2/users/by/username/{username}",
@@ -47,6 +56,6 @@ class PlatformFingerprinter:
 
         return new_platforms
 
-    def auto_discover_platforms(self, pattern_analysis: Any) -> list[str]:
+    def auto_discover_platforms(self, pattern_analysis: object) -> list[str]:
         # Implementation for auto-discovery
         return []

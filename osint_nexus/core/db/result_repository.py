@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from osint_nexus.core.db.base import DatabaseConnection
 
@@ -23,7 +22,7 @@ class ResultRepository:
         except Exception as exc:
             logger.error("Failed to save result: %s", exc, exc_info=True)
 
-    async def save_batch(self, query: str, data: list[tuple[Any, ...]]) -> None:
+    async def save_batch(self, query: str, data: list[tuple[str | int | bool, ...]]) -> None:
         try:
             async with self.connection.connect() as db:
                 await db.executemany(query, data)
@@ -36,9 +35,9 @@ class ResultRepository:
         username: str | None = None,
         platform: str | None = None,
         limit: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, str | int]]:
         query = "SELECT id, username, platform, found, timestamp FROM results WHERE 1=1"
-        params: list[Any] = []
+        params: list[str | int] = []
         if username:
             query += " AND username = ?"
             params.append(username)

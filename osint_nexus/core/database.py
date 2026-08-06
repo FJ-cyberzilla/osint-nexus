@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
 from osint_nexus.core.bootstrap import DATABASE_PATH
 from osint_nexus.core.config import Config
@@ -16,6 +15,7 @@ from osint_nexus.core.db.health_manager import HealthManager
 from osint_nexus.core.db.result_repository import ResultRepository
 from osint_nexus.core.db.schema_manager import SchemaManager
 from osint_nexus.core.db.search_repository import SearchRepository
+from osint_nexus.core.types import JSONObject, JSONValue
 
 logger = logging.getLogger("osint_nexus.database")
 
@@ -45,10 +45,10 @@ class DatabaseManager:
     async def save_result(self, username: str, platform: str, found: bool) -> None:
         await self.results.save(username, platform, found)
 
-    async def save_batch(self, query: str, data: list[tuple[Any, ...]]) -> None:
+    async def save_batch(self, query: str, data: list[tuple[JSONValue, ...]]) -> None:
         await self.results.save_batch(query, data)
 
-    async def get_cached(self, key: str) -> dict[str, Any] | None:
+    async def get_cached(self, key: str) -> JSONObject | None:
         return await self.cache.get(key)
 
     async def set_cached(self, key: str, value: str, ttl_days: int = 1) -> None:
@@ -58,7 +58,7 @@ class DatabaseManager:
         """Ensure the database is initialized."""
         await self._init_db()
 
-    async def search(self, keyword: str) -> list[dict[str, Any]]:
+    async def search(self, keyword: str) -> list[JSONObject]:
         """Perform FTS5 search."""
         return await self.search_repo.search(keyword)
 
@@ -67,7 +67,7 @@ class DatabaseManager:
         username: str | None = None,
         platform: str | None = None,
         limit: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[JSONObject]:
         """Query stored results with optional filters."""
         return await self.results.query(username, platform, limit)
 

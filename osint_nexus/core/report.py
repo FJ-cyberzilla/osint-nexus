@@ -1,19 +1,17 @@
-from typing import Any
-
 from pydantic import BaseModel
 from rich.panel import Panel
 
 
 class TelemetryPayload(BaseModel):
-    browser: Any = None
-    raw_metadata: dict[str, Any]
+    browser: object = None
+    raw_metadata: dict[str, object]
     pipeline_status: str
 
 
 class AdvancedReportGenerator:
     """Consolidates cross-subsystem telemetry and returns aesthetic structural threat summaries."""
 
-    def __init__(self, db_manager: Any) -> None:
+    def __init__(self, db_manager: object) -> None:
         self.db_manager = db_manager
 
     def generate(self, target_username: str) -> Panel:

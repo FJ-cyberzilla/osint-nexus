@@ -1,14 +1,17 @@
-from typing import Any
+from collections.abc import Mapping
+from typing import cast
 
 from textual.app import ComposeResult
 from textual.message import Message
 from textual.widgets import DataTable, ProgressBar, RichLog, Static
 
+from osint_nexus.core.intelligence import IntelligenceObject
+
 
 class ScanUpdate(Message):
     """Message sent when new intelligence is found."""
 
-    def __init__(self, intel: Any) -> None:
+    def __init__(self, intel: IntelligenceObject) -> None:
         super().__init__()
         self.intel = intel
 
@@ -16,7 +19,7 @@ class ScanUpdate(Message):
 class Header(Static):
     """Renders the top branding and target info panel."""
 
-    def __init__(self, username: str, **kwargs: Any) -> None:
+    def __init__(self, username: str, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self.username = username
 
@@ -29,7 +32,7 @@ class Header(Static):
 class ReconProgress(Static):
     """Renders the real-time progress bar."""
 
-    def __init__(self, total: int, **kwargs: Any) -> None:
+    def __init__(self, total: int, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self.total = total
 
@@ -42,9 +45,9 @@ class IntelligenceDashboard(Static):
 
     table: DataTable[str]
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
-        self.data = {
+        self.data: dict[str, str] = {
             "Fingerprint": "Pending",
             "Footprint": "Pending",
             "Canvas": "Pending",
@@ -58,20 +61,23 @@ class IntelligenceDashboard(Static):
             self.table.add_row(key, value)
         yield self.table
 
-    def _extract_intel_data(self, intel: Any) -> dict[str, str]:
+    def _extract_intel_data(self, intel: IntelligenceObject) -> dict[str, str]:
         """Extracts and formats relevant information from intelligence."""
+        # Ensure metadata is treated as a mapping for .get()
+        metadata = cast(Mapping[str, object], intel.metadata)
+
         return {
-            "Fingerprint": intel.metadata.get("fingerprint", "Detected"),
-            "Footprint": intel.metadata.get("footprint", "Active"),
+            "Fingerprint": str(metadata.get("fingerprint", "Detected")),
+            "Footprint": str(metadata.get("footprint", "Active")),
             "Canvas": (
                 "Visuals Present"
                 if (intel.visuals and (intel.visuals.profile_picture or intel.visuals.banner_image))
                 else "Text/Data Only"
             ),
-            "Useragent": intel.metadata.get("device_inference", {}).get("os_guess", "Generic"),
+            "Useragent": str(metadata.get("device_inference", {}).get("os_guess", "Generic")),
         }
 
-    def update_data(self, intel: Any) -> None:
+    def update_data(self, intel: IntelligenceObject) -> None:
         """Update intelligence data."""
         if not intel.found:
             return
@@ -93,7 +99,7 @@ class LogPanel(Static):
 class MetricsGraph(Static):
     """Displays success/failure ratio as a simple bar."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self.successes = 0
         self.failures = 0

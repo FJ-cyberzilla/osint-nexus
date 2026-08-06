@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from osint_nexus.core.db.base import DatabaseConnection
 from osint_nexus.core.exceptions import DatabaseError
@@ -13,7 +12,7 @@ class SearchRepository:
     def __init__(self, connection: DatabaseConnection) -> None:
         self.connection = connection
 
-    async def search(self, keyword: str) -> list[dict[str, Any]]:
+    async def search(self, keyword: str) -> list[dict[str, str]]:
         """Perform FTS5 search."""
         try:
             async with self.connection.connect() as db:

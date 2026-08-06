@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 
 from osint_nexus.core.config import Config
 
@@ -20,19 +21,27 @@ class CaptchaConfig:
     cache_ttl: int = 300
     max_retries: int = 3
     retry_delay: float = 1.0
+    n1: int = 12
+    n2: int = 25
+    vocabulary_size: int = 25
+    captcha_length: int = 45
     solver_priority: list[str] = field(default_factory=lambda: ["2captcha", "anti_captcha"])
 
     @classmethod
     def from_config(cls, config: Config) -> CaptchaConfig:
-        captcha_cfg = config.get("captcha", {})
+        captcha_cfg = cast(dict[str, object], config.get("captcha", {}))
         return cls(
-            two_captcha_key=captcha_cfg.get("two_captcha_key"),
-            anti_captcha_key=captcha_cfg.get("anti_captcha_key"),
-            request_timeout=captcha_cfg.get("request_timeout", 30.0),
-            solve_timeout=captcha_cfg.get("solve_timeout", 120.0),
-            max_cost_per_solve=captcha_cfg.get("max_cost_per_solve", 0.05),
-            daily_budget=captcha_cfg.get("daily_budget", 1.0),
-            cache_ttl=captcha_cfg.get("cache_ttl", 300),
-            max_retries=captcha_cfg.get("max_retries", 3),
-            retry_delay=captcha_cfg.get("retry_delay", 1.0),
+            two_captcha_key=cast(str | None, captcha_cfg.get("two_captcha_key")),
+            anti_captcha_key=cast(str | None, captcha_cfg.get("anti_captcha_key")),
+            request_timeout=cast(float, captcha_cfg.get("request_timeout", 30.0)),
+            solve_timeout=cast(float, captcha_cfg.get("solve_timeout", 120.0)),
+            max_cost_per_solve=cast(float, captcha_cfg.get("max_cost_per_solve", 0.05)),
+            daily_budget=cast(float, captcha_cfg.get("daily_budget", 1.0)),
+            cache_ttl=cast(int, captcha_cfg.get("cache_ttl", 300)),
+            max_retries=cast(int, captcha_cfg.get("max_retries", 3)),
+            retry_delay=cast(float, captcha_cfg.get("retry_delay", 1.0)),
+            n1=cast(int, captcha_cfg.get("n1", 12)),
+            n2=cast(int, captcha_cfg.get("n2", 25)),
+            vocabulary_size=cast(int, captcha_cfg.get("vocabulary_size", 25)),
+            captcha_length=cast(int, captcha_cfg.get("captcha_length", 45)),
         )
