@@ -11,13 +11,14 @@ import asyncio
 import logging
 import random
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import ParamSpec, TypeVar
 
 from osint_nexus.core.config import Config
 
 logger = logging.getLogger("osint_nexus.retry")
 
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class RetryHandler:
@@ -44,9 +45,9 @@ class RetryHandler:
 
     async def run(
         self,
-        func: Callable[..., Awaitable[T]],
-        *args: Any,
-        **kwargs: Any,
+        func: Callable[P, Awaitable[T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> T:
         """
         Execute *func* with retries.

@@ -118,6 +118,12 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 exclude = ["build"]
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 [[tool.mypy.overrides]]
 module = ["curl_cffi.*", "httpx.*"]

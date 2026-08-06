@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
@@ -28,6 +28,7 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="OSINT_",
         env_nested_delimiter="__",
+        env_parse_json=False,
     )
 
     @classmethod
@@ -49,10 +50,10 @@ class Config(BaseSettings):
     proxy_api_url: str = ""
 
     # Use JSON aliases for types that might come from ENV as strings to avoid auto-json-parsing
-    user_agents: str | list[str] = Field(default_factory=lambda: _DEFAULT_USER_AGENTS.copy())
-    mimicry_profiles: str | JSONObject = Field(default_factory=dict)
-    device_patterns: str | JSONList = Field(default_factory=list)
-    dork_templates: str | JSONObject = Field(default_factory=dict)
+    user_agents: list[str] | str = Field(default_factory=lambda: _DEFAULT_USER_AGENTS.copy())
+    mimicry_profiles: JSONObject | str = Field(default_factory=dict)
+    device_patterns: JSONList | str = Field(default_factory=list)
+    dork_templates: JSONObject | str = Field(default_factory=dict)
 
     min_jitter: float = constants.JITTER_MIN
     max_jitter: float = constants.JITTER_MAX
@@ -81,7 +82,7 @@ class Config(BaseSettings):
 
     @field_validator("user_agents", "mimicry_profiles", "device_patterns", "dork_templates", mode="before")
     @classmethod
-    def validate_json_fields(cls, v: object, info: ValidationInfo) -> object:
+    def validate_json_fields(cls, v: Any, info: ValidationInfo) -> Any:
         if isinstance(v, str):
             try:
                 return json.loads(v)
@@ -95,11 +96,11 @@ class Config(BaseSettings):
                 return {}
         return v
 
-    def get(self, key: str, default: object = None) -> object:
+    def get(self, key: str, default: Any = None) -> Any:
         return getattr(self, key, default)
 
     @classmethod
-    def from_env(cls, **overrides: object) -> Config:
+    def from_env(cls, **overrides: Any) -> Config:
         return cls(**overrides)
 
     @classmethod
@@ -108,7 +109,7 @@ class Config(BaseSettings):
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
         with open(path, encoding="utf-8") as f:
-            data = cast(dict[str, object], json.load(f))
+            data = json.load(f)
         return cls(**data)
 
 

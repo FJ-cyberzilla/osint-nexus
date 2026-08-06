@@ -1,11 +1,13 @@
-from pydantic import BaseModel
+from pydantic import Field
+from pydantic.dataclasses import dataclass
 from rich.panel import Panel
 
 
-class TelemetryPayload(BaseModel):
-    browser: object = None
-    raw_metadata: dict[str, object]
-    pipeline_status: str
+@dataclass
+class TelemetryPayload:
+    browser: object | None = None
+    raw_metadata: dict[str, object] = Field(default_factory=dict)
+    pipeline_status: str = ""
 
 
 class AdvancedReportGenerator:

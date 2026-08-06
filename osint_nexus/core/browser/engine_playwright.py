@@ -26,7 +26,7 @@ class PlaywrightBrowserEngine:
         self.callback = callback
         self.inference_engine = DeviceInferenceEngine()
 
-    def handle_submit_telemetry(self, source: object, raw_json_data: str) -> None:
+    def handle_submit_telemetry(self, _source: object, raw_json_data: str) -> None:
         """Handles telemetry payload injected from Playwright context."""
         try:
             data_obj: object = json.loads(raw_json_data)

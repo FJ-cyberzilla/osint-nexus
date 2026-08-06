@@ -106,7 +106,7 @@ class OSINTApp(App[None]):
 def setup_signals(agent: OSINTAgent) -> None:
     """Register signal handlers for graceful shutdown."""
 
-    def handle_signal(signum: int, frame: FrameType | None) -> None:
+    def handle_signal(_signum: int, _frame: FrameType | None) -> None:
         console.print("\n[bold red]Interrupt received! Aborting scans gracefully...[/]")
         if hasattr(agent, "abort_scan"):
             agent.abort_scan()

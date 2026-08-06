@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class EvasionWeights(BaseModel):
+@dataclass
+class EvasionWeights:
     ai_signature: float = 0.2
     headless_mode: float = 0.3
     webdriver_active: float = 0.3

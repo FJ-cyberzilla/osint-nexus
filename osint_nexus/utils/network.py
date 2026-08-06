@@ -2,7 +2,15 @@ import asyncio
 import logging
 import random
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, Protocol, Self
+
+from osint_nexus.core.browser import BrowserPoolManager
+from osint_nexus.core.config import Config
+from osint_nexus.core.evasion_agent import EvasionAgent
+from osint_nexus.core.exceptions import NetworkError
+from osint_nexus.core.mimicry import HumanMimicryEngine
+from osint_nexus.utils.limiter import AdaptiveRateLimiter, RateLimiter
+from osint_nexus.utils.retry import RetryHandler
 
 try:
     import curl_cffi.requests as curl_requests
@@ -15,13 +23,14 @@ except ImportError:
     HAS_CURL_CFFI = False
     NETWORK_EXCEPTION = httpx.HTTPError
 
-from osint_nexus.core.browser import BrowserPoolManager
-from osint_nexus.core.config import Config
-from osint_nexus.core.evasion_agent import EvasionAgent
-from osint_nexus.core.exceptions import NetworkError
-from osint_nexus.core.mimicry import HumanMimicryEngine
-from osint_nexus.utils.limiter import AdaptiveRateLimiter, RateLimiter
-from osint_nexus.utils.retry import RetryHandler
+
+class SessionProtocol(Protocol):
+    """Protocol for HTTP sessions to support both curl_cffi and httpx."""
+
+    async def aclose(self) -> None: ...
+    async def close(self) -> None: ...
+    async def get(self, url: str, **kwargs: Any) -> Any: ...
+
 
 logger = logging.getLogger("osint_nexus.network")
 
@@ -33,17 +42,20 @@ class SessionManager:
         self.config = config
         self.evasion = evasion
         self.dynamic_timeout = dynamic_timeout
-        self._session: Any | None = None
+        self._session: SessionProtocol | None = None
         self._current_proxy: str | None = None
         self._current_profile: str | None = None
         self._session_lock = asyncio.Lock()
 
-    async def get_session(self) -> Any:
+    async def get_session(self) -> SessionProtocol:
         new_proxy = self.evasion.get_proxy()
         async with self._session_lock:
             if self._session is None or new_proxy != self._current_proxy:
                 if self._session is not None:
-                    await self._session.aclose() if not HAS_CURL_CFFI else await self._session.close()
+                    if HAS_CURL_CFFI:
+                        await self._session.close()
+                    else:
+                        await self._session.aclose()
 
                 self._current_proxy = new_proxy
 
@@ -64,12 +76,15 @@ class SessionManager:
                     self._session = httpx.AsyncClient(
                         proxies=proxies, timeout=self.dynamic_timeout, follow_redirects=True
                     )
-            return self._session
+            return self._session  # type: ignore[return-value]
 
     async def close(self) -> None:
         async with self._session_lock:
             if self._session:
-                await self._session.aclose() if not HAS_CURL_CFFI else await self._session.close()
+                if HAS_CURL_CFFI:
+                    await self._session.close()
+                else:
+                    await self._session.aclose()
                 self._session = None
 
 

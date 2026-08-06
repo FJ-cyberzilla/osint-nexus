@@ -2,7 +2,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
@@ -21,23 +21,25 @@ class QObjectProtocol(Protocol):
     def disconnect(self, slot: Callable[..., object]) -> None: ...
 
 
+PYQT_AVAILABLE = False
 try:
     from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
     PYQT_AVAILABLE = True
 except ImportError:
-    PYQT_AVAILABLE = False
 
-    # Define mocks that are more type-compliant
     class QObject:
         def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-    def pyqtSignal(*args: type, **kwargs: type) -> object:
-        return None
+        def emit(self, *args: object, **kwargs: object) -> None:
+            pass
 
-    def pyqtSlot(*args: str, **kwargs: str) -> Callable[[Callable[..., None]], Callable[..., None]]:
-        def decorator(func: Callable[..., None]) -> Callable[..., None]:
+    def pyqtSignal(*args: type, **kwargs: type) -> Any:
+        return Any
+
+    def pyqtSlot(*args: str, **kwargs: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             return func
 
         return decorator
