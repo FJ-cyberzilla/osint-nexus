@@ -1,6 +1,14 @@
-from osint_nexus.core.validator import ResultValidator
+from osint_nexus.core.validator import ResultValidator, _sanitize_for_log
 from osint_nexus.core.validators.base import ValidationVote
 from osint_nexus.core.validators.rules import ExclusionPatternRule
+
+
+def test_sanitize_for_log() -> None:
+    assert _sanitize_for_log("normal") == "normal"
+    assert _sanitize_for_log("with\nnewline") == "withnewline"
+    assert _sanitize_for_log("with\r\ncr") == "withcr"
+    assert _sanitize_for_log("with\r\r") == "with"
+    assert _sanitize_for_log("control\x00chars") == "controlchars"
 
 
 def test_validation_logic_permissive() -> None:

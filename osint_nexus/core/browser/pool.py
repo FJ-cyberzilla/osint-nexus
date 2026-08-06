@@ -6,32 +6,33 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum, auto
 from types import TracebackType
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
-try:
+if TYPE_CHECKING:
     from playwright.async_api import (
-        Browser,
         BrowserContext,
         Playwright,
-        async_playwright,
     )
     from playwright.async_api import (
         Error as PlaywrightError,
     )
 
-    PLAYWRIGHT_AVAILABLE = True
-except ImportError:
-    PLAYWRIGHT_AVAILABLE = False
-    Browser = Any
-    BrowserContext = Any
-    Playwright = Any
-    async_playwright = Any
-    PlaywrightError = Exception
-
 from osint_nexus.core.browser.config import BrowserPoolConfig
 from osint_nexus.core.browser.factory import BrowserContextFactory
 from osint_nexus.core.browser.monitor import PoolMonitor
+from osint_nexus.core.browser.protocols import BrowserProtocol
 from osint_nexus.core.telemetry.bridge import WebViewBridge
+
+# Runtime availability check
+try:
+    from playwright.async_api import Error as PlaywrightError  # type: ignore[assignment]
+    from playwright.async_api import async_playwright
+
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    async_playwright = Any
+    PlaywrightError = Exception
 
 logger = logging.getLogger("osint_nexus.core.browser.pool")
 
@@ -60,7 +61,7 @@ class BrowserPoolManager:
         self._monitor = PoolMonitor()
         self._bridge = bridge
         self._playwright: Playwright | None = None
-        self._browser: Browser | None = None
+        self._browser: BrowserProtocol | None = None
         self._state: BrowserPoolState = BrowserPoolState.UNINITIALIZED
         self._lifecycle_lock = asyncio.Lock()
 
@@ -92,9 +93,12 @@ class BrowserPoolManager:
         if self._state != BrowserPoolState.READY:
             await self.initialize()
 
-        if not self._monitor.check_health(self._browser):
+        if self._browser is None or not self._monitor.check_health(self._browser):
             self._state = BrowserPoolState.UNINITIALIZED
             await self.initialize()
+
+        if self._browser is None:
+            raise BrowserPoolError("Browser initialization failed.")
 
         context: BrowserContext | None = None
         try:

@@ -26,7 +26,6 @@ class ValidationRule(Protocol):
         Evaluate response text and return a vote with confidence.
         Confidence: 0.0 to 1.0 (1.0 = absolute certainty).
         """
-        ...
 
 
 class ValidationResult(BaseModel):

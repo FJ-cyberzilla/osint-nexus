@@ -11,11 +11,9 @@ logger = logging.getLogger("osint_nexus.rate_limiter")
 class RateLimiter(Protocol):
     async def wait(self, site_name: str | None = None) -> None:
         """Call this before executing a request."""
-        ...
 
     async def report(self, site_name: str | None, status_code: int, response_time: float) -> None:
         """Call this after the request finishes to update adaptive state."""
-        ...
 
 
 class AdaptiveRateLimiter:

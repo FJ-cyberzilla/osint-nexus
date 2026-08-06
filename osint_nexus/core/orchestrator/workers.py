@@ -3,16 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import TYPE_CHECKING
 
 from osint_nexus.core.exceptions import ProviderError
 from osint_nexus.core.intelligence import IntelligenceObject
+from osint_nexus.core.provider_runner import ProviderRunner
 from osint_nexus.providers.base import BaseProvider
 
-if TYPE_CHECKING:
-    from osint_nexus.core.provider_runner import ProviderRunner
-
-    from .core import OrchestratorDeps
+from .types import OrchestratorDeps
 
 logger = logging.getLogger("osint_nexus.orchestrator.workers")
 

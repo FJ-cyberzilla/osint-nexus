@@ -1,12 +1,12 @@
 import json
 import logging
 from collections.abc import Callable
-from typing import Any
 
 from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
     DeviceProfile,
 )
+from osint_nexus.core.telemetry.bridge import TelemetryDict, TelemetryLoggerProtocol
 from osint_nexus.core.telemetry.probes.hardware_telemetry import (
     ADVANCED_TELEMETRY_JS,
 )
@@ -19,17 +19,26 @@ class PlaywrightBrowserEngine:
 
     def __init__(
         self,
-        telemetry_client: Any | None = None,
+        telemetry_client: TelemetryLoggerProtocol | None = None,
         callback: Callable[[DeviceProfile], None] | None = None,
     ) -> None:
         self.telemetry_client = telemetry_client
         self.callback = callback
         self.inference_engine = DeviceInferenceEngine()
 
-    def handle_submit_telemetry(self, source: Any, raw_json_data: str) -> None:
+    def handle_submit_telemetry(self, source: object, raw_json_data: str) -> None:
         """Handles telemetry payload injected from Playwright context."""
         try:
-            data: dict[str, Any] = json.loads(raw_json_data)
+            data_obj: object = json.loads(raw_json_data)
+            if not isinstance(data_obj, dict):
+                raise TypeError("Expected dictionary")
+
+            data: TelemetryDict = {
+                k: v
+                for k, v in data_obj.items()
+                if isinstance(k, str) and isinstance(v, (str, float, int, bool))
+            }
+
             if self.telemetry_client is not None:
                 self.telemetry_client.log(data)
 

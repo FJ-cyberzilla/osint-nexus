@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import TYPE_CHECKING
 
-try:
-    from playwright.async_api import Browser, BrowserContext
-except ImportError:
-    Browser = Any
-    BrowserContext = Any
+if TYPE_CHECKING:
+    pass
 
 from osint_nexus.core.browser.config import BrowserPoolConfig
-from osint_nexus.core.browser.monitor import BrowserProtocol
+from osint_nexus.core.browser.protocols import BrowserContextProtocol, BrowserProtocol
 
 STEALTH_INIT_SCRIPT = """
     Object.defineProperty(navigator, 'webdriver', {
@@ -28,10 +25,10 @@ class BrowserContextFactory:
 
     async def create(
         self,
-        browser: Browser | BrowserProtocol,
+        browser: BrowserProtocol,
         proxy_url: str | None = None,
         extra_headers: dict[str, str] | None = None,
-    ) -> BrowserContext:
+    ) -> BrowserContextProtocol:
         """Configures and creates a new BrowserContext."""
         user_agent = random.choice(self.config.user_agents)  # nosec B311
         viewport = random.choice(self.config.viewports)  # nosec B311

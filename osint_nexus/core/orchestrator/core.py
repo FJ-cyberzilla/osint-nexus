@@ -3,44 +3,24 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import AsyncGenerator
-from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 from osint_nexus.core.detection import DetectionEngine
-from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.provider_runner import ProviderRunner
 from osint_nexus.core.provider_types import (
-    DatabaseManagerProtocol,
     DeviceInferenceProtocol,
     MetadataDict,
-    ValidatorProtocol,
 )
 from osint_nexus.core.report import TelemetryPayload
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
+from .types import OrchestratorDeps
 from .workers import ProviderWorker
 
 logger = logging.getLogger("osint_nexus.orchestrator.core")
-
-
-@runtime_checkable
-class HealthCheckProtocol(Protocol):
-    async def is_healthy(self) -> bool: ...
-
-
-@dataclass(frozen=True)
-class OrchestratorDeps:
-    """Container for core service dependencies to reduce orchestrator bloat."""
-
-    health: HealthCheckProtocol
-    validator: ValidatorProtocol
-    db_manager: DatabaseManagerProtocol
-    network: NetworkManager
-    mimicry: HumanMimicryEngine
-    extractor: PivotExtractor
 
 
 @runtime_checkable
@@ -57,15 +37,12 @@ class ProviderProtocol(Protocol):
         **kwargs: Any,
     ) -> tuple[bool, MetadataDict]:
         """Check if username exists on provider."""
-        ...
 
     def get_dork_query(self, username: str) -> str:
         """Get the dork query for this provider."""
-        ...
 
     def get_metadata(self, username: str) -> MetadataDict:
         """Get provider-specific metadata."""
-        ...
 
 
 class ScanOrchestrator:

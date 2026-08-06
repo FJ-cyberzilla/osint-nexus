@@ -13,8 +13,11 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class DatabaseProtocol(Protocol):
-    def connect(self) -> AbstractAsyncContextManager[aiosqlite.Connection]: ...
-    async def close(self) -> None: ...
+    def connect(self) -> AbstractAsyncContextManager[aiosqlite.Connection]:
+        """Connect to the database."""
+
+    async def close(self) -> None:
+        """Close the database connection."""
 
 
 class DatabaseConnection(DatabaseProtocol):

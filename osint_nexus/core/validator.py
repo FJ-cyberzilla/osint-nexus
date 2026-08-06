@@ -31,7 +31,10 @@ def _sanitize_for_log(value: str) -> str:
     Removes CR/LF and other ASCII control characters that could
     forge or split log entries.
     """
-    return "".join(ch for ch in value if ch >= " " and ch != "\x7f")
+    # Remove CR/LF directly
+    sanitized = value.replace("\r\n", "").replace("\n", "").replace("\r", "")
+    # Remove all other control characters (0-31, 127)
+    return "".join(ch for ch in sanitized if ch >= " " and ch != "\x7f")
 
 
 class ResultValidator:

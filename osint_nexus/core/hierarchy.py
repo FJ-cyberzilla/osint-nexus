@@ -14,7 +14,8 @@ logger = logging.getLogger("osint_nexus.hierarchy")
 
 @runtime_checkable
 class HealthCheckable(Protocol):
-    async def health_check(self) -> bool: ...
+    async def health_check(self) -> bool:
+        """Perform a health check."""
 
 
 class SubsystemStatus:

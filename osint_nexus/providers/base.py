@@ -49,7 +49,7 @@ class BaseProvider(ABC):
             the username appears to exist; ``content`` is the raw
             response text for later validation.
         """
-        ...
+        raise NotImplementedError("Method not implemented")
 
     @abstractmethod
     def get_dork_query(self, username: str) -> str:
@@ -62,7 +62,7 @@ class BaseProvider(ABC):
         Returns:
             A formatted search string.
         """
-        ...
+        raise NotImplementedError("Method not implemented")
 
     def get_metadata(self, username: str) -> MetadataDict:
         """

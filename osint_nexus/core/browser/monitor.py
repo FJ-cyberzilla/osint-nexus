@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
-
-
-@runtime_checkable
-class BrowserProtocol(Protocol):
-    def is_connected(self) -> bool: ...
+from osint_nexus.core.browser.protocols import BrowserProtocol
 
 
 class PoolMonitor:
