@@ -70,7 +70,8 @@ class TemporalAnalysis:
 
 
 class RelationshipInferenceStrategy(Protocol):
-    def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None: ...
+    def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None:
+        pass
 
 
 class SharedEmailStrategy:
