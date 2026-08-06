@@ -1,4 +1,4 @@
-from osint_nexus.core.browser.detector import detect_best_engine
+from osint_nexus.core.browser.detector import EngineType, detect_best_engine
 from osint_nexus.core.browser.engine_playwright import PlaywrightBrowserEngine
 
 
@@ -12,7 +12,7 @@ class MockLogger:
 
 def test_platform_detector_returns_valid_type() -> None:
     engine_type = detect_best_engine()
-    assert engine_type in ["pyqt6", "playwright"]
+    assert isinstance(engine_type, EngineType)
 
 
 def test_playwright_engine_fallback_processing() -> None:

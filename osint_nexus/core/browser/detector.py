@@ -1,7 +1,10 @@
 import os
-from typing import Literal
+from enum import Enum
 
-EngineType = Literal["pyqt6", "playwright"]
+
+class EngineType(Enum):
+    PYQT6 = "pyqt6"
+    PLAYWRIGHT = "playwright"
 
 
 def detect_best_engine() -> EngineType:
@@ -14,11 +17,11 @@ def detect_best_engine() -> EngineType:
     is_android = "ANDROID_ROOT" in os.environ
 
     if is_termux or is_android:
-        return "playwright"
+        return EngineType.PLAYWRIGHT
 
     try:
         import PyQt6.QtWebEngineWidgets  # noqa: F401
 
-        return "pyqt6"
+        return EngineType.PYQT6
     except ImportError:
-        return "playwright"
+        return EngineType.PLAYWRIGHT
