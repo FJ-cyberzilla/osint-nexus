@@ -1,37 +1,18 @@
-from dataclasses import dataclass
-
-from osint_nexus.core.correlation import RelationMapper
-
-
-@dataclass
-class Account:
-    username: str
-    type: str
-
-
-@dataclass
-class Connection:
-    email: str | None = None
-    phone: str | None = None
-
-
-@dataclass
-class UsernameData:
-    username: str
-    accounts: list[Account]
-    emails: list[Connection]
-    phones: list[Connection]
+from osint_nexus.core.correlation import AccountData, ConnectionData, RelationMapper, UserData
 
 
 def test_relation_mapper() -> None:
     mapper = RelationMapper()
 
-    data = UsernameData(
-        username="testuser",
-        accounts=[Account("acc1", "type1"), Account("acc2", "type2")],
-        emails=[Connection(email="test@example.com")],
-        phones=[Connection(phone="1234567890")],
-    )
+    data: UserData = {
+        "username": "testuser",
+        "accounts": [
+            AccountData(username="acc1", type="type1"),
+            AccountData(username="acc2", type="type2"),
+        ],
+        "emails": [ConnectionData(email="test@example.com")],
+        "phones": [ConnectionData(phone="1234567890")],
+    }
 
     graph = mapper.generate_network_graph(data)
 

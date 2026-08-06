@@ -19,6 +19,7 @@ C_GRY    := \033[38;5;242m
 C_DIM    := \033[38;5;238m
 RST      := \033[0m
 B        := \033[1m
+I        := \033[3m
 
 # --- Configuration & Environment Detection ---
 PYTHONPATH   := .
@@ -27,147 +28,164 @@ UV           := $(shell command -v uv 2> /dev/null)
 PYTEST       := pytest
 RUFF         := ruff
 
-# Detect Termux / Android environment
-IS_TERMUX    := $(shell if [ -d "/data/data/com.termux" ] || uname -o 2>/dev/null | grep -iq "android"; then echo "true"; else echo "false"; fi)
+# Enhanced precise system detection
+IS_TERMUX    := $(shell [ -d "/data/data/com.termux" ] && echo "true" || echo "false")
+IS_ANDROID   := $(shell uname -o 2>/dev/null | grep -qi "android" && echo "true" || echo "false")
+IS_LINUX     := $(shell uname -s 2>/dev/null | grep -qi "linux" && echo "true" || echo "false")
+IS_MACOS     := $(shell uname -s 2>/dev/null | grep -qi "darwin" && echo "true" || echo "false")
+IS_WSL       := $(shell grep -qi "microsoft" /proc/version 2>/dev/null && echo "true" || echo "false")
+IS_CONTAINER := $(shell [ -f /.dockerenv ] && echo "true" || echo "false")
+HAS_GUI      := $(shell [ -n "$$DISPLAY" ] && echo "true" || echo "false")
 
 .PHONY: help install install-core install-full sync run health db-info test lint format clean
 
-# --- Visual Animation Helper ---
+# --- Smooth Animated Spinner ---
 define animate_status
 	@sp='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'; \
-	delay=0.05; \
-	for i in {1..15}; do \
-		printf "\r  $(C_CYN)$${sp:i%10:1}$(RST)  $(C_WHT)%s$(RST)..." "$(1)"; \
+	delay=0.04; \
+	for i in $(shell seq 1 20); do \
+		printf "\r  $(C_CYN)$${sp:$$((i % 10)):1}$(RST)  $(C_WHT)%s$(RST)..." "$(1)"; \
 		sleep $$delay; \
 	done; \
 	printf "\r\033[K"
 endef
 
+# --- Compact Banner (reduced size) ---
+define show_banner
+	@printf "\n  $(C_PUR)╭─$(C_CYN) FJ™ Cybertronic $(C_ORG)v3.1.7$(C_PUR) ───$(C_GRY)◆$(C_PUR)───╮$(RST)\n"
+	@printf "  $(C_PUR)│$(RST)  $(C_WHT)%s$(RST)  $(C_PUR)│$(RST)\n" "OSINT Nexus Recon"
+	@printf "  $(C_PUR)╰──────────────────────────╯$(RST)\n\n"
+endef
+
 # --- Default Target ---
 help:
 	@clear
-	@echo ""
-	@echo -e "  $(C_PUR)╭──────────────────────────────────────────────────────────╮$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_CYN)██████╗ ███████╗██╗███╗   ██╗████████╗$(RST) $(C_PNK)███╗   ██╗██╗██╗$(RST)  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_CYN)██╔═══██╗██╔════╝██║████╗  ██║╚══██╔══╝$(RST) $(C_PNK)████╗  ██║██║██║$(RST)  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_CYN)██║   ██║███████╗██║██╔██╗ ██║   ██║   $(RST) $(C_PNK)██╔██╗ ██║██║██║$(RST)  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_CYN)██║   ██║╚════██║██║██║╚██╗██║   ██║   $(RST) $(C_PNK)██║╚██╗██║██║╚═╝$(RST)  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_CYN)╚██████╔╝███████║██║██║ ╚████║   ██║   $(RST) $(C_PNK)██║ ╚████║██║██╗$(RST)  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)   $(C_DIM)╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝   ╚═╝   $(RST) $(C_DIM)╚═╝  ╚═══╝╚═╝╚═╝$(RST)  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)├──────────────────────────────────────────────────────────┤$(RST)"
-	@echo -e "  $(C_PUR)│$(RST) $(C_WHT)$(B)FJ™ Cybertronic Systems$(RST) $(C_GRY)•$(RST) $(C_ORG)v3.1.7$(RST) $(C_GRY)•$(RST) $(C_PUR)Dev: FJ-cyberzilla$(RST)  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)├──────────────────────────────────────────────────────────┤$(RST)"
-	@echo -e "  $(C_PUR)│$(RST) $(C_YEL)$(B)SYSTEM COMMANDS & OPERATIONAL MENU$(RST)                       $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)                                                          $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_CYN)📦 [SETUP & ENVIRONMENT]$(RST)                               $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make install$(RST)      $(C_GRY)→$(RST) Auto-detect platform & install setup   $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make install-core$(RST) $(C_GRY)→$(RST) Pure-Python setup (Termux/Mobile)    $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make install-full$(RST) $(C_GRY)→$(RST) Complete suite (PyQt6/Playwright)     $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make sync$(RST)         $(C_GRY)→$(RST) Sync virtual environment dependencies $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)                                                          $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_PNK)🎯 [EXECUTION]$(RST)                                          $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make run$(RST)          $(C_GRY)→$(RST) Initiate target username scan         $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)                                                          $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_GRN)📊 [TELEMETRY & DATABASE]$(RST)                                $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make health$(RST)       $(C_GRY)→$(RST) Run network/provider health diagnostics $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make db-info$(RST)      $(C_GRY)→$(RST) Inspect local scan SQLite database    $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)                                                          $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)  $(C_ORG)🛠️  [DEVELOPMENT & QUALITY]$(RST)                               $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make test$(RST)         $(C_GRY)→$(RST) Execute full test suite with coverage $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make lint$(RST)         $(C_GRY)→$(RST) Verify code quality via Ruff          $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make format$(RST)       $(C_GRY)→$(RST) Automatically format codebase         $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)│$(RST)    $(C_WHT)make clean$(RST)        $(C_GRY)→$(RST) Purge build artifacts, cache, and DB  $(C_PUR)│$(RST)"
-	@echo -e "  $(C_PUR)╰──────────────────────────────────────────────────────────╯$(RST)"
-	@echo ""
+	$(call show_banner)
+	@printf "  $(C_YEL)$(B)OPERATIONAL COMMANDS$(RST)\n\n"
+	@printf "  $(C_CYN)📦 SETUP$(RST)\n"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Auto-detect & install\n" "make install"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Pure-Python (Termux/Mobile)\n" "make install-core"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Complete suite (GUI+Browser)\n" "make install-full"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Sync venv dependencies\n" "make sync"
+	@printf "\n  $(C_PNK)🎯 EXECUTION$(RST)\n"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Target username scan\n" "make run"
+	@printf "\n  $(C_GRN)📊 TELEMETRY$(RST)\n"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Network health diagnostics\n" "make health"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Inspect SQLite database\n" "make db-info"
+	@printf "\n  $(C_ORG)🛠️  DEV TOOLS$(RST)\n"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Test suite + coverage\n" "make test"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Code quality check\n" "make lint"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Auto-format codebase\n" "make format"
+	@printf "    $(C_WHT)%-18s$(RST) $(C_GRY)→$(RST) Purge cache & artifacts\n" "make clean"
+	@printf "\n"
 
-# --- Smart Installation Targets ---
+# --- Smart Installation with Precise Detection ---
 install:
-	@$(call animate_status,"Detecting environment profile")
-	@if [ "$(IS_TERMUX)" = "true" ]; then \
-		echo -e "  $(C_ORG)📱 Android/Termux detected! Running Core installation...$(RST)"; \
+	@$(call animate_status,"Precise environment detection")
+	@sleep 0.3
+	@printf "\n  $(C_BLU)🔍 System Analysis:$(RST)\n"
+	@[ "$(IS_TERMUX)" = "true" ] && printf "  $(C_ORG)📱 Termux environment detected$(RST)\n" || true
+	@[ "$(IS_ANDROID)" = "true" ] && [ "$(IS_TERMUX)" = "false" ] && printf "  $(C_ORG)📱 Android (non-Termux) detected$(RST)\n" || true
+	@[ "$(IS_LINUX)" = "true" ] && printf "  $(C_CYN)🐧 Linux detected$(RST)\n" || true
+	@[ "$(IS_MACOS)" = "true" ] && printf "  $(C_PNK)🍎 macOS detected$(RST)\n" || true
+	@[ "$(IS_WSL)" = "true" ] && printf "  $(C_BLU)🪟 WSL (Windows Subsystem) detected$(RST)\n" || true
+	@[ "$(IS_CONTAINER)" = "true" ] && printf "  $(C_PUR)📦 Container environment$(RST)\n" || true
+	@[ "$(HAS_GUI)" = "true" ] && printf "  $(C_GRN)🖥️  GUI display available$(RST)\n" || printf "  $(C_GRY)🖥️  No GUI (headless)$(RST)\n"
+	@printf "\n"
+	@if [ "$(IS_TERMUX)" = "true" ] || [ "$(IS_ANDROID)" = "true" ]; then \
+		printf "  $(C_ORG)➡️  Installing Core (mobile-optimized)...$(RST)\n"; \
+		sleep 0.5; \
+		$(MAKE) --no-print-directory install-core; \
+	elif [ "$(HAS_GUI)" = "false" ] || [ "$(IS_CONTAINER)" = "true" ]; then \
+		printf "  $(C_BLU)➡️  Installing Core (headless/server)...$(RST)\n"; \
+		sleep 0.5; \
 		$(MAKE) --no-print-directory install-core; \
 	else \
-		echo -e "  $(C_CYN)💻 Desktop Linux/Unix detected! Running Full installation...$(RST)"; \
+		printf "  $(C_CYN)➡️  Installing Full suite (desktop)...$(RST)\n"; \
+		sleep 0.5; \
 		$(MAKE) --no-print-directory install-full; \
 	fi
 
 install-core:
-	@$(call animate_status,"Installing Pure-Python Core Engine")
+	@$(call animate_status,"Core Engine Installation")
 	@if [ -n "$(UV)" ]; then \
-		$(UV) pip install -e . || { echo -e "  $(C_RED)❌ Core installation failed.$(RST)"; exit 1; }; \
+		$(UV) pip install -e . 2>&1 | tail -1 || { printf "\n  $(C_RED)❌ Core installation failed$(RST)\n"; exit 1; }; \
 	else \
-		pip install -e . || { echo -e "  $(C_RED)❌ Core installation failed.$(RST)"; exit 1; }; \
+		pip install -e . 2>&1 | tail -1 || { printf "\n  $(C_RED)❌ Core installation failed$(RST)\n"; exit 1; }; \
 	fi
-	@echo -e "  $(C_GRN)✔ Core Engine installed successfully (Termux Ready).$(RST)\n"
+	@printf "\r\033[K  $(C_GRN)✔ Core Engine ready$(RST)\n"
 
 install-full:
-	@$(call animate_status,"Installing Full Suite (Speedups + GUI + Browser)")
+	@$(call animate_status,"Full Suite Installation")
 	@if [ -n "$(UV)" ]; then \
-		$(UV) pip install -e ".[full]" || { echo -e "  $(C_RED)❌ Full installation failed.$(RST)"; exit 1; }; \
+		$(UV) pip install -e ".[full]" 2>&1 | tail -1 || { printf "\n  $(C_RED)❌ Full installation failed$(RST)\n"; exit 1; }; \
 	else \
-		pip install -e ".[full]" || { echo -e "  $(C_RED)❌ Full installation failed.$(RST)"; exit 1; }; \
+		pip install -e ".[full]" 2>&1 | tail -1 || { printf "\n  $(C_RED)❌ Full installation failed$(RST)\n"; exit 1; }; \
 	fi
-	@echo -e "  $(C_GRN)✔ Full OSINT Suite installed successfully.$(RST)\n"
+	@printf "\r\033[K  $(C_GRN)✔ Full OSINT Suite ready$(RST)\n"
 
 sync:
-	@$(call animate_status,"Synchronizing Virtual Environment")
+	@$(call animate_status,"Syncing Environment")
 	@if [ -n "$(UV)" ]; then \
-		$(UV) sync || { echo -e "  $(C_RED)❌ Environment sync failed.$(RST)"; exit 1; }; \
+		$(UV) sync || { printf "\n  $(C_RED)❌ Sync failed$(RST)\n"; exit 1; }; \
 	else \
-		pip install -e . || { echo -e "  $(C_RED)❌ Environment sync failed.$(RST)"; exit 1; }; \
+		pip install -e . || { printf "\n  $(C_RED)❌ Sync failed$(RST)\n"; exit 1; }; \
 	fi
-	@echo -e "  $(C_GRN)✔ Virtual environment synchronized.$(RST)\n"
+	@printf "\r\033[K  $(C_GRN)✔ Environment synchronized$(RST)\n"
 
 # --- Operations ---
 run:
+	@$(call show_banner)
 	@uname="$(USERNAME)"; \
 	if [ -z "$$uname" ]; then \
-		echo ""; \
-		echo -e "  $(C_CYN)╭── Target Username Selection ──────────────────────╮$(RST)"; \
-		echo -e "  $(C_CYN)│$(RST) Enter Username $(C_PNK)(or 'q' / 'cancel' to exit)$(RST):"; \
+		printf "  $(C_CYN)╭─ Target Selection ─╮$(RST)\n"; \
+		printf "  $(C_CYN)│$(RST) Username $(C_PNK)(q=cancel)$(RST): "; \
 		while [ -z "$$uname" ]; do \
-			echo -ne "  $(C_CYN)► $(RST)"; \
 			read uname; \
 			if [ "$$uname" = "cancel" ] || [ "$$uname" = "q" ]; then \
-				echo -e "  $(C_YEL)⚠️  Operation cancelled.$(RST)\n"; \
+				printf "\n  $(C_YEL)⚠️  Cancelled$(RST)\n\n"; \
 				exit 0; \
 			elif [ -z "$$uname" ]; then \
-				echo -e "  $(C_RED)❌ Username cannot be empty. Try again.$(RST)"; \
+				printf "  $(C_RED)❌ Required$(RST): "; \
 			fi; \
 		done; \
-		echo -e "  $(C_CYN)╰───────────────────────────────────────────────────╯$(RST)"; \
+		printf "  $(C_CYN)╰─────────────────────╯$(RST)\n"; \
 	fi; \
-	echo -e "\n  $(C_ORG)🚀 Initiating OSINT Recon Scan for:$(RST) $(C_WHT)$(B)$$uname$(RST)"; \
-	export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $$uname || { echo -e "  $(C_RED)❌ Scan aborted or failed.$(RST)"; exit 1; }
+	printf "\n  $(C_ORG)🚀 Recon: $(C_WHT)$(B)%s$(RST)\n\n" "$$uname"; \
+	export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main scan --username $$uname || \
+		{ printf "\n  $(C_RED)❌ Scan failed$(RST)\n"; exit 1; }
 
 health:
-	@$(call animate_status,"Running Network & Provider Health Diagnostics")
-	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main health || { echo -e "  $(C_RED)❌ Health check failed.$(RST)"; exit 1; }
+	@$(call animate_status,"Health Diagnostics")
+	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main health || \
+		{ printf "\n  $(C_RED)❌ Health check failed$(RST)\n"; exit 1; }
 
 db-info:
-	@$(call animate_status,"Querying Local Recon Database")
-	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main db-info || { echo -e "  $(C_RED)❌ Database inspection failed.$(RST)"; exit 1; }
+	@$(call animate_status,"Database Query")
+	@export PYTHONPATH=$(PYTHONPATH) && python -m osint_nexus.cli.main db-info || \
+		{ printf "\n  $(C_RED)❌ Database inspection failed$(RST)\n"; exit 1; }
 
 # --- Development & Quality Control ---
 test:
-	@$(call animate_status,"Executing Pytest Test Suite")
-	@export PYTHONPATH=$(PYTHONPATH) && $(PYTEST) --cov=osint_nexus tests/ || { echo -e "  $(C_RED)❌ Test suite failed.$(RST)"; exit 1; }
+	@$(call animate_status,"Running Test Suite")
+	@export PYTHONPATH=$(PYTHONPATH) && $(PYTEST) --cov=osint_nexus tests/ || \
+		{ printf "\n  $(C_RED)❌ Tests failed$(RST)\n"; exit 1; }
 
 lint:
-	@$(call animate_status,"Analyzing Code Quality with Ruff")
-	@$(RUFF) check . || { echo -e "  $(C_RED)❌ Linting errors detected.$(RST)"; exit 1; }
-	@echo -e "  $(C_GRN)✔ Codebase clean. Zero linting issues.$(RST)\n"
+	@$(call animate_status,"Code Quality Analysis")
+	@$(RUFF) check . || { printf "\n  $(C_RED)❌ Linting errors$(RST)\n"; exit 1; }
+	@printf "\r\033[K  $(C_GRN)✔ Code quality perfect$(RST)\n"
 
 format:
 	@$(call animate_status,"Formatting Codebase")
-	@$(RUFF) format . || { echo -e "  $(C_RED)❌ Code formatting failed.$(RST)"; exit 1; }
-	@echo -e "  $(C_GRN)✔ Formatting applied successfully.$(RST)\n"
+	@$(RUFF) format . || { printf "\n  $(C_RED)❌ Format failed$(RST)\n"; exit 1; }
+	@printf "\r\033[K  $(C_GRN)✔ Code formatted$(RST)\n"
 
 clean:
-	@$(call animate_status,"Purging Cache, Artifacts, and Temporary Files")
+	@$(call animate_status,"System Cleanup")
 	@rm -rf __pycache__ .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov *.egg-info *.egg build dist .venv
-	@rm -f data/*.db
-	@rm -rf logs/* log/*
-	@find . -type d -name "__pycache__" -exec rm -rf {} + >/dev/null 2>&1 || true
+	@rm -f data/*.db 2>/dev/null || true
+	@rm -rf logs/* log/* 2>/dev/null || true
+	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@if [ -n "$(UV)" ]; then $(UV) cache clean >/dev/null 2>&1 || true; fi
-	@echo -e "  $(C_GRN)✔ System cleanup complete.$(RST)\n"
+	@printf "\r\033[K  $(C_GRN)✔ Cleanup complete$(RST)\n"

@@ -1,18 +1,16 @@
-"""Centralised configuration for OSINT Nexus."""
-
 from __future__ import annotations
 
 import json
 import logging
-from dataclasses import field
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 from pydantic import Field, ValidationInfo, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from osint_nexus.core import bootstrap, constants
 from osint_nexus.core.evasion import EvasionWeights
+from osint_nexus.core.types import JSONList, JSONObject
 
 # Guarantee directories exist at runtime before modules try to write to them
 bootstrap.initialize_directories()
@@ -30,8 +28,18 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="OSINT_",
         env_nested_delimiter="__",
-        # We handle complex types manually to avoid pydantic-settings auto-parsing crashes
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (env_settings,)
 
     http_timeout: int = constants.DEFAULT_TIMEOUT
     retry_attempts: int = constants.RETRY_ATTEMPTS
@@ -40,11 +48,11 @@ class Config(BaseSettings):
     require_proxy: bool = False
     proxy_api_url: str = ""
 
-    # Use Any for types that might come from ENV as strings to avoid auto-json-parsing
-    user_agents: Any = Field(default_factory=lambda: _DEFAULT_USER_AGENTS.copy())
-    mimicry_profiles: Any = Field(default_factory=dict)
-    device_patterns: Any = Field(default_factory=list)
-    dork_templates: Any = Field(default_factory=dict)
+    # Use JSON aliases for types that might come from ENV as strings to avoid auto-json-parsing
+    user_agents: str | list[str] = Field(default_factory=lambda: _DEFAULT_USER_AGENTS.copy())
+    mimicry_profiles: str | JSONObject = Field(default_factory=dict)
+    device_patterns: str | JSONList = Field(default_factory=list)
+    dork_templates: str | JSONObject = Field(default_factory=dict)
 
     min_jitter: float = constants.JITTER_MIN
     max_jitter: float = constants.JITTER_MAX
@@ -57,7 +65,7 @@ class Config(BaseSettings):
     click_misclick_prob: float = 0.08
     click_observation_delay: tuple[float, float] = (0.5, 2.0)
     db_path: str = "osint_results.db"
-    captcha: dict[str, Any] = Field(default_factory=dict)
+    captcha: JSONObject = Field(default_factory=dict)
     service_urls: dict[str, str] = Field(
         default_factory=lambda: {
             "anti_captcha": "https://api.anti-captcha.com",
@@ -69,11 +77,11 @@ class Config(BaseSettings):
     )
     tls_backend: str = "httpx"
     log_level: int = logging.INFO
-    evasion_weights: EvasionWeights = field(default_factory=EvasionWeights)
+    evasion_weights: EvasionWeights = Field(default_factory=EvasionWeights)
 
     @field_validator("user_agents", "mimicry_profiles", "device_patterns", "dork_templates", mode="before")
     @classmethod
-    def validate_json_fields(cls, v: Any, info: ValidationInfo) -> Any:
+    def validate_json_fields(cls, v: object, info: ValidationInfo) -> object:
         if isinstance(v, str):
             try:
                 return json.loads(v)
@@ -87,11 +95,11 @@ class Config(BaseSettings):
                 return {}
         return v
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: object = None) -> object:
         return getattr(self, key, default)
 
     @classmethod
-    def from_env(cls, **overrides: Any) -> Config:
+    def from_env(cls, **overrides: object) -> Config:
         return cls(**overrides)
 
     @classmethod
@@ -100,7 +108,7 @@ class Config(BaseSettings):
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
         with open(path, encoding="utf-8") as f:
-            data = json.load(f)
+            data = cast(dict[str, object], json.load(f))
         return cls(**data)
 
 

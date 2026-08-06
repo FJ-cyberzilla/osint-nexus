@@ -1,6 +1,5 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Any
 
 from pydantic import (
     BaseModel,
@@ -65,7 +64,7 @@ class IntelligenceObject(BaseModel):
 
     # --- Extracted Intelligence ---
     # We keep metadata flexible for platform-specific quirks (e.g., repo count vs follower count)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
 
     # We use a strict nested model for visuals rather than a loose dict
     visuals: VisualIntelligence = Field(default_factory=VisualIntelligence)

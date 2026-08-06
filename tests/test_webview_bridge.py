@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Any
 from unittest.mock import MagicMock
@@ -9,7 +10,10 @@ from osint_nexus.core.telemetry.bridge import PYQT_AVAILABLE, WebViewBridge
 
 class MockTelemetryRegistry:
     def __init__(self) -> None:
-        self.run_all = MagicMock(return_value={"dns": {"leaked": False}})
+        self.run_all = MagicMock()
+        # Create an async mock
+        self.run_all.return_value = asyncio.Future()
+        self.run_all.return_value.set_result({"dns": {"leaked": False}})
 
 
 class MockTelemetryClient:

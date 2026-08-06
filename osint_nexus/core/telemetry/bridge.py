@@ -2,7 +2,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any, Protocol, cast
+from typing import Protocol, cast
 
 from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
@@ -10,11 +10,15 @@ from osint_nexus.core.device_inference import (
 )
 from osint_nexus.core.telemetry.registry import TelemetryRegistry
 
+# Define type alias for telemetry data values
+type TelemetryValue = str | float | int | bool
+type TelemetryDict = dict[str, TelemetryValue]
+
 
 # Define a protocol for QObject-like behavior to avoid 'Any' in type hints
 class QObjectProtocol(Protocol):
-    def connect(self, slot: Callable[..., Any]) -> None: ...
-    def disconnect(self, slot: Callable[..., Any]) -> None: ...
+    def connect(self, slot: Callable[..., object]) -> None: ...
+    def disconnect(self, slot: Callable[..., object]) -> None: ...
 
 
 try:
@@ -26,14 +30,14 @@ except ImportError:
 
     # Define mocks that are more type-compliant
     class QObject:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
+        def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-    def pyqtSignal(*args: Any, **kwargs: Any) -> Any:
+    def pyqtSignal(*args: type, **kwargs: type) -> object:
         return None
 
-    def pyqtSlot(*args: Any, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def pyqtSlot(*args: str, **kwargs: str) -> Callable[[Callable[..., None]], Callable[..., None]]:
+        def decorator(func: Callable[..., None]) -> Callable[..., None]:
             return func
 
         return decorator
@@ -44,23 +48,23 @@ logger = logging.getLogger("osint_nexus.telemetry.bridge")
 
 
 class TelemetryLoggerProtocol(Protocol):
-    def log(self, data: dict[str, Any]) -> None: ...
+    def log(self, data: TelemetryDict) -> None: ...
 
 
 class WebViewAction(ABC):
     @abstractmethod
-    async def execute(self, telemetry_registry: TelemetryRegistry, data: dict[str, Any]) -> Any:
+    async def execute(self, telemetry_registry: TelemetryRegistry, data: TelemetryDict) -> object:
         pass
 
 
 class TelemetryAction(WebViewAction):
-    async def execute(self, telemetry_registry: TelemetryRegistry, data: dict[str, Any]) -> Any:
+    async def execute(self, telemetry_registry: TelemetryRegistry, data: TelemetryDict) -> object:
         return await telemetry_registry.run_all()
 
 
 class WebViewBridge(QObject):
     # Define signal if PyQt is available
-    telemetry_received: Any = pyqtSignal(dict) if PYQT_AVAILABLE else None
+    telemetry_received: object | None = pyqtSignal(dict) if PYQT_AVAILABLE else None
 
     def __init__(
         self,
@@ -77,14 +81,30 @@ class WebViewBridge(QObject):
     def submit_telemetry(self, raw_json_data: str) -> None:
         """Slot called directly from JavaScript when telemetry is pushed."""
         try:
-            data: dict[str, Any] = cast(dict[str, Any], json.loads(raw_json_data))
+            data_obj: object = json.loads(raw_json_data)
+            if not isinstance(data_obj, dict) or not all(isinstance(k, str) for k in data_obj):
+                raise TypeError("Expected dictionary with string keys")
+
+            # Simple validation for the values
+            if not all(isinstance(v, (str, float, int, bool)) for v in data_obj.values()):
+                # Filter invalid values
+                data: TelemetryDict = {
+                    k: v for k, v in data_obj.items() if isinstance(v, (str, float, int, bool))
+                }
+            else:
+                data = cast(TelemetryDict, data_obj)
 
             if self.telemetry_client is not None:
                 self.telemetry_client.log(data)
 
             inferred_profile: DeviceProfile = self.inference_engine.analyze(data)
 
-            if PYQT_AVAILABLE and self.telemetry_received is not None:
+            if (
+                PYQT_AVAILABLE
+                and self.telemetry_received is not None
+                and hasattr(self.telemetry_received, "emit")
+            ):
+                # We know emit exists if PYQT_AVAILABLE is true for a signal
                 self.telemetry_received.emit(inferred_profile)
             else:
                 logger.info("Telemetry inferred: %s", inferred_profile)
@@ -96,8 +116,20 @@ class WebViewBridge(QObject):
         """Handle messages coming from the WebView (Async/Playwright style)."""
         logger.debug("Received message: %s", message)
         try:
-            data = cast(dict[str, Any], json.loads(message))
-            action_name = cast(str, data.get("action", ""))
+            data_obj: object = json.loads(message)
+            if not isinstance(data_obj, dict) or not all(isinstance(k, str) for k in data_obj):
+                raise TypeError("Expected dictionary with string keys")
+
+            # Simple validation for the values
+            if not all(isinstance(v, (str, float, int, bool)) for v in data_obj.values()):
+                # Filter invalid values
+                data: TelemetryDict = {
+                    k: v for k, v in data_obj.items() if isinstance(v, (str, float, int, bool))
+                }
+            else:
+                data = cast(TelemetryDict, data_obj)
+
+            action_name = str(data.get("action", ""))
 
             if action_name not in self._actions:
                 return json.dumps({"status": "error", "message": f"Unknown action: {action_name}"})

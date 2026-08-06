@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from osint_nexus.core.db.base import DatabaseConnection
 from osint_nexus.core.exceptions import DatabaseError
@@ -13,7 +12,7 @@ class CacheRepository:
     def __init__(self, connection: DatabaseConnection) -> None:
         self.connection = connection
 
-    async def get(self, key: str) -> dict[str, Any] | None:
+    async def get(self, key: str) -> dict[str, str] | None:
         try:
             async with self.connection.connect() as db:
                 cursor = await db.execute(

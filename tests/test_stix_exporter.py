@@ -1,5 +1,3 @@
-from typing import Any
-
 from osint_nexus.core.exporters.stix import STIXExporter
 
 
@@ -11,16 +9,20 @@ def test_stix_exporter() -> None:
     assert result["type"] == "bundle"
     assert "id" in result
     assert len(result["objects"]) == 1
-    assert result["objects"][0]["type"] == "identity"
-    assert "id" in result["objects"][0]
-    assert result["objects"][0]["name"] == "test_user"
-    assert result["objects"][0]["description"] == "test bio"
+    # STIXIdentity access is safe via TypedDict
+    identity = result["objects"][0]
+    assert identity["type"] == "identity"
+    assert "id" in identity
+    assert identity["name"] == "test_user"
+    assert identity["description"] == "test bio"
 
 
 def test_stix_exporter_defaults() -> None:
     exporter = STIXExporter()
-    data: dict[str, Any] = {}
+    # Cast to match the expected input dict[str, str]
+    data: dict[str, str] = {}
     result = exporter.export(data)
 
-    assert result["objects"][0]["name"] == "unknown"
-    assert result["objects"][0]["description"] == ""
+    identity = result["objects"][0]
+    assert identity["name"] == "unknown"
+    assert identity["description"] == ""
