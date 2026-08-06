@@ -24,6 +24,16 @@ from osint_nexus.core.validators.rules import (
 logger = logging.getLogger("osint_nexus.validator")
 
 
+def _sanitize_for_log(value: str) -> str:
+    """
+    Sanitize untrusted text before logging to prevent log injection.
+
+    Removes CR/LF and other ASCII control characters that could
+    forge or split log entries.
+    """
+    return "".join(ch for ch in value if ch >= " " and ch != "\x7f")
+
+
 class ResultValidator:
     """
     Validates provider responses using a configurable pipeline of rules.
@@ -50,9 +60,10 @@ class ResultValidator:
                 ExclusionPatternRule(),
                 MinimumContentLengthRule(),
             ]
+        safe_target_username = _sanitize_for_log(target_username)
         logger.info(
             "Validator initialised for '%s' with %d rules",
-            target_username,
+            safe_target_username,
             len(self._rules),
         )
 
