@@ -61,6 +61,11 @@ python -m osint_nexus.cli scan --username target_user
 python -m osint_nexus.cli health
 ```
 
+## Development Notes
+
+### Static Analysis Exceptions
+Some function parameters in the `tests/` directory may be flagged as 'unused' by tools like `vulture`. These are intentional and required for either interface compliance or mocking purposes. Do not remove them.
+
 ## Testing
 
 Comprehensive test suite available in `tests/`.

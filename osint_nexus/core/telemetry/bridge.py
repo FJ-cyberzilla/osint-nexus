@@ -79,71 +79,58 @@ class WebViewBridge(QObject):
         self.inference_engine = DeviceInferenceEngine()
         self._actions: dict[str, WebViewAction] = {"run_telemetry": TelemetryAction()}
 
+    def _validate_dict(self, data_obj: object) -> None:
+        if not isinstance(data_obj, dict) or not all(isinstance(k, str) for k in data_obj):
+            raise TypeError("Expected dictionary with string keys")
+
+    def _clean_data(self, data_obj: dict[str, Any]) -> TelemetryDict:
+        if not all(isinstance(v, (str, float, int, bool)) for v in data_obj.values()):
+            return {k: v for k, v in data_obj.items() if isinstance(v, (str, float, int, bool))}
+        return cast(TelemetryDict, data_obj)
+
+    def _parse_telemetry(self, raw_json_data: str) -> TelemetryDict:
+        data_obj: object = json.loads(raw_json_data)
+        self._validate_dict(data_obj)
+        return self._clean_data(cast(dict[str, Any], data_obj))
+
+    def _emit_or_log_profile(self, profile: DeviceProfile) -> None:
+        if (
+            PYQT_AVAILABLE
+            and self.telemetry_received is not None
+            and hasattr(self.telemetry_received, "emit")
+        ):
+            self.telemetry_received.emit(profile)
+        else:
+            logger.info("Telemetry inferred: %s", profile)
+
     @pyqtSlot(str)
     def submit_telemetry(self, raw_json_data: str) -> None:
         """Slot called directly from JavaScript when telemetry is pushed."""
         try:
-            data_obj: object = json.loads(raw_json_data)
-            if not isinstance(data_obj, dict) or not all(isinstance(k, str) for k in data_obj):
-                raise TypeError("Expected dictionary with string keys")
-
-            # Simple validation for the values
-            if not all(isinstance(v, (str, float, int, bool)) for v in data_obj.values()):
-                # Filter invalid values
-                data: TelemetryDict = {
-                    k: v for k, v in data_obj.items() if isinstance(v, (str, float, int, bool))
-                }
-            else:
-                data = cast(TelemetryDict, data_obj)
-
+            data = self._parse_telemetry(raw_json_data)
             if self.telemetry_client is not None:
                 self.telemetry_client.log(data)
-
             inferred_profile: DeviceProfile = self.inference_engine.analyze(data)
-
-            if (
-                PYQT_AVAILABLE
-                and self.telemetry_received is not None
-                and hasattr(self.telemetry_received, "emit")
-            ):
-                # We know emit exists if PYQT_AVAILABLE is true for a signal
-                self.telemetry_received.emit(inferred_profile)
-            else:
-                logger.info("Telemetry inferred: %s", inferred_profile)
-
+            self._emit_or_log_profile(inferred_profile)
         except (json.JSONDecodeError, TypeError, KeyError) as e:
             logger.error("Failed to parse incoming telemetry: %s", e)
+
+    async def _execute_action(self, action_name: str, data: TelemetryDict) -> str:
+        if action_name not in self._actions:
+            return json.dumps({"status": "error", "message": f"Unknown action: {action_name}"})
+        if self.telemetry_registry is None:
+            return json.dumps({"status": "error", "message": "Telemetry registry not initialized"})
+
+        results = await self._actions[action_name].execute(self.telemetry_registry, data)
+        return json.dumps({"status": "success", "results": results})
 
     async def handle_message(self, message: str) -> str:
         """Handle messages coming from the WebView (Async/Playwright style)."""
         logger.debug("Received message: %s", message)
         try:
-            data_obj: object = json.loads(message)
-            if not isinstance(data_obj, dict) or not all(isinstance(k, str) for k in data_obj):
-                raise TypeError("Expected dictionary with string keys")
-
-            # Simple validation for the values
-            if not all(isinstance(v, (str, float, int, bool)) for v in data_obj.values()):
-                # Filter invalid values
-                data: TelemetryDict = {
-                    k: v for k, v in data_obj.items() if isinstance(v, (str, float, int, bool))
-                }
-            else:
-                data = cast(TelemetryDict, data_obj)
-
+            data = self._parse_telemetry(message)
             action_name = str(data.get("action", ""))
-
-            if action_name not in self._actions:
-                return json.dumps({"status": "error", "message": f"Unknown action: {action_name}"})
-
-            action = self._actions[action_name]
-
-            if self.telemetry_registry is None:
-                return json.dumps({"status": "error", "message": "Telemetry registry not initialized"})
-
-            results = await action.execute(self.telemetry_registry, data)
-
-            return json.dumps({"status": "success", "results": results})
+            return await self._execute_action(action_name, data)
         except json.JSONDecodeError:
             logger.error("Failed to decode JSON message", exc_info=True)
             return json.dumps({"status": "error", "message": "Invalid JSON"})
