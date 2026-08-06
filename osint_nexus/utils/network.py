@@ -12,6 +12,7 @@ from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.utils.limiter import AdaptiveRateLimiter, RateLimiter
 from osint_nexus.utils.retry import RetryHandler
 
+curl_requests: Any = None
 try:
     import curl_cffi.requests as curl_requests
 
@@ -47,7 +48,7 @@ class SessionManager:
         self._current_profile: str | None = None
         self._session_lock = asyncio.Lock()
 
-    def _init_curl_session(self, new_proxy: str | None) -> curl_requests.AsyncSession:
+    def _init_curl_session(self, new_proxy: str | None) -> Any:
         profiles = getattr(self.config, "TLS_PROFILES", ["chrome120", "edge114", "safari15_3"])
         self._current_profile = random.choice(profiles)  # nosec B311
         return curl_requests.AsyncSession(
