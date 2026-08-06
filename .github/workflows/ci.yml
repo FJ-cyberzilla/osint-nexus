@@ -39,7 +39,7 @@ jobs:
 
       - name: Run MyPy Type Check
         run: |
-          uv run mypy osint_nexus
+          uv run python -m mypy osint_nexus
 
   test:
     name: Run Tests (Python ${{ matrix.python-version }})
