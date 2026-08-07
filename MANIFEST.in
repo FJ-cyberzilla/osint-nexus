@@ -1,0 +1,63 @@
+# ==========================================================================
+#  FJ™ CYBERTRONIC SYSTEMS • OSINT NEXUS MATRIX ENGINE
+# ==========================================================================
+#  Package Distribution Manifest Specification (MANIFEST.in)
+#  Version : 4.1.1
+#  License : MIT
+# ==========================================================================
+
+# --- Core Metadata & Configuration Specs ---
+include README.md
+include LICENSE
+include pyproject.toml
+include mypy.ini
+include Makefile
+include justfile
+
+# --- Data Assets & Static Templates ---
+# Include site definition JSON while strictly excluding runtime databases & logs
+include data/sites.json
+exclude data/*.db
+exclude data/*.db-shm
+exclude data/*.db-wal
+exclude data/*.sqlite*
+
+# --- Documentation Suite & Architecture Specs ---
+recursive-include docs *.md *.html *.mmd *.png *.svg *.jpg
+prune docs/_build
+
+# --- Package Source Code Static Assets ---
+recursive-include osint_nexus py.typed *.json *.yaml *.yml *.sql
+
+# --- Exclude Development Scripts, Tests & Logs from Distribution ---
+prune scripts
+prune tests
+prune logs
+
+# --- Global Artifact & Cache Exclusions ---
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.dylib
+global-exclude *.dll
+
+# Cache & Telemetry Directories
+global-exclude .pytest_cache
+global-exclude .ruff_cache
+global-exclude .mypy_cache
+global-exclude .coverage
+global-exclude coverage.xml
+global-exclude htmlcov
+
+# OS & Workspace Metadata
+global-exclude .DS_Store
+global-exclude .idea
+global-exclude .vscode
+global-exclude *.swp
+global-exclude *.swo
+
+# Environment & Secret Shields
+global-exclude .env
+global-exclude .env.*
+global-exclude *.pem
+global-exclude *.key
