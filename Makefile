@@ -78,11 +78,7 @@ define render_error
 	printf "\n  $(C_RED)┌── [CRITICAL SUBSYSTEM FAILURE] ─────────────────────────────┐$(RST)\n"; \
 	printf "  $(C_RED)│$(RST) $(C_ORG)Task Domain:$(RST) $(C_SLV)%s$(RST)\n" "$(1)"; \
 	printf "  $(C_RED)│$(RST) $(C_RED)Root Cause :$(RST) $(C_SLV)%s$(RST)\n" "$(2)"; \
-	printf "  $(C_RED)├── [ACTIONABLE TROUBLESHOOTING PATHS] ──────────────────────────┤$(RST)\n"; \
-	printf "  $(C_RED)│$(RST) $(C_YEL)1.$(RST) Verify python interpreter & virtualenv setup\n"; \
-	printf "  $(C_RED)│$(RST) $(C_YEL)2.$(RST) Execute system diagnostics: $(C_CYN)make health$(RST)\n"; \
-	printf "  $(C_RED)│$(RST) $(C_YEL)3.$(RST) Re-synchronize environment: $(C_CYN)make sync$(RST)\n"; \
-	printf "  $(C_RED)│$(RST) $(C_YEL)4.$(RST) Purge residual artifacts:   $(C_CYN)make clean$(RST)\n"; \
+	printf "  $(C_RED)│$(RST) $(C_ICE)Tip:$(RST) $(C_SLV)Consult logs or check system status.$(RST)\n"; \
 	printf "  $(C_RED)└──────────────────────────────────────────────────────────────┘$(RST)\n\n"
 endef
 
