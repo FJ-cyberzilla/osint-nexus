@@ -24,6 +24,16 @@ except ImportError:
     HAS_CURL_CFFI = False
     NETWORK_EXCEPTION = httpx.HTTPError
 
+# Re-import httpx for type hinting if it wasn't imported above
+if not HAS_CURL_CFFI:
+    import httpx
+else:
+    # We still need the type hint if httpx is available
+    try:
+        import httpx
+    except ImportError:
+        pass
+
 
 class SessionProtocol(Protocol):
     """Protocol for HTTP sessions to support both curl_cffi and httpx."""
