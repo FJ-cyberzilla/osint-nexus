@@ -15,7 +15,7 @@ OSINT Nexus has been refactored to a modular, facade-based architecture, decoupl
 *   **`OSINTAgent` (Facade)**: The primary entry point, orchestrating the scan lifecycle via injected subsystems.
 *   **`ScanOrchestrator`**: Manages concurrent provider scanning, health tracking, and persistence.
 *   **`HealthTracker`**: Implements platform health monitoring with failure decay, circuit breaking, and auto-healing.
-*   **`ReportGenerator`**: Handles telemetry collection and scan summary generation.
+*   **`AdvancedReportGenerator`**: Dynamically aggregates intelligence from the database for real-time reporting.
 *   **`DeviceInferenceService`**: Provides intelligent device context (MAC OUI, port heuristics).
 *   **`DatabaseManager`**: Ensures thread-safe/async-safe persistence of scan results. Includes FTS5 support for full-text search, batch insertion methods, and persistent caching with automatic TTL.
 *   **`CaptchaRegistry`**: Adaptive captcha solving interface supporting multiple providers (e.g., AntiCaptcha, 2Captcha).

@@ -9,17 +9,7 @@ from __future__ import annotations
 import logging
 from typing import NotRequired, TypedDict
 
-# Optional dependencies for advanced correlation
-try:
-    import imagehash  # noqa: F401
-    from PIL import Image  # noqa: F401
-    from rapidfuzz import fuzz  # noqa: F401
-
-    HAS_CORRELATION_EXTRAS = True
-except ImportError:
-    HAS_CORRELATION_EXTRAS = False
-
-logger = logging.getLogger("osint_nexus.core.correlation")
+logger = logging.getLogger(__name__)
 
 
 class ResultMetadata(TypedDict, total=False):
@@ -81,7 +71,6 @@ class CorrelationEngine:
             A dictionary mapping identifiers to platform lists.
         """
         correlation_map = self._build_correlation_map(results)
-        self._log_correlation_extras_status()
         correlations = self._filter_correlations(correlation_map)
 
         logger.debug("Correlations found: %s", correlations)
@@ -100,13 +89,6 @@ class CorrelationEngine:
         """Adds identifiers to the correlation map."""
         for item in items:
             cmap.setdefault(f"{prefix}:{item}", []).append(platform)
-
-    def _log_correlation_extras_status(self) -> None:
-        """Logs the availability of optional correlation dependencies."""
-        if not HAS_CORRELATION_EXTRAS:
-            logger.warning(
-                "Correlation extras (imagehash, Pillow, rapidfuzz) not installed. Advanced correlation disabled."
-            )
 
     def _filter_correlations(self, correlation_map: dict[str, list[str]]) -> dict[str, list[str]]:
         """Filters the correlation map to keep only identifiers found in multiple platforms."""

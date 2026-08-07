@@ -58,5 +58,5 @@ class TestOSINTApp:
             # Assertions
             mock_dashboard.update_data.assert_called_once_with(mock_intel)
             mock_progress_bar.advance.assert_called_once_with(1)
-            mock_rich_log.write.assert_called_once()
+            mock_log_panel.write_log.assert_called_once_with(mock_intel.platform, mock_intel.found)
             mock_metrics_graph.update_metrics.assert_called_once_with(1, 0)

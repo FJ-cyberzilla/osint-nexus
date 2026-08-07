@@ -1,12 +1,13 @@
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
+from rich.spinner import Spinner
 
 from osint_nexus.cli.ui import (
     OSINTApp,
 )
 from osint_nexus.core import constants
 from osint_nexus.core.agent import OSINTAgent
-from osint_nexus.core.exceptions import NexusError
 
 console = Console()
 
@@ -33,27 +34,25 @@ async def run_scan(
     console.print("[bold green]Reconnaissance finished.[/]")
 
 
-def generate_report(agent: OSINTAgent) -> None:
-    """Generate and display the final report."""
-    # Simplified report generation
+async def generate_report(agent: OSINTAgent) -> None:
+    """Generate and display the final report with a real-time progress indicator."""
+
+    # Spinner for report compilation
+    spinner = Spinner("dots", text="[orange1]Compiling intelligence report...[/]")
+
+    with Live(spinner, refresh_per_second=10, console=console):
+        try:
+            report_content = await agent.get_final_report()
+        except Exception as e:
+            console.print(f"[bold red]Error generating final report:[/] {e}")
+            return
+
+    # Display the actual report
     console.print(
         Panel(
-            "[bold white]Reconnaissance Complete![/]\n[orange1]Compiling intelligence report...[/]",
-            border_style="green",
+            report_content,
+            border_style=constants.COLOR_ORANGE,
+            title="[bold white]OSINT Nexus Final Report[/]",
+            padding=(1, 2),
         )
     )
-
-    try:
-        report_content = agent.get_final_report()
-        console.print(
-            Panel(
-                report_content,
-                border_style=constants.COLOR_ORANGE,
-                title="[bold white]OSINT Nexus Final Report[/]",
-                padding=(1, 2),
-            )
-        )
-    except AttributeError:
-        console.print("[yellow]Warning: Final report method not available.[/]")
-    except NexusError as e:
-        console.print(f"[bold red]Error generating final report:[/] {e}")

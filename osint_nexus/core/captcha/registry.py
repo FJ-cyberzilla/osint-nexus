@@ -8,8 +8,8 @@ from osint_nexus.core.captcha.base import (
     CaptchaSolver,
     CaptchaSolveResult,
     CaptchaType,
-    ChainedCaptchaSolver,
 )
+from osint_nexus.core.captcha.chained import ChainedCaptchaSolver
 from osint_nexus.core.captcha.solvers.anti_captcha import AntiCaptchaSolver
 from osint_nexus.core.captcha.solvers.two_captcha import TwoCaptchaSolver
 from osint_nexus.core.config import get_config

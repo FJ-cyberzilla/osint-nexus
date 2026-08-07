@@ -9,6 +9,10 @@ classDiagram
         +get_final_report()
     }
     
+    class AdvancedReportGenerator {
+        +generate(username)
+    }
+    
     class ScanOrchestrator {
         +run_scan()
         +abort()
@@ -77,6 +81,8 @@ classDiagram
     }
 
     OSINTAgent --> ScanOrchestrator
+    OSINTAgent --> AdvancedReportGenerator
+    AdvancedReportGenerator --> DatabaseManager
     ScanOrchestrator --> HealthTracker
     ScanOrchestrator --> DeviceInferenceService
     ScanOrchestrator --> DatabaseManager

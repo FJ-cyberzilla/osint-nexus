@@ -64,7 +64,7 @@ async def test_chained_captcha_solver() -> None:
         patch.object(solver2, "_solve_impl", return_value=CaptchaSolveResult(token="success2")) as mock2,
         patch.object(solver1, "_solve_impl", return_value=CaptchaSolveResult(error="fail")) as mock1,
     ):
-        from osint_nexus.core.captcha.base import ChainedCaptchaSolver
+        from osint_nexus.core.captcha.chained import ChainedCaptchaSolver
 
         chain = ChainedCaptchaSolver([solver1, solver2], config)
 

@@ -31,7 +31,7 @@ async def async_main(args: argparse.Namespace) -> None:
     finally:
         from osint_nexus.cli.scanner import generate_report
 
-        generate_report(agent)
+        await generate_report(agent)
 
 
 def handle_scan_command(args: argparse.Namespace) -> None:

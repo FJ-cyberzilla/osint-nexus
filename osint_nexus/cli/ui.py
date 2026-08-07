@@ -5,8 +5,9 @@ from types import FrameType
 from rich.console import Console
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal
-from textual.widgets import ProgressBar, RichLog
+from textual.widgets import ProgressBar
 
+from osint_nexus.cli.components.panels import HelpPanel, SettingsPanel
 from osint_nexus.cli.widgets import (
     Header,
     IntelligenceDashboard,
@@ -44,9 +45,11 @@ class OSINTApp(App[None]):
     }
     LogPanel {
         height: 6;
-        border: solid dim;
+        border: solid grey;
     }
     """
+
+    BINDINGS = [("ctrl+q", "quit", "Quit")]
 
     def __init__(self, agent: OSINTAgent, username: str, total: int, timeout: float) -> None:
         super().__init__()
@@ -56,6 +59,7 @@ class OSINTApp(App[None]):
         self.timeout = timeout
         self._successes = 0
         self._failures = 0
+        self._scan_finished = False
 
     def compose(self) -> ComposeResult:
         yield Container(
@@ -64,8 +68,10 @@ class OSINTApp(App[None]):
             Horizontal(
                 IntelligenceDashboard(id="dashboard"),
                 MetricsGraph(id="metrics"),
+                SettingsPanel(id="settings"),
             ),
             LogPanel(id="logs"),
+            HelpPanel(id="help"),
             id="main-container",
         )
 
@@ -77,6 +83,13 @@ class OSINTApp(App[None]):
         """Scanner worker."""
         async for intel in self.agent.run_scan(username=self.username, timeout=self.timeout):
             self.post_message(ScanUpdate(intel))
+        self._scan_finished = True
+
+    async def action_quit(self) -> None:
+        """Restrict quit to after scan."""
+        if not self._scan_finished:
+            return
+        await super().action_quit()
 
     def on_scan_update(self, message: ScanUpdate) -> None:
         """Handle scan updates."""
@@ -89,8 +102,7 @@ class OSINTApp(App[None]):
         self.query_one("#progress", ReconProgress).query_one(ProgressBar).advance(1)
 
         # Update logs
-        status = "Found" if intel.found else "Not Found"
-        self.query_one("#logs", LogPanel).query_one(RichLog).write(f"Analyzed {intel.platform}: {status}")
+        self.query_one("#logs", LogPanel).write_log(intel.platform, intel.found)
 
         # Update metrics
         if "error" in intel.metadata:

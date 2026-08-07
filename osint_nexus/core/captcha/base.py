@@ -28,7 +28,6 @@ __all__ = [
     "CaptchaTimeoutError",
     "CaptchaSolveResult",
     "CaptchaType",
-    "ChainedCaptchaSolver",
     "CaptchaSolverProtocol",
 ]
 
@@ -167,7 +166,3 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
     async def close(self) -> None:
         if self._session is not None:
             await self._session.close()
-
-
-# Import ChainedCaptchaSolver here for backwards compatibility
-from osint_nexus.core.captcha.chained import ChainedCaptchaSolver  # noqa: E402

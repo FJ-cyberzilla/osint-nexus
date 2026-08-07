@@ -1,6 +1,14 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 from pydantic import Field
-from pydantic.dataclasses import dataclass
 from rich.panel import Panel
+from rich.table import Table
+
+if TYPE_CHECKING:
+    from osint_nexus.core.database import DatabaseManager
 
 
 @dataclass
@@ -10,27 +18,41 @@ class TelemetryPayload:
     pipeline_status: str = ""
 
 
+@dataclass
+class IntelligenceReport:
+    """Structured container for aggregated intelligence scan results."""
+
+    username: str
+    results: list[dict[str, str | int]]
+    # Add other fields (telemetry, inference) here as needed
+
+
 class AdvancedReportGenerator:
     """Consolidates cross-subsystem telemetry and returns aesthetic structural threat summaries."""
 
-    def __init__(self, db_manager: object) -> None:
+    def __init__(self, db_manager: DatabaseManager) -> None:
         self.db_manager = db_manager
 
-    def generate(self, target_username: str) -> Panel:
-        """Generates the final report as a Rich Panel."""
-        # In a real scenario, we would fetch data from db_manager
-        # For now, we'll return a beautifully formatted summary panel
+    async def generate(self, target_username: str) -> Panel:
+        """Generates the final report as a Rich Panel with actual database data."""
+        # Query results from database
+        results = await self.db_manager.query_results(username=target_username)
 
-        banner_content = (
-            f"Target Identifier : [bold orange3]{target_username}[/bold orange3]\n"
-            f"Hardware Integrity : [bold green]✅ CONSISTENT (AUTHENTIC)[/bold green]\n"
-            f"Scan Status        : [bold green]COMPLETE[/bold green]\n"
-            f"Intelligence Layer : [dim]Verified[/dim]"
+        # Build Table
+        table = Table(
+            title=f"Scan Results for {target_username}", show_header=True, header_style="bold magenta"
         )
+        table.add_column("Platform", style="dim")
+        table.add_column("Found", style="bold")
+        table.add_column("Timestamp")
+
+        for row in results:
+            found_str = "✅ Yes" if row.get("found") else "❌ No"
+            table.add_row(str(row.get("platform")), found_str, str(row.get("timestamp")))
 
         return Panel(
-            banner_content,
-            title="[bold orange3] ░█▀█░█▀▀░█░█░█░█░█▀▀ ░░░ ▀█▀░█▀█░█▀▀░█░█░▀█▀ [/bold orange3]",
+            table,
+            title="[bold orange3] OSINT Nexus Intelligence Report [/bold orange3]",
             border_style="orange3",
             padding=(1, 2),
         )

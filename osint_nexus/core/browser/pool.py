@@ -133,7 +133,9 @@ class BrowserPoolManager:
                 await self._browser.close()
             if self._playwright:
                 await self._playwright.stop()
-        except Exception:
+        except Exception as e:
+            # Log cleanup error but proceed with cleanup
+            print(f"Error during browser teardown: {e}")
             pass
         finally:
             self._browser = None

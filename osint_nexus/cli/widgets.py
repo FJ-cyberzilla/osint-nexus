@@ -5,6 +5,13 @@ from textual.app import ComposeResult
 from textual.message import Message
 from textual.widgets import DataTable, ProgressBar, RichLog, Static
 
+from osint_nexus.cli.theme import (
+    COLOR_FOUND,
+    COLOR_NOT_FOUND,
+    COLOR_PROGRESS_FAILURE,
+    COLOR_PROGRESS_SUCCESS,
+    METRICS_BAR_WIDTH,
+)
 from osint_nexus.core.intelligence import IntelligenceObject
 
 
@@ -37,7 +44,11 @@ class ReconProgress(Static):
         self.total = total
 
     def compose(self) -> ComposeResult:
-        yield ProgressBar(total=self.total, id="progress-bar")
+        # Multi-colored progress bar
+        bar = ProgressBar(total=self.total, id="progress-bar")
+        bar.styles.bar_color = COLOR_PROGRESS_SUCCESS
+        bar.styles.bar_background = COLOR_PROGRESS_FAILURE
+        yield bar
 
 
 class IntelligenceDashboard(Static):
@@ -95,14 +106,20 @@ class LogPanel(Static):
     def compose(self) -> ComposeResult:
         yield RichLog(highlight=True, markup=True)
 
+    def write_log(self, platform: str, found: bool) -> None:
+        """Log with themed colors."""
+        color = COLOR_FOUND if found else COLOR_NOT_FOUND
+        status = "Found" if found else "Not Found"
+        self.query_one(RichLog).write(f"Analyzed {platform}: [{color}]{status}[/]")
+
 
 class MetricsGraph(Static):
     """Displays success/failure ratio as a simple bar."""
 
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
-        self.successes = 0
-        self.failures = 0
+        self.successes: int = 0
+        self.failures: int = 0
 
     def update_metrics(self, successes: int, failures: int) -> None:
         """Update the metrics display."""
@@ -112,7 +129,7 @@ class MetricsGraph(Static):
         if total == 0:
             graph = "No data yet."
         else:
-            s_bar = "█" * (successes * 20 // total)
-            f_bar = "░" * (failures * 20 // total)
+            s_bar = "█" * (self.successes * METRICS_BAR_WIDTH // total)
+            f_bar = "░" * (self.failures * METRICS_BAR_WIDTH // total)
             graph = f"{s_bar}{f_bar}"
-        self.update(f"[cyan]{graph}[/]\n{successes} success | {failures} failure")
+        self.update(f"[cyan]{graph}[/]\n{self.successes} success | {self.failures} failure")

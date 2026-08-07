@@ -10,7 +10,8 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Any
+
+from rich.panel import Panel
 
 from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.config import Config
@@ -116,14 +117,14 @@ class OSINTAgent:
         async for intel in self.subsystems.orchestrator.run_scan(username, providers, timeout=timeout):
             yield intel
 
-    def get_final_report(self) -> Any:
+    async def get_final_report(self) -> Panel:
         """
         Generates the final report based on gathered intelligence.
 
         Returns:
             The rich-formatted report object.
         """
-        return self.subsystems.report.generate(self.username)
+        return await self.subsystems.report.generate(self.username)
 
     def abort_scan(self) -> None:
         """Aborts any currently running scan processes."""

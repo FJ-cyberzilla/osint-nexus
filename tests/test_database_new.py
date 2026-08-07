@@ -19,18 +19,6 @@ async def test_database_initialization(tmp_path: Any) -> None:
     ):
         tables = {row[0] for row in await cur.fetchall()}
 
-    expected_tables = {
-        "results",
-        "schema_version",
-        "entities",
-        "pivots",
-        "avatars",
-        "historical_scans",
-        "cache",
-        "content_search",
-        "sqlite_sequence",
-    }
-
     for table in [
         "results",
         "schema_version",
