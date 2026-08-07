@@ -1,12 +1,9 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
 from osint_nexus.core.config import get_config
+from osint_nexus.core.provider_types import JSONValue, MetadataDict
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
-
-if TYPE_CHECKING:
-    from osint_nexus.core.provider_types import JSONValue, MetadataDict
-
 
 class AparatProvider(BaseProvider):
     """Provider for Aparat (Iranian video platform) OSINT.

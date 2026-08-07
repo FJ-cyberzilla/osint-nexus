@@ -5,10 +5,8 @@ from typing import Any
 
 from osint_nexus.core.dork import DorkEngine
 from osint_nexus.core.evasion_agent import EvasionAgent
-from osint_nexus.providers.aparat import AparatProvider
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.providers.generic import GenericProvider, SiteConfig
-from osint_nexus.providers.github import GitHubProvider
 from osint_nexus.utils.network import NetworkManager
 
 logger = logging.getLogger("osint_nexus.registry")
@@ -43,6 +41,9 @@ class ProviderRegistry:
         Returns:
             A list of initialized provider instances.
         """
+        from osint_nexus.providers.aparat import AparatProvider
+        from osint_nexus.providers.github import GitHubProvider
+
         providers: list[BaseProvider] = []
 
         # Load dynamic providers
