@@ -144,7 +144,6 @@ class BrowserPoolManager:
         except Exception as e:
             # Log cleanup error but proceed with cleanup
             print(f"Error during browser teardown: {e}")
-            pass
         finally:
             self._browser = None
             self._playwright = None
