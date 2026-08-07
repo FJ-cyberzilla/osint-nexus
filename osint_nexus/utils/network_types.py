@@ -10,7 +10,6 @@ class SessionProtocol(Protocol):
 
 
 HAS_CURL_CFFI = False
-NETWORK_EXCEPTION = Exception
 
 try:
     import curl_cffi.requests as curl_requests
