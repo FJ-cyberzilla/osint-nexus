@@ -29,10 +29,6 @@ async def run_scan(
     app = OSINTApp(agent, username, total, timeout)
     await app.run_async()
 
-    # Display final summary
-    console.print("\n[bold green]Scan completed successfully![/]")
-    console.print("[bold green]Reconnaissance finished.[/]")
-
 
 async def generate_report(agent: OSINTAgent) -> None:
     """Generate and display the final report with a real-time progress indicator."""

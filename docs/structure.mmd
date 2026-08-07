@@ -4,10 +4,33 @@ classDiagram
     %% Author: FJ-cyberzilla
     %% Org: FJ™ Cybertronic Systems
     
-    class OSINTAgent {
-        +run_scan(username)
-        +get_final_report()
+    class OSINTApp {
+        +compose()
+        +on_scan_update()
+        +update_dashboard()
+        +update_advanced_intel()
     }
+    
+    class IntelligenceDashboard {
+        +update_data()
+    }
+    
+    class TelemetryPanel {
+        +update_telemetry()
+    }
+    
+    class RelationshipPanel {
+        +update_relationships()
+    }
+    
+    class HeatmapPanel {
+        +update_heatmap()
+    }
+    
+    OSINTApp --> IntelligenceDashboard
+    OSINTApp --> TelemetryPanel
+    OSINTApp --> RelationshipPanel
+    OSINTApp --> HeatmapPanel
     
     class AdvancedReportGenerator {
         +generate(username)

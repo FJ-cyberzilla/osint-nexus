@@ -1,8 +1,11 @@
+"""UI widgets for the OSINT Nexus TUI."""
+
 from collections.abc import Mapping
+from typing import Final
 
 from textual.app import ComposeResult
 from textual.message import Message
-from textual.widgets import DataTable, ProgressBar, RichLog, Static
+from textual.widgets import DataTable, ProgressBar, RichLog, Static, Tree
 
 from osint_nexus.cli.theme import (
     COLOR_FOUND,
@@ -12,6 +15,10 @@ from osint_nexus.cli.theme import (
     METRICS_BAR_WIDTH,
 )
 from osint_nexus.core.intelligence import IntelligenceObject
+from osint_nexus.core.ui_models import ActivityLevel, TelemetryData
+
+# Widget Constants
+DEFAULT_PROGRESS_TOTAL: Final[int] = 0
 
 
 class ScanUpdate(Message):
@@ -44,17 +51,17 @@ class ReconProgress(Static):
 
     def compose(self) -> ComposeResult:
         # Multi-colored progress bar
-        bar = ProgressBar(total=self.total, id="progress-bar")
+        progress_bar = ProgressBar(total=self.total, id="progress-bar", show_eta=False, show_percentage=True)
         # Textual style modification: set style properties explicitly
-        bar.styles.background = COLOR_PROGRESS_FAILURE
-        bar.styles.color = COLOR_PROGRESS_SUCCESS
-        yield bar
+        progress_bar.styles.background = COLOR_PROGRESS_FAILURE
+        progress_bar.styles.color = COLOR_PROGRESS_SUCCESS
+        yield progress_bar
 
 
 class IntelligenceDashboard(Static):
     """Renders the Intelligence Dashboard (Fingerprint, Footprint, etc.)."""
 
-    table: DataTable[str]
+    table: DataTable[str] = DataTable()
 
     def __init__(self, id: str | None = None) -> None:
         super().__init__(id=id)
@@ -66,7 +73,6 @@ class IntelligenceDashboard(Static):
         }
 
     def compose(self) -> ComposeResult:
-        self.table = DataTable()
         self.table.add_columns("Category", "Details")
         for key, value in self.data.items():
             self.table.add_row(key, value)
@@ -104,6 +110,50 @@ class IntelligenceDashboard(Static):
         self.table.clear()
         for key, value in self.data.items():
             self.table.add_row(key, value)
+
+
+class TelemetryPanel(Static):
+    """Renders Telemetry data (Accessibility: Uses DataTable for screen reader compatibility)."""
+
+    def compose(self) -> ComposeResult:
+        table = DataTable()
+        table.add_columns("Metric", "Value")
+        yield table
+
+    def update_telemetry(self, telemetry: TelemetryData) -> None:
+        """Updates telemetry table with structured data."""
+        table = self.query_one(DataTable)
+        table.clear()
+        table.add_row("DNS Leak", telemetry.dns_leak)
+        table.add_row("Connection", telemetry.connection_type)
+        table.add_row("HW Fingerprint", telemetry.hardware_fingerprint)
+
+
+class RelationshipPanel(Static):
+    """Renders Relationships as a Tree (Accessibility: Tree widget is keyboard accessible)."""
+
+    def compose(self) -> ComposeResult:
+        yield Tree("Relationships")
+
+    def update_relationships(self, relationships: list[str]) -> None:
+        """Updates relationship tree."""
+        tree = self.query_one(Tree)
+        tree.root.remove_children()
+        for rel in relationships:
+            tree.root.add(rel)
+
+
+class HeatmapPanel(Static):
+    """Renders Activity Heatmap (Accessibility: Descriptive labels, color independence)."""
+
+    def compose(self) -> ComposeResult:
+        yield Static("Activity: [None]", id="heatmap-label")
+
+    def update_heatmap(self, activity: ActivityLevel) -> None:
+        """Updates heatmap status using structured model."""
+        self.query_one("#heatmap-label", Static).update(
+            f"Activity: [bold cyan]{activity.level}[/] (Trend: {activity.trend})"
+        )
 
 
 class LogPanel(Static):

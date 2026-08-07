@@ -32,6 +32,8 @@ async def async_main(args: argparse.Namespace) -> None:
         from osint_nexus.cli.scanner import generate_report
 
         await generate_report(agent)
+        console.print("\n[bold green]Scan completed successfully![/]")
+        console.print("[bold green]Reconnaissance finished.[/]")
 
 
 def handle_scan_command(args: argparse.Namespace) -> None:

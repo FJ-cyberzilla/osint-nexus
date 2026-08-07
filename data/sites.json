@@ -1,7 +1,8 @@
 [
   {
     "name": "facebook",
-    "url_template": "https://www.facebook.com/{username}"
+    "url_template": "https://www.facebook.com/{username}",
+    "use_browser": true
   },
   {
     "name": "twitter",
@@ -137,7 +138,8 @@
   },
   {
     "name": "telegram",
-    "url_template": "https://t.me/{username}"
+    "url_template": "https://t.me/{username}",
+    "use_browser": true
   },
   {
     "name": "whatsapp",

@@ -27,7 +27,7 @@ OSINT Nexus is a modular, facade-based system designed to automate username reco
 *   **Browser & Captcha Management**: Built-in browser pooling, recycling, and multi-provider captcha solving, featuring a cross-platform engine (PyQt6/Playwright) with automatic environment detection.
 *   **Telemetry & Data Integrity**: Comprehensive telemetry collection (DNS, hardware) and data export support (e.g., STIX).
 *   **Persistence**: Async-ready SQLite database with support for caching and FTS5 full-text search.
-*   **Aesthetic UI**: Color-coded, rich CLI interfaces for real-time monitoring and reporting.
+*   **Aesthetic & Informative UI**: Rich CLI TUI featuring real-time intelligence dashboards (Telemetry, Relationships, Activity Heatmaps) and comprehensive reporting.
 *   **Android/Termux Optimized**: Configured for high-performance mobile execution.
 
 ## Architecture

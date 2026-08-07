@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Protocol, TypedDict
+from typing import Protocol, TypedDict
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -89,26 +89,24 @@ class LinkHarvester:
     """Harvests external links from a page, excluding the source domain."""
 
     def harvest(self, soup: BeautifulSoup, source_url: str | None = None) -> set[str]:
+        """Harvests all valid external links from the soup."""
         source_domain = urlparse(source_url).netloc.lower() if source_url else ""
 
-        # Explicitly get hrefs and filter None/non-string
-        links = []
-        for a in soup.find_all("a", href=True):
-            # BeautifulSoup Tag.attrs returns a dictionary.
-            # Explicitly cast to dict[str, Any] if necessary to avoid typing ambiguity
-            attrs: dict[str, Any] = a.attrs
-            href = attrs.get("href")
-            if isinstance(href, str):
-                links.append(href)
+        # Extract and filter hrefs using comprehension for better performance and readability
+        links = {
+            href
+            for a in soup.find_all("a", href=True)
+            if isinstance((href := a.get("href")), str) and self._is_valid_link(href, source_domain)
+        }
 
-        return {link for link in links if self._is_valid_link(link, source_domain)}
+        return links
 
     def _is_valid_link(self, link: str, source_domain: str) -> bool:
-        if not isinstance(link, str) or not link.startswith(("http://", "https://")):
-            return False
-        return self._is_external(link, source_domain)
+        """Validates if a link is an external http/https URL."""
+        return link.startswith(("http://", "https://")) and self._is_external(link, source_domain)
 
     def _is_external(self, href: str, source_domain: str) -> bool:
+        """Checks if the link belongs to a different domain."""
         href_domain = urlparse(href).netloc.lower()
         if not source_domain:
             return True
