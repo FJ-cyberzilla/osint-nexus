@@ -26,26 +26,33 @@ class PlaywrightBrowserEngine:
         self.callback = callback
         self.inference_engine = DeviceInferenceEngine()
 
+    def _parse_telemetry(self, raw_json_data: str) -> TelemetryDict:
+        """Parses and validates telemetry data."""
+        data_obj: object = json.loads(raw_json_data)
+        if not isinstance(data_obj, dict):
+            raise TypeError("Expected dictionary")
+
+        return {
+            k: v
+            for k, v in data_obj.items()
+            if isinstance(k, str) and isinstance(v, (str, float, int, bool))
+        }
+
+    def _process_telemetry(self, data: TelemetryDict) -> None:
+        """Processes and logs telemetry data."""
+        if self.telemetry_client is not None:
+            self.telemetry_client.log(data)
+
+        inferred_profile: DeviceProfile = self.inference_engine.analyze(data)
+        if self.callback is not None:
+            self.callback(inferred_profile)
+        logger.info("Successfully processed Playwright telemetry.")
+
     def handle_submit_telemetry(self, _source: object, raw_json_data: str) -> None:
         """Handles telemetry payload injected from Playwright context."""
         try:
-            data_obj: object = json.loads(raw_json_data)
-            if not isinstance(data_obj, dict):
-                raise TypeError("Expected dictionary")
-
-            data: TelemetryDict = {
-                k: v
-                for k, v in data_obj.items()
-                if isinstance(k, str) and isinstance(v, (str, float, int, bool))
-            }
-
-            if self.telemetry_client is not None:
-                self.telemetry_client.log(data)
-
-            inferred_profile: DeviceProfile = self.inference_engine.analyze(data)
-            if self.callback is not None:
-                self.callback(inferred_profile)
-            logger.info("Successfully processed Playwright telemetry.")
+            data = self._parse_telemetry(raw_json_data)
+            self._process_telemetry(data)
         except (json.JSONDecodeError, TypeError, KeyError) as e:
             logger.error(f"Failed to parse Playwright telemetry payload: {e}")
 

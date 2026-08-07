@@ -168,7 +168,8 @@ db-info:
 # --- Development & Quality Control ---
 test:
 	@$(call animate_status,"Running Test Suite")
-	@export PYTHONPATH=$(PYTHONPATH) && $(PYTEST) --cov=osint_nexus tests/ || \
+	@mkdir -p logs
+	@export PYTHONPATH=$(PYTHONPATH) && $(PYTEST) --cov=osint_nexus --cov-report=xml:logs/coverage.xml tests/ || \
 		{ printf "\n  $(C_RED)❌ Tests failed$(RST)\n"; exit 1; }
 
 lint:

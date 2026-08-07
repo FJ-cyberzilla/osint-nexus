@@ -85,11 +85,8 @@ class BrowserPoolManager:
                 await self._force_cleanup()
                 raise BrowserPoolError(f"Initialization failed: {e}") from e
 
-    @asynccontextmanager
-    async def acquire_context(
-        self, proxy_url: str | None = None, extra_headers: dict[str, str] | None = None
-    ) -> AsyncGenerator[BrowserContext]:
-        """Acquires a hardened browser context using the factory."""
+    async def _ensure_browser(self) -> None:
+        """Ensures the browser is initialized and healthy."""
         if self._state != BrowserPoolState.READY:
             await self.initialize()
 
@@ -100,15 +97,26 @@ class BrowserPoolManager:
         if self._browser is None:
             raise BrowserPoolError("Browser initialization failed.")
 
+    async def _configure_bridge(self, context: BrowserContext) -> None:
+        """Configures the bridge handler if available."""
+        if self._bridge:
+            page = context.pages[0] if context.pages else await context.new_page()
+            await page.expose_function("webviewBridge", self._bridge.handle_message)
+
+    @asynccontextmanager
+    async def acquire_context(
+        self, proxy_url: str | None = None, extra_headers: dict[str, str] | None = None
+    ) -> AsyncGenerator[BrowserContext]:
+        """Acquires a hardened browser context using the factory."""
+        await self._ensure_browser()
+
         context: BrowserContext | None = None
         try:
+            # Type hint needed as factory.create can return any browser context based on factory impl
             context = await self._factory.create(
                 self._browser, proxy_url=proxy_url, extra_headers=extra_headers
             )
-            if self._bridge:
-                # Expose the bridge handler to the page
-                page = context.pages[0] if context.pages else await context.new_page()
-                await page.expose_function("webviewBridge", self._bridge.handle_message)
+            await self._configure_bridge(context)
 
             self._monitor.record_acquisition()
             yield context
