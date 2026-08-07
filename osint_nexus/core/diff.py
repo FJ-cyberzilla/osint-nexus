@@ -1,18 +1,28 @@
-"""
-Diff Engine for detecting changes in identity presence.
-
-Compares current scan results against historical database records to identify
-changes in platform presence and content.
-"""
-
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TypedDict, List, Dict
 
 from osint_nexus.core.database import DatabaseManager
+from osint_nexus.core.types import JSONObject
 
 logger = logging.getLogger("osint_nexus.core.diff")
+
+
+class Change(TypedDict):
+    platform: str
+    field: str
+
+
+class PlatformChanges(TypedDict):
+    new_platforms: List[str]
+    removed_platforms: List[str]
+
+
+class DiffResult(TypedDict):
+    new_platforms: List[str]
+    removed_platforms: List[str]
+    modified_content: List[Change]
 
 
 class DiffEngine:
@@ -23,7 +33,7 @@ class DiffEngine:
     def __init__(self, db_manager: DatabaseManager) -> None:
         self.db_manager = db_manager
 
-    async def diff(self, username: str, current_results: list[dict[str, Any]]) -> dict[str, Any]:
+    async def diff(self, username: str, current_results: List[JSONObject]) -> DiffResult:
         """
         Compare current results against the last known state from the database.
         """
@@ -31,18 +41,25 @@ class DiffEngine:
         last_known = self._get_found_results(historical_results)
         current_found = self._get_found_results(current_results)
 
-        diff = self._calculate_platform_changes(current_found, last_known)
-        diff["modified_content"] = self._calculate_content_changes(current_found, last_known)
+        platform_changes = self._calculate_platform_changes(current_found, last_known)
+        modified_content = self._calculate_content_changes(current_found, last_known)
+
+        diff: DiffResult = {
+            "new_platforms": platform_changes["new_platforms"],
+            "removed_platforms": platform_changes["removed_platforms"],
+            "modified_content": modified_content,
+        }
 
         logger.debug("Diff found: %s", diff)
         return diff
 
-    def _get_found_results(self, results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    def _get_found_results(self, results: List[JSONObject]) -> Dict[str, JSONObject]:
+        # Keep only entries with a truthy "found" flag and index by platform name.
         return {r["platform"]: r for r in results if r.get("found")}
 
     def _calculate_platform_changes(
-        self, current: dict[str, Any], last_known: dict[str, Any]
-    ) -> dict[str, Any]:
+        self, current: Dict[str, JSONObject], last_known: Dict[str, JSONObject]
+    ) -> PlatformChanges:
         current_keys = set(current.keys())
         last_keys = set(last_known.keys())
         return {
@@ -51,16 +68,16 @@ class DiffEngine:
         }
 
     def _calculate_content_changes(
-        self, current: dict[str, Any], last_known: dict[str, Any]
-    ) -> list[dict[str, str]]:
-        changes: list[dict[str, str]] = []
+        self, current: Dict[str, JSONObject], last_known: Dict[str, JSONObject]
+    ) -> List[Change]:
+        changes: List[Change] = []
         for platform, res in current.items():
             if platform in last_known:
                 self._check_result_diff(platform, res, last_known[platform], changes)
         return changes
 
     def _check_result_diff(
-        self, platform: str, new_res: dict[str, Any], old_res: dict[str, Any], changes: list[dict[str, str]]
+        self, platform: str, new_res: JSONObject, old_res: JSONObject, changes: List[Change]
     ) -> None:
         for field in ("bio", "avatar_url"):
             if new_res.get(field) != old_res.get(field):
