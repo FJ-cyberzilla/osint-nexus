@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TypedDict
 
 import aiohttp
 
@@ -14,6 +14,11 @@ from osint_nexus.core.captcha.solvers.anti_captcha import AntiCaptchaSolver
 from osint_nexus.core.captcha.solvers.two_captcha import TwoCaptchaSolver
 from osint_nexus.core.config import get_config
 from osint_nexus.core.db.cache_repository import CacheRepository
+from osint_nexus.core.types import JSONObject
+
+
+class CacheEntry(TypedDict):
+    token: str
 
 
 class CaptchaSolverRegistry:
@@ -63,8 +68,9 @@ class CaptchaSolverRegistry:
         """Returns cached result if available."""
         if self.cache_repository:
             cached = await self.cache_repository.get(cache_key)
-            if cached and "token" in cached:
-                return CaptchaSolveResult(token=cached["token"], cost=0.0, solver_name="cache")
+            if cached and isinstance(cached, dict) and "token" in cached:
+                entry = cached  # Assuming it matches CacheEntry structure for this context
+                return CaptchaSolveResult(token=entry["token"], cost=0.0, solver_name="cache")
         return None
 
     async def _perform_solve(

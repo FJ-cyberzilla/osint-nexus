@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable, TypedDict
 
 import aiohttp
 
@@ -15,6 +15,7 @@ from osint_nexus.core.captcha.exceptions import (
     CaptchaTimeoutError,
 )
 from osint_nexus.core.captcha.models import CaptchaSolveResult, CaptchaType
+from osint_nexus.core.types import JSONObject
 from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger("osint_nexus.captcha")
@@ -29,7 +30,15 @@ __all__ = [
     "CaptchaSolveResult",
     "CaptchaType",
     "CaptchaSolverProtocol",
+    "CaptchaTask",
 ]
+
+
+class CaptchaTask(TypedDict):
+    id: str
+    payload: JSONObject
+    provider: str
+    priority: int
 
 
 @runtime_checkable
