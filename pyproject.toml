@@ -125,7 +125,7 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 exclude = ["build"]
-plugins = ["pydantic.mypy"]
+plugins = ["pydantic.mypy", "beartype.mypy.beartype_plugin"]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
@@ -136,3 +136,15 @@ warn_required_dynamic_aliases = true
 module = ["curl_cffi.*", "httpx.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+# ===== RADON CONFIGURATION =====
+[tool.radon]
+cc_min = "A"
+cc_max = "B"
+# We want to enforce max 4, which is technically A (1-5).
+# Radon doesn't allow custom complexity thresholds per se, 
+# so we use a custom script or rely on explicit 'cc' output 
+# in CI. 
+# Added here for completeness if a plugin exists, 
+# but we will enforce via shell command in CI.
+

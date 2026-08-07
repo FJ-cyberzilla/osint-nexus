@@ -135,6 +135,17 @@ class TwoCaptchaSolver(CaptchaSolver):
             "pageurl": url,
             "json": "1",
         }
+        self._add_type_specific_params(params, site_key, captcha_type, extra)
+        return params
+
+    def _add_type_specific_params(
+        self,
+        params: TwoCaptchaSubmitParams,
+        site_key: str,
+        captcha_type: CaptchaType,
+        extra: dict[str, JSONValue],
+    ) -> None:
+        """Add type-specific parameters to the submit payload."""
         if captcha_type == CaptchaType.RECAPTCHA_V3:
             params["version"] = "v3"
             action = extra.get("action", "verify")
@@ -144,7 +155,6 @@ class TwoCaptchaSolver(CaptchaSolver):
             params["data_s"] = str(data_s) if data_s is not None else ""
         elif captcha_type == CaptchaType.TURNSTILE:
             params["sitekey"] = site_key
-        return params
 
     async def _poll_for_result(self, session: aiohttp.ClientSession, captcha_id: str) -> str:
         """Poll 2captcha until result is ready."""

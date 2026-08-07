@@ -154,8 +154,12 @@ class OSINTApp(App[None]):
             return
 
         metadata = intel.metadata
+        self._update_telemetry_panel(metadata)
+        self._update_relationship_panel(metadata)
+        self._update_activity_panel(metadata)
 
-        # Map Telemetry
+    def _update_telemetry_panel(self, metadata: dict) -> None:
+        """Helper to update telemetry panel."""
         telemetry_raw = metadata.get("telemetry")
         if isinstance(telemetry_raw, dict):
             try:
@@ -164,12 +168,14 @@ class OSINTApp(App[None]):
             except ValueError:
                 console.log("Invalid telemetry data format.")
 
-        # Map Relationships
+    def _update_relationship_panel(self, metadata: dict) -> None:
+        """Helper to update relationship panel."""
         relationships = metadata.get("relationships", [])
         if isinstance(relationships, list):
             self.query_one("#relationships", RelationshipPanel).update_relationships(relationships)
 
-        # Map Activity
+    def _update_activity_panel(self, metadata: dict) -> None:
+        """Helper to update activity panel."""
         activity_raw = metadata.get("activity")
         if isinstance(activity_raw, dict):
             try:

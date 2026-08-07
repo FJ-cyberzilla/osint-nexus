@@ -109,14 +109,19 @@ class NodeGenerator:
             A list of node dictionaries.
         """
         nodes: list[GraphNode] = [{"id": username_data["username"], "type": "primary"}]
-        nodes.extend([{"id": acc["username"], "type": acc["type"]} for acc in username_data["accounts"]])
-        nodes.extend(
-            [{"id": conn["email"], "type": "email"} for conn in username_data["emails"] if "email" in conn]
-        )
-        nodes.extend(
-            [{"id": conn["phone"], "type": "phone"} for conn in username_data["phones"] if "phone" in conn]
-        )
+        nodes.extend(self._get_account_nodes(username_data))
+        nodes.extend(self._get_email_nodes(username_data))
+        nodes.extend(self._get_phone_nodes(username_data))
         return nodes
+
+    def _get_account_nodes(self, username_data: UserData) -> list[GraphNode]:
+        return [{"id": acc["username"], "type": acc["type"]} for acc in username_data["accounts"]]
+
+    def _get_email_nodes(self, username_data: UserData) -> list[GraphNode]:
+        return [{"id": conn["email"], "type": "email"} for conn in username_data["emails"] if "email" in conn]
+
+    def _get_phone_nodes(self, username_data: UserData) -> list[GraphNode]:
+        return [{"id": conn["phone"], "type": "phone"} for conn in username_data["phones"] if "phone" in conn]
 
 
 class EdgeGenerator:
@@ -146,12 +151,18 @@ class EdgeGenerator:
     def _add_usage_edges(self, edges: list[GraphEdge], data: UserData) -> None:
         """Adds usage edges for email and phone."""
         for acc in data["accounts"]:
-            for conn in data["emails"]:
-                if "email" in conn:
-                    edges.append({"source": acc["username"], "target": conn["email"], "type": "uses_email"})
-            for conn in data["phones"]:
-                if "phone" in conn:
-                    edges.append({"source": acc["username"], "target": conn["phone"], "type": "uses_phone"})
+            self._add_email_edges_for_account(edges, acc, data["emails"])
+            self._add_phone_edges_for_account(edges, acc, data["phones"])
+
+    def _add_email_edges_for_account(self, edges: list[GraphEdge], acc: AccountData, emails: list[ConnectionData]) -> None:
+        for conn in emails:
+            if "email" in conn:
+                edges.append({"source": acc["username"], "target": conn["email"], "type": "uses_email"})
+
+    def _add_phone_edges_for_account(self, edges: list[GraphEdge], acc: AccountData, phones: list[ConnectionData]) -> None:
+        for conn in phones:
+            if "phone" in conn:
+                edges.append({"source": acc["username"], "target": conn["phone"], "type": "uses_phone"})
 
     def _add_interaction_edges(self, edges: list[GraphEdge], data: UserData) -> None:
         """Adds interaction edges between accounts."""
