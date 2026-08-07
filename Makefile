@@ -48,7 +48,7 @@ IS_WSL       := $(shell grep -qi "microsoft" /proc/version 2>/dev/null && echo "
 IS_CONTAINER := $(shell [ -f /.dockerenv ] || [ -f /run/.containerenv ] && echo "true" || echo "false")
 HAS_GUI      := $(shell [ -n "$$DISPLAY" ] || [ -n "$$WAYLAND_DISPLAY" ] && echo "true" || echo "false")
 
-.PHONY: help install install-core install-full sync run health db-info test lint format clean
+.PHONY: help install install-core install-full sync run health db-info test lint format clean about
 
 # --- Quoted Animation Macro (Prevents Space/Word Splitting Bugs) ---
 define animate_status
@@ -70,6 +70,19 @@ define show_banner
 	@printf "  $(C_PUR)┌──────────────────────────────────────────────────────────────┐$(RST)\n"
 	@printf "  $(C_PUR)│$(RST)  $(C_CYN)$(B)FJ™ CYBERTRONIC SYSTEMS$(RST)  $(C_DIM)•$(RST)  $(C_PUR)OSINT NEXUS MATRIX ENGINE$(RST)  $(C_PUR)│$(RST)\n"
 	@printf "  $(C_PUR)│$(RST)  $(C_SLV)Cybernetic Intelligence Platform$(RST) $(C_DIM)|$(RST) $(C_ORG)v4.1.1$(RST)               $(C_PUR)│$(RST)\n"
+	@printf "  $(C_PUR)└──────────────────────────────────────────────────────────────┘$(RST)\n\n"
+endef
+
+# --- About Panel ---
+define show_about
+	@printf "\n"
+	@printf "  $(C_PUR)┌──────────────────────────────────────────────────────────────┐$(RST)\n"
+	@printf "  $(C_PUR)│$(RST)  $(C_CYN)$(B)OSINT NEXUS$(RST)  $(C_DIM)•$(RST)  $(C_SLV)Cybernetic Intelligence Platform$(RST)           $(C_PUR)│$(RST)\n"
+	@printf "  $(C_PUR)├──────────────────────────────────────────────────────────────┤$(RST)\n"
+	@printf "  $(C_PUR)│$(RST)  $(C_SLV)A sophisticated framework for identity discovery.$(RST)      $(C_PUR)│$(RST)\n"
+	@printf "  $(C_PUR)├──────────────────────────────────────────────────────────────┤$(RST)\n"
+	@printf "  $(C_PUR)│$(RST)  $(C_ORG)Author:$(RST) FJ-cyberzilla                                    $(C_PUR)│$(RST)\n"
+	@printf "  $(C_PUR)│$(RST)  $(C_ORG)Repository:$(RST) https://github.com/FJ-cyberzilla/osint-nexus  $(C_PUR)│$(RST)\n"
 	@printf "  $(C_PUR)└──────────────────────────────────────────────────────────────┘$(RST)\n\n"
 endef
 
@@ -102,7 +115,12 @@ help:
 	@printf "    $(C_ORG)%-18s$(RST) $(C_DIM)→$(RST) $(C_SLV)Static code analysis & quality verification$(RST)\n" "make lint"
 	@printf "    $(C_ORG)%-18s$(RST) $(C_DIM)→$(RST) $(C_SLV)Auto-format codebase using Ruff formatter$(RST)\n" "make format"
 	@printf "    $(C_ORG)%-18s$(RST) $(C_DIM)→$(RST) $(C_SLV)Purge workspace cache, venvs & build artifacts$(RST)\n" "make clean"
+	@printf "    $(C_ORG)%-18s$(RST) $(C_DIM)→$(RST) $(C_SLV)Display application information$(RST)\n" "make about"
 	@printf "\n"
+
+# --- About Target ---
+about:
+	@$(call show_about)
 
 # --- Smart Environment Installation ---
 install:
