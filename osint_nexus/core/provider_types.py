@@ -23,7 +23,8 @@ class ProviderExecutionResult:
 class ValidatorProtocol(Protocol):
     """Interface for provider result validation."""
 
-    def validate(self, content: str, provider_name: str) -> bool: ...
+    def validate(self, content: str, provider_name: str) -> bool:
+        pass
 
 
 @runtime_checkable
