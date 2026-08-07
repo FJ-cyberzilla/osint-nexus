@@ -1,5 +1,6 @@
 import argparse
-from typing import TYPE_CHECKING, Any
+from argparse import _SubParsersAction, ArgumentParser
+from typing import Any
 
 from rich.console import Console
 
@@ -13,6 +14,6 @@ def handle_health_command(args: argparse.Namespace) -> None:
     run_health_check()
 
 
-def setup_health_parser(subparsers: Any) -> None:
+def setup_health_parser(subparsers: _SubParsersAction[ArgumentParser]) -> None:
     """Configure the health command parser."""
     subparsers.add_parser("health", help="Check provider health status")

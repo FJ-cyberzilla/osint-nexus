@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+from argparse import _SubParsersAction, ArgumentParser
 from typing import Any
 
 from rich.console import Console
@@ -38,7 +39,7 @@ def handle_scan_command(args: argparse.Namespace) -> None:
     asyncio.run(async_main(args))
 
 
-def setup_scan_parser(subparsers: Any) -> None:
+def setup_scan_parser(subparsers: _SubParsersAction[ArgumentParser]) -> None:
     """Configure the scan command parser."""
     scan_parser = subparsers.add_parser("scan", help="Scan a target username")
     scan_parser.add_argument("--username", required=True, help="Target username to investigate")
