@@ -27,7 +27,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system -e ".[dev,speedups]"
+          uv sync --all-extras
 
-      - name: Run tests
+      - name: Run tests with beartype
+        # Ensure tests run and beartype is installed in the dev environment.
         run: uv run pytest tests/

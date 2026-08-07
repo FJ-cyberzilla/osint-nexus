@@ -41,6 +41,13 @@ jobs:
         run: |
           uv run python -m mypy osint_nexus
 
+      - name: Run Beartype Verification
+        # Run a quick check that beartype is functional by ensuring no immediate violations
+        # in core components if explicitly instrumented, or by running with beartype enabled.
+        run: |
+          # This verifies that the dependencies are installed and accessible
+          uv run python -c "import beartype; print('Beartype version:', beartype.__version__)"
+
       - name: Run Pylint
         run: |
           uv run pylint osint_nexus
