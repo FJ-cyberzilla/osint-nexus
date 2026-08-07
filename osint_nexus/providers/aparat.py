@@ -6,6 +6,7 @@ from osint_nexus.core.config import get_config
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
+
 class AparatProvider(BaseProvider):
     """Provider for Aparat (Iranian video platform) OSINT.
 

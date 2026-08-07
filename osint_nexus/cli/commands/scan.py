@@ -1,8 +1,7 @@
 import argparse
 import asyncio
 import logging
-from argparse import _SubParsersAction, ArgumentParser
-from typing import Any
+from argparse import ArgumentParser, _SubParsersAction
 
 from rich.console import Console
 
