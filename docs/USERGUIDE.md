@@ -1,7 +1,7 @@
 # OSINT Nexus User Guide
 _Maintained by_ **[FJ-cyberzilla](https://github.com/FJ-cyberzilla)**  
 > _Powered by_ **FJ™ Cybertronic Systems**
-**Version: 3.1.7**
+**Version: 4.1.1**
 
 Welcome to the OSINT Nexus user guide. This document provides detailed instructions on installing, configuring, and effectively using the OSINT Nexus reconnaissance system.
 

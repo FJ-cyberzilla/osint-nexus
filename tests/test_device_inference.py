@@ -1,11 +1,11 @@
 import pytest
 
-from osint_nexus.core.device_inference import DeviceInferenceService
+from osint_nexus.core.device_inference import DeviceInferenceNetworkEngine
 
 
 @pytest.mark.asyncio
 async def test_infer_by_ports_windows_profile() -> None:
-    service = DeviceInferenceService()
+    service = DeviceInferenceNetworkEngine()
     # Mocking standard Active Directory / Windows Server exposed ports
     result = await service.infer_by_ports("192.168.1.50", [445, 3389])
 
@@ -16,7 +16,7 @@ async def test_infer_by_ports_windows_profile() -> None:
 
 @pytest.mark.asyncio
 async def test_infer_by_ports_linux_db_profile() -> None:
-    service = DeviceInferenceService()
+    service = DeviceInferenceNetworkEngine()
     # Mocking standard Linux Database ports
     result = await service.infer_by_ports("10.0.0.1", [3306, 5432])
 
@@ -28,7 +28,7 @@ async def test_infer_by_ports_linux_db_profile() -> None:
 
 @pytest.mark.asyncio
 async def test_infer_by_ports_empty_and_unknown() -> None:
-    service = DeviceInferenceService()
+    service = DeviceInferenceNetworkEngine()
 
     # Empty ports
     result_empty = await service.infer_by_ports("127.0.0.1", [])
@@ -45,6 +45,6 @@ async def test_infer_by_ports_empty_and_unknown() -> None:
 
 @pytest.mark.asyncio
 async def test_infer_by_mac_apple_lookup() -> None:
-    service = DeviceInferenceService()
+    service = DeviceInferenceNetworkEngine()
     manufacturer = await service.infer_by_mac("A4-77-33-FF-12-34")
     assert manufacturer == "Apple, Inc."

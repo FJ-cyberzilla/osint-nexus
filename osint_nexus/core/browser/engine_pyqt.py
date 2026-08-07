@@ -4,7 +4,6 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
-from osint_nexus.core.browser.engine import BrowserEngine
 from osint_nexus.core.telemetry.bridge import (
     TelemetryLoggerProtocol,
     WebViewBridge,
@@ -14,7 +13,7 @@ from osint_nexus.core.telemetry.probes.hardware_telemetry import (
 )
 
 
-class PyQtBrowserEngine(QWebEngineView, BrowserEngine):  # type: ignore
+class PyQtBrowserEngine(QWebEngineView):  # type: ignore
     """Linux / Desktop PyQt6 Native WebEngine Implementation with QWebChannel."""
 
     def __init__(

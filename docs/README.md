@@ -4,7 +4,7 @@
 
 An adaptive, high-performance OSINT agent for verifying username presence across platforms with advanced evasion, validation, and device inference capabilities.
 
-## Version: 3.1.7
+## Version: 4.1.1
 
 ## Architecture Overview
 

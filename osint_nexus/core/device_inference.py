@@ -27,7 +27,7 @@ class DeviceProfile(TypedDict):
     raw_telemetry: dict[str, str | float | int | bool]
 
 
-class DeviceInferenceService:
+class DeviceInferenceNetworkEngine:
     """Provides production-grade device context signatures based on network heuristics."""
 
     # Static SOTA fingerprint matrices for performance mapping

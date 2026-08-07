@@ -1,7 +1,7 @@
 # ==========================================================================
 #  FJ™ CYBERTRONIC SYSTEMS • OSINT NEXUS MATRIX ENGINE
 # ==========================================================================
-#  Version : 3.1.7
+#  Version : 4.1.1
 #  License : MIT
 # ==========================================================================
 
@@ -69,7 +69,7 @@ define show_banner
 	@printf "\n"
 	@printf "  $(C_PUR)┌──────────────────────────────────────────────────────────────┐$(RST)\n"
 	@printf "  $(C_PUR)│$(RST)  $(C_CYN)$(B)FJ™ CYBERTRONIC SYSTEMS$(RST)  $(C_DIM)•$(RST)  $(C_PUR)OSINT NEXUS MATRIX ENGINE$(RST)  $(C_PUR)│$(RST)\n"
-	@printf "  $(C_PUR)│$(RST)  $(C_SLV)Cybernetic Intelligence Platform$(RST) $(C_DIM)|$(RST) $(C_ORG)v3.1.7$(RST)               $(C_PUR)│$(RST)\n"
+	@printf "  $(C_PUR)│$(RST)  $(C_SLV)Cybernetic Intelligence Platform$(RST) $(C_DIM)|$(RST) $(C_ORG)v4.1.1$(RST)               $(C_PUR)│$(RST)\n"
 	@printf "  $(C_PUR)└──────────────────────────────────────────────────────────────┘$(RST)\n\n"
 endef
 
@@ -155,7 +155,9 @@ install-full:
 
 sync:
 	@$(call animate_status,Synchronizing Environment Dependencies)
-	@if [ -n "$(UV)" ]; then \
+	@if [ "$(IS_TERMUX)" = "true" ] || [ "$(IS_ANDROID)" = "true" ]; then \
+		pip install -e . || { $(call render_error,SYNC,Pip installation in mobile environment failed.); exit 1; }; \
+	elif [ -n "$(UV)" ]; then \
 		$(UV) sync || { $(call render_error,SYNC,UV virtualenv sync failed.); exit 1; }; \
 	else \
 		pip install -e . || { $(call render_error,SYNC,Pip installation fallback failed.); exit 1; }; \

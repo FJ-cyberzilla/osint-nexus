@@ -17,7 +17,7 @@ from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.config import Config
 from osint_nexus.core.database import DatabaseManager
 from osint_nexus.core.detection import DetectionEngine
-from osint_nexus.core.device_inference import DeviceInferenceService
+from osint_nexus.core.device_inference import DeviceInferenceNetworkEngine
 from osint_nexus.core.evasion import EvasionWeights
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.core.extractor import PivotExtractor
@@ -89,7 +89,7 @@ class OSINTAgent:
                     extractor=self.extractor,
                 ),
                 detection_engine=DetectionEngine(weights=self.evasion_weights),
-                device_inference=DeviceInferenceService(),
+                device_inference=DeviceInferenceNetworkEngine(),
             ),
             report=AdvancedReportGenerator(self.db),
             db=self.db,

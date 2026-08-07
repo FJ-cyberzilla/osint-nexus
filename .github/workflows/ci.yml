@@ -41,6 +41,10 @@ jobs:
         run: |
           uv run python -m mypy osint_nexus
 
+      - name: Run Pylint
+        run: |
+          uv run pylint osint_nexus
+
   test:
     name: Run Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest

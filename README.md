@@ -1,6 +1,6 @@
 # OSINT Nexus
 _A high-performance reconnaissance engine by_ **[FJ-cyberzilla](https://github.com/FJ-cyberzilla)**
-**Version: 3.1.7**
+**Version: 4.1.1**
 [![Dependency Graph](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/update-graph)[![CodeQL Advanced](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/codeql.yml/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/codeql.yml)[![Dependabot Updates](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/dependabot-updates)
 > **[FJ™ Cybertronic Systems](https://github.com/FJ-cyberzilla)**
 
