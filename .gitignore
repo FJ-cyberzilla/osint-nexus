@@ -60,5 +60,4 @@ data/*.db
 .vscode/
 .idea/
 MANIFEST
-MANIFEST.in
 coverage.xml
