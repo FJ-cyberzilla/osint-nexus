@@ -6,6 +6,8 @@ _A high-performance reconnaissance engine by_ **[FJ-cyberzilla]
 **Version: 4.1.1**
 
 [![Dependency Graph](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/update-graph)[![CodeQL Advanced](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/codeql.yml/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/codeql.yml)[![Dependabot Updates](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/dependabot/dependabot-updates)
+[![pages-build-deployment](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/pages/pages-build-deployment)
+
 > **[FJ™ Cybertronic Systems](https://github.com/FJ-cyberzilla)**
 
 
