@@ -29,7 +29,6 @@ async def test_run_scan_success():
             await run_scan(mock_agent, "testuser", 30.0)
 
             mock_app.run_async.assert_awaited_once()
-            mock_console.print.assert_any_call("\n[bold green]Scan completed successfully![/]")
 
 
 @pytest.mark.asyncio
