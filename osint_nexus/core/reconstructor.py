@@ -7,68 +7,23 @@ graph analysis and temporal mapping.
 
 from __future__ import annotations
 
-import logging
-from dataclasses import dataclass
-from typing import Protocol, TypedDict
+from typing import Protocol, runtime_checkable
+
+from osint_nexus.core.models import (
+    Account,
+    Correlations,
+    IdentityProfile,
+    LLMInterface,
+    Neo4jConnection,
+    RelationshipGraph,
+    TemporalAnalysis,
+    Timeline,
+)
+
+# ...
 
 
-# Type Aliases for domain entities
-class Account(TypedDict, total=False):
-    id: str
-    username: str
-    platform: str
-    email: str | None
-    phone: str | None
-    device_id: str | None
-    last_seen: str | None
-
-
-class RelationshipGraph(TypedDict):
-    nodes: list[str]
-    edges: list[dict[str, str]]
-
-
-class TimelineEntry(TypedDict):
-    event: str
-    timestamp: str
-    description: str
-
-
-class Correlations(TypedDict, total=False):
-    confidence: float
-    reasoning: str
-    related_accounts: list[str]
-
-
-type Timeline = list[TimelineEntry]
-
-logger = logging.getLogger("osint_nexus.core.reconstructor")
-
-
-@dataclass
-class IdentityProfile:
-    username: str
-    accounts: list[Account]
-    relationships: RelationshipGraph
-    timeline: Timeline | None
-    correlations: Correlations | None
-    confidence_score: float
-
-
-class Neo4jConnection:
-    def add_relationship(self, rel_type: str, account: Account) -> None:
-        pass
-
-
-class LLMInterface:
-    pass
-
-
-class TemporalAnalysis:
-    def create_timeline(self, accounts: list[Account]) -> Timeline | None:
-        return None
-
-
+@runtime_checkable
 class RelationshipInferenceStrategy(Protocol):
     def infer(self, account: Account, accounts: list[Account], graph_db: Neo4jConnection) -> None:
         pass

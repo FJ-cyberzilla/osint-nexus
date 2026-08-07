@@ -1,5 +1,5 @@
 # ==========================================================================
-#  FJ™ CYBERTRONIC SYSTEMS • OSINT NEXUS MATRIX ENGINE
+#  FJ™ CYBERTRONIC SYSTEMS • OSINT NEXUS
 # ==========================================================================
 #  Version : 4.1.1
 #  License : MIT
@@ -220,7 +220,7 @@ test:
 
 lint:
 	@$(call animate_status,Executing Code Quality Analysis)
-	@$(RUFF) check . || { $(call render_error,LINT,Ruff linter detected formatting or code quality errors.); exit 1; }
+	@$(RUFF) check . || { $(call render_error,LINT,Ruff linter detected linter  or CQ  errors.); exit 1; }
 	@printf "  $(C_GRN)✔ Code quality verification passed$(RST)\n\n"
 
 format:

@@ -64,6 +64,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+    "beartype>=0.18.0",
 ]
 
 [tool.setuptools]
@@ -111,6 +112,10 @@ indent-style = "space"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 pythonpath = ["."]
+filterwarnings = [
+    "ignore:install \"ipywidgets\":UserWarning",
+    "ignore::pytest.PytestUnhandledThreadExceptionWarning"
+]
 
 # ===== MYPY CONFIGURATION =====
 [tool.mypy]

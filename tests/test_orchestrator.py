@@ -2,19 +2,25 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from osint_nexus.core.extractor import PivotExtractor
+from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.orchestrator import OrchestratorDeps, ScanOrchestrator
+from osint_nexus.core.orchestrator.types import HealthCheckProtocol
+from osint_nexus.core.provider_types import DatabaseManagerProtocol, ValidatorProtocol
+from osint_nexus.utils.network import NetworkManager
 
 
 @pytest.mark.asyncio
 async def test_scan_orchestrator_run_scan() -> None:
     # Setup mocks
-    mock_health = MagicMock()
-    mock_validator = MagicMock()
-    mock_db = MagicMock()
+    mock_health = MagicMock(spec=HealthCheckProtocol)
+    mock_health.is_healthy = MagicMock(return_value=True)
+    mock_validator = MagicMock(spec=ValidatorProtocol)
+    mock_db = MagicMock(spec=DatabaseManagerProtocol)
     mock_db.save_result = AsyncMock()  # Must be AsyncMock
-    mock_network = MagicMock()
-    mock_mimicry = MagicMock()
-    mock_extractor = MagicMock()
+    mock_network = MagicMock(spec=NetworkManager)
+    mock_mimicry = MagicMock(spec=HumanMimicryEngine)
+    mock_extractor = MagicMock(spec=PivotExtractor)
     mock_extractor.extract = AsyncMock(return_value={})
 
     deps = OrchestratorDeps(

@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Protocol, TypedDict
+from typing import Protocol, TypedDict, runtime_checkable
 from urllib.parse import urlparse
 
+import bs4
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger("osint_nexus.core.extractor")
@@ -149,6 +150,7 @@ class LinkSocialExtractor:
         return {"external_links": list(links), "social_handles": social_handles}
 
 
+@runtime_checkable
 class BioExtractionStrategy(Protocol):
     def extract(self, soup: BeautifulSoup) -> str | None: ...
 
@@ -165,8 +167,8 @@ class MetaTagBioStrategy:
         for attr, value in self.targets:
             # Use find with attrs dict for robust searching
             meta = soup.find("meta", attrs={attr: value})
-            # meta.get("content") returns Optional[Any], explicitly check and cast to str
-            content = meta.get("content") if meta else None
+            # meta.attrs.get("content") is safer as meta is already checked as a Tag if found
+            content = meta.attrs.get("content") if meta and isinstance(meta, bs4.element.Tag) else None
             if isinstance(content, str):
                 return content.strip()
         return None
@@ -231,10 +233,10 @@ class PivotExtractor:
         """
         soup = BeautifulSoup(content, "html.parser")
 
-        emails = self.email_extractor.extract(content, soup)
-        pgp_keys = self.pgp_extractor.extract(content)
-        links_info = self.link_social_extractor.extract(soup, source_url)
-        bio = self.bio_extractor.extract(soup)
+        emails: list[str] = self.email_extractor.extract(content, soup)
+        pgp_keys: list[str] = self.pgp_extractor.extract(content)
+        links_info: LinkHarvestResult = self.link_social_extractor.extract(soup, source_url)
+        bio: str | None = self.bio_extractor.extract(soup)
 
         extracted: ExtractedPivots = {
             "emails": emails,

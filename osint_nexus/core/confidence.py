@@ -5,6 +5,7 @@ from collections.abc import Iterable
 
 from .confidence_config import ConfidenceConfig
 from .models import ConfidenceResult, Factor
+from .score_calculator import ScoreCalculator
 
 logger = logging.getLogger("osint_nexus.confidence")
 
@@ -15,8 +16,6 @@ class ConfidenceEngine:
     """
 
     def __init__(self) -> None:
-        from osint_nexus.core.score_calculator import ScoreCalculator
-
         self.config = ConfidenceConfig()
         self.calculator = ScoreCalculator(self.config)
 

@@ -6,15 +6,25 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum, auto
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Self
 
 if TYPE_CHECKING:
     from playwright.async_api import BrowserContext, Playwright, async_playwright
     from playwright.async_api import Error as PlaywrightError
 else:
-    # Minimal mocks for runtime
-    PlaywrightError = Exception
-    async_playwright = Any  # Placeholder
+    # Runtime placeholders if playwright is not present
+    class Playwright:
+        pass
+
+    class BrowserContext:
+        pass
+
+    class PlaywrightError(Exception):
+        pass
+
+    async def async_playwright():
+        raise ImportError("Playwright is not installed.")
+
 
 from osint_nexus.core.browser.config import BrowserPoolConfig
 from osint_nexus.core.browser.factory import BrowserContextFactory
@@ -24,8 +34,8 @@ from osint_nexus.core.telemetry.bridge import WebViewBridge
 
 # Runtime availability check
 try:
-    from playwright.async_api import Error as PlaywrightError  # type: ignore[assignment]
-    from playwright.async_api import async_playwright
+    from playwright.async_api import BrowserContext, Playwright, async_playwright
+    from playwright.async_api import Error as PlaywrightError
 
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:

@@ -1,4 +1,8 @@
+import sys
+
 import mypy.api
+
+sys.path.append(".")
 
 
 def test_mypy_telemetry_bridge():

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from osint_nexus.core.types import JSONValue, MetadataDict
 
@@ -19,12 +19,14 @@ class ProviderExecutionResult:
         return self.error is None
 
 
+@runtime_checkable
 class ValidatorProtocol(Protocol):
     """Interface for provider result validation."""
 
     def validate(self, content: str, provider_name: str) -> bool: ...
 
 
+@runtime_checkable
 class DatabaseManagerProtocol(Protocol):
     """Interface for result persistence."""
 
@@ -41,6 +43,7 @@ __all__ = [
 ]
 
 
+@runtime_checkable
 class DeviceInferenceProtocol(Protocol):
     """Interface for device inference."""
 

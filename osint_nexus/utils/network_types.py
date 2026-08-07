@@ -1,6 +1,7 @@
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 
+@runtime_checkable
 class SessionProtocol(Protocol):
     """Protocol for HTTP sessions to support both curl_cffi and httpx."""
 

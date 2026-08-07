@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 logger = logging.getLogger("osint_nexus.platform_permutator")
 
 
+@runtime_checkable
 class PlatformVariationStrategy(Protocol):
     """Protocol for generating platform variations (e.g., TLD, subdomain)."""
 

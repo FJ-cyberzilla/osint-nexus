@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+import aiosqlite
 
 from osint_nexus.core.db.base import DatabaseConnection
 
@@ -9,7 +9,7 @@ class SchemaManager:
     def __init__(self, connection: DatabaseConnection) -> None:
         self.connection = connection
 
-    async def _migrate_v1(self, db: Any) -> int:
+    async def _migrate_v1(self, db: aiosqlite.Connection) -> int:
         # Create results table
         await db.execute(
             "CREATE TABLE IF NOT EXISTS results ("
@@ -23,7 +23,7 @@ class SchemaManager:
         await db.execute("INSERT INTO schema_version (version) VALUES (1)")
         return 1
 
-    async def _migrate_v2(self, db: Any) -> int:
+    async def _migrate_v2(self, db: aiosqlite.Connection) -> int:
         # Phase 1: Modernization Tables
         await db.execute(
             "CREATE TABLE IF NOT EXISTS entities ("
@@ -68,7 +68,7 @@ class SchemaManager:
         await db.execute("INSERT INTO schema_version (version) VALUES (2)")
         return 2
 
-    async def _migrate_v3(self, db: Any) -> int:
+    async def _migrate_v3(self, db: aiosqlite.Connection) -> int:
         # Cache table
         await db.execute(
             "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY,value TEXT,expires_at DATETIME)"
@@ -90,7 +90,7 @@ class SchemaManager:
             await self._run_migrations(db, current_version)
             await db.commit()
 
-    async def _ensure_version_table(self, db: Any) -> None:
+    async def _ensure_version_table(self, db: aiosqlite.Connection) -> None:
         await db.execute(
             "CREATE TABLE IF NOT EXISTS schema_version ("
             "version INTEGER PRIMARY KEY,"
@@ -98,12 +98,12 @@ class SchemaManager:
             ")"
         )
 
-    async def _get_current_version(self, db: Any) -> int:
+    async def _get_current_version(self, db: aiosqlite.Connection) -> int:
         async with db.execute("SELECT MAX(version) FROM schema_version") as cur:
-            row = await cur.fetchone()
-            return row[0] if row and row[0] else 0
+            row: aiosqlite.Row | None = await cur.fetchone()
+            return int(row[0]) if row and row[0] else 0
 
-    async def _run_migrations(self, db: Any, current_version: int) -> None:
+    async def _run_migrations(self, db: aiosqlite.Connection, current_version: int) -> None:
         if current_version < 1:
             current_version = await self._migrate_v1(db)
         if current_version < 2:

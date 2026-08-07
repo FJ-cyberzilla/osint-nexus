@@ -4,7 +4,7 @@ import logging
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 logger = logging.getLogger("osint_nexus.permutator")
 
@@ -29,6 +29,7 @@ class PermutationConfig:
     )
 
 
+@runtime_checkable
 class PermutationStrategy(Protocol):
     """Protocol for username generation strategies."""
 

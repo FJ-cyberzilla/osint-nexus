@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # Avoid circular imports
+    pass
 
 
 @dataclass
@@ -37,8 +42,8 @@ class ConfidenceResult:
     Encapsulates the result of a confidence calculation.
 
     Attributes:
-        score: Numeric confidence score (0.0–100.0). Higher is more confident.
-        category: Human‑readable category (e.g., 'High', 'Medium', 'Low').
+        score: Numeric confidence score (0.0-100.0). Higher is more confident.
+        category: Human-readable category (e.g., 'High', 'Medium', 'Low').
         details: Complete audit trail of contributing factors (base weights,
             multipliers, bonuses).
     """
@@ -50,3 +55,50 @@ class ConfidenceResult:
     def __str__(self) -> str:
         """Return a compact string suitable for terminal reports."""
         return f"{self.category} Confidence ({self.score:.1f}%)"
+
+
+@dataclass
+class Account:
+    id: str
+    username: str | None = None
+    platform: str | None = None
+
+
+@dataclass
+class IdentityProfile:
+    username: str
+    accounts: list[Account]
+    relationships: RelationshipGraph
+    timeline: Timeline | None
+    correlations: Correlations | None
+    confidence_score: float
+
+
+@dataclass
+class RelationshipGraph:
+    nodes: list[dict]
+    edges: list[dict]
+
+
+@dataclass
+class Timeline:
+    events: list[dict]
+
+
+@dataclass
+class Correlations:
+    data: dict
+
+
+class Neo4jConnection:
+    def add_relationship(self, rel_type: str, account: Account) -> None:
+        pass
+
+
+class LLMInterface:
+    pass
+
+
+class TemporalAnalysis:
+    def create_timeline(self, accounts: list[Account]) -> Timeline:
+        return Timeline(events=[])

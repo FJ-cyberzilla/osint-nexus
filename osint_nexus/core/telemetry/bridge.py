@@ -2,7 +2,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
@@ -21,17 +21,17 @@ if TYPE_CHECKING:
 else:
 
     class QObject:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
+        def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-        def emit(self, *args: Any, **kwargs: Any) -> None:
+        def emit(self, *args: object, **kwargs: object) -> None:
             pass
 
-    def pyqtSignal(*args: Any, **kwargs: Any) -> Any:
+    def pyqtSignal(*args: object, **kwargs: object) -> object:
         return None
 
-    def pyqtSlot(*args: Any, **kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def pyqtSlot(*args: object, **kwargs: object) -> Callable[[Callable[..., object]], Callable[..., object]]:
+        def decorator(func: Callable[..., object]) -> Callable[..., object]:
             return func
 
         return decorator
@@ -42,6 +42,7 @@ else:
 logger = logging.getLogger("osint_nexus.telemetry.bridge")
 
 
+@runtime_checkable
 class TelemetryLoggerProtocol(Protocol):
     def log(self, data: TelemetryDict) -> None: ...
 
