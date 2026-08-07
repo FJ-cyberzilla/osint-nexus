@@ -1,6 +1,6 @@
+import argparse
 from typing import TYPE_CHECKING
 
-import argparse
 from rich.console import Console
 
 from osint_nexus.utils.troubleshoot import run_health_check
@@ -8,7 +8,7 @@ from osint_nexus.utils.troubleshoot import run_health_check
 console = Console()
 
 if TYPE_CHECKING:
-    from argparse import _SubParsersAction, ArgumentParser
+    from argparse import ArgumentParser, _SubParsersAction
 
 
 def handle_health_command(args: argparse.Namespace) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Protocol, runtime_checkable, TypedDict
+from typing import Any, Protocol, TypedDict, runtime_checkable
 
 import aiohttp
 

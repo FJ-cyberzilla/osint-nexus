@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TypedDict, List, Dict
+from typing import TypedDict
 
 from osint_nexus.core.database import DatabaseManager
 from osint_nexus.core.types import JSONObject
@@ -15,14 +15,14 @@ class Change(TypedDict):
 
 
 class PlatformChanges(TypedDict):
-    new_platforms: List[str]
-    removed_platforms: List[str]
+    new_platforms: list[str]
+    removed_platforms: list[str]
 
 
 class DiffResult(TypedDict):
-    new_platforms: List[str]
-    removed_platforms: List[str]
-    modified_content: List[Change]
+    new_platforms: list[str]
+    removed_platforms: list[str]
+    modified_content: list[Change]
 
 
 class DiffEngine:
@@ -33,7 +33,7 @@ class DiffEngine:
     def __init__(self, db_manager: DatabaseManager) -> None:
         self.db_manager = db_manager
 
-    async def diff(self, username: str, current_results: List[JSONObject]) -> DiffResult:
+    async def diff(self, username: str, current_results: list[JSONObject]) -> DiffResult:
         """
         Compare current results against the last known state from the database.
         """
@@ -53,12 +53,12 @@ class DiffEngine:
         logger.debug("Diff found: %s", diff)
         return diff
 
-    def _get_found_results(self, results: List[JSONObject]) -> Dict[str, JSONObject]:
+    def _get_found_results(self, results: list[JSONObject]) -> dict[str, JSONObject]:
         # Keep only entries with a truthy "found" flag and index by platform name.
         return {r["platform"]: r for r in results if r.get("found")}
 
     def _calculate_platform_changes(
-        self, current: Dict[str, JSONObject], last_known: Dict[str, JSONObject]
+        self, current: dict[str, JSONObject], last_known: dict[str, JSONObject]
     ) -> PlatformChanges:
         current_keys = set(current.keys())
         last_keys = set(last_known.keys())
@@ -68,16 +68,16 @@ class DiffEngine:
         }
 
     def _calculate_content_changes(
-        self, current: Dict[str, JSONObject], last_known: Dict[str, JSONObject]
-    ) -> List[Change]:
-        changes: List[Change] = []
+        self, current: dict[str, JSONObject], last_known: dict[str, JSONObject]
+    ) -> list[Change]:
+        changes: list[Change] = []
         for platform, res in current.items():
             if platform in last_known:
                 self._check_result_diff(platform, res, last_known[platform], changes)
         return changes
 
     def _check_result_diff(
-        self, platform: str, new_res: JSONObject, old_res: JSONObject, changes: List[Change]
+        self, platform: str, new_res: JSONObject, old_res: JSONObject, changes: list[Change]
     ) -> None:
         for field in ("bio", "avatar_url"):
             if new_res.get(field) != old_res.get(field):

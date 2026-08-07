@@ -14,7 +14,6 @@ from osint_nexus.core.captcha.solvers.anti_captcha import AntiCaptchaSolver
 from osint_nexus.core.captcha.solvers.two_captcha import TwoCaptchaSolver
 from osint_nexus.core.config import get_config
 from osint_nexus.core.db.cache_repository import CacheRepository
-from osint_nexus.core.types import JSONObject
 
 
 class CacheEntry(TypedDict):

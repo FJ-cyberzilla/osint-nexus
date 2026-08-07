@@ -1,6 +1,5 @@
-from typing import TYPE_CHECKING
-
 import argparse
+from typing import TYPE_CHECKING
 
 from osint_nexus.utils.troubleshoot import (
     inspect_database_schema,
@@ -8,7 +7,7 @@ from osint_nexus.utils.troubleshoot import (
 )
 
 if TYPE_CHECKING:
-    from argparse import _SubParsersAction, ArgumentParser
+    from argparse import ArgumentParser, _SubParsersAction
 
 
 def handle_db_info_command(args: argparse.Namespace) -> None:

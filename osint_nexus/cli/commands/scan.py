@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING
-
 import argparse
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 
@@ -13,7 +12,7 @@ from osint_nexus.utils.security import SecurityUtility
 console = Console()
 
 if TYPE_CHECKING:
-    from argparse import _SubParsersAction, ArgumentParser
+    from argparse import ArgumentParser, _SubParsersAction
 
 
 async def async_main(args: argparse.Namespace) -> None:
