@@ -23,4 +23,6 @@ except ImportError:
 
         NETWORK_EXCEPTION = httpx.HTTPError
     except ImportError:
-        pass
+        # Optional dependency fallback: if neither backend is installed,
+        # keep NETWORK_EXCEPTION as the default Exception.
+        NETWORK_EXCEPTION = Exception
