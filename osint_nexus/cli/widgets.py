@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-from typing import cast
 
 from textual.app import ComposeResult
 from textual.message import Message
@@ -26,8 +25,8 @@ class ScanUpdate(Message):
 class Header(Static):
     """Renders the top branding and target info panel."""
 
-    def __init__(self, username: str, **kwargs: object) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, username: str, id: str | None = None) -> None:
+        super().__init__(id=id)
         self.username = username
 
     def compose(self) -> ComposeResult:
@@ -39,15 +38,16 @@ class Header(Static):
 class ReconProgress(Static):
     """Renders the real-time progress bar."""
 
-    def __init__(self, total: int, **kwargs: object) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, total: int, id: str | None = None) -> None:
+        super().__init__(id=id)
         self.total = total
 
     def compose(self) -> ComposeResult:
         # Multi-colored progress bar
         bar = ProgressBar(total=self.total, id="progress-bar")
-        bar.styles.bar_color = COLOR_PROGRESS_SUCCESS
-        bar.styles.bar_background = COLOR_PROGRESS_FAILURE
+        # Textual style modification: set style properties explicitly
+        bar.styles.background = COLOR_PROGRESS_FAILURE
+        bar.styles.color = COLOR_PROGRESS_SUCCESS
         yield bar
 
 
@@ -56,8 +56,8 @@ class IntelligenceDashboard(Static):
 
     table: DataTable[str]
 
-    def __init__(self, **kwargs: object) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, id: str | None = None) -> None:
+        super().__init__(id=id)
         self.data: dict[str, str] = {
             "Fingerprint": "Pending",
             "Footprint": "Pending",
@@ -74,8 +74,14 @@ class IntelligenceDashboard(Static):
 
     def _extract_intel_data(self, intel: IntelligenceObject) -> dict[str, str]:
         """Extracts and formats relevant information from intelligence."""
-        # Ensure metadata is treated as a mapping for .get()
-        metadata = cast(Mapping[str, object], intel.metadata)
+        metadata = intel.metadata
+
+        device_inference = metadata.get("device_inference")
+        # Ensure safe access to nested dictionary
+        if isinstance(device_inference, Mapping):
+            os_guess = str(device_inference.get("os_guess", "Generic"))
+        else:
+            os_guess = "Generic"
 
         return {
             "Fingerprint": str(metadata.get("fingerprint", "Detected")),
@@ -85,7 +91,7 @@ class IntelligenceDashboard(Static):
                 if (intel.visuals and (intel.visuals.profile_picture or intel.visuals.banner_image))
                 else "Text/Data Only"
             ),
-            "Useragent": str(metadata.get("device_inference", {}).get("os_guess", "Generic")),
+            "Useragent": os_guess,
         }
 
     def update_data(self, intel: IntelligenceObject) -> None:
@@ -116,8 +122,8 @@ class LogPanel(Static):
 class MetricsGraph(Static):
     """Displays success/failure ratio as a simple bar."""
 
-    def __init__(self, **kwargs: object) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, id: str | None = None) -> None:
+        super().__init__(id=id)
         self.successes: int = 0
         self.failures: int = 0
 

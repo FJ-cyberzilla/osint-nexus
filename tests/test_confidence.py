@@ -1,6 +1,7 @@
 import pytest
 
 from osint_nexus.core.confidence import ConfidenceEngine
+from osint_nexus.core.models import Factor
 
 
 def test_confidence_basic() -> None:
@@ -69,14 +70,11 @@ def test_create_factors() -> None:
     with pytest.raises(ValueError, match="Factor type must be either 'multiplier' or 'bonus'"):
         # This is tricky as _create_factors enforces type in Factor init.
         # But we can test Factor directly.
-        from osint_nexus.core.confidence import Factor
-
         Factor("invalid", 0.5, "wrong_type")
 
 
 def test_apply_factors() -> None:
     engine = ConfidenceEngine()
-    from osint_nexus.core.confidence import Factor
 
     factors = [Factor("m1", 0.5, "multiplier"), Factor("b1", 10.0, "bonus")]
     detail: dict[str, float] = {}

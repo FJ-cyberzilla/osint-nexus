@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Protocol, TypedDict
+from typing import Any, Protocol, TypedDict
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -91,10 +91,17 @@ class LinkHarvester:
     def harvest(self, soup: BeautifulSoup, source_url: str | None = None) -> set[str]:
         source_domain = urlparse(source_url).netloc.lower() if source_url else ""
 
-        links = (a.get("href") for a in soup.find_all("a", href=True))
-        return {
-            str(link) for link in links if isinstance(link, str) and self._is_valid_link(link, source_domain)
-        }
+        # Explicitly get hrefs and filter None/non-string
+        links = []
+        for a in soup.find_all("a", href=True):
+            # BeautifulSoup Tag.attrs returns a dictionary.
+            # Explicitly cast to dict[str, Any] if necessary to avoid typing ambiguity
+            attrs: dict[str, Any] = a.attrs
+            href = attrs.get("href")
+            if isinstance(href, str):
+                links.append(href)
+
+        return {link for link in links if self._is_valid_link(link, source_domain)}
 
     def _is_valid_link(self, link: str, source_domain: str) -> bool:
         if not isinstance(link, str) or not link.startswith(("http://", "https://")):
@@ -158,9 +165,12 @@ class MetaTagBioStrategy:
 
     def extract(self, soup: BeautifulSoup) -> str | None:
         for attr, value in self.targets:
+            # Use find with attrs dict for robust searching
             meta = soup.find("meta", attrs={attr: value})
-            if meta and meta.get("content"):
-                return str(meta["content"]).strip()
+            # meta.get("content") returns Optional[Any], explicitly check and cast to str
+            content = meta.get("content") if meta else None
+            if isinstance(content, str):
+                return content.strip()
         return None
 
 

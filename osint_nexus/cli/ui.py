@@ -1,7 +1,3 @@
-import asyncio
-import signal
-from types import FrameType
-
 from rich.console import Console
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal
@@ -110,26 +106,3 @@ class OSINTApp(App[None]):
         else:
             self._successes += 1
         self.query_one("#metrics", MetricsGraph).update_metrics(self._successes, self._failures)
-
-
-...
-
-
-def setup_signals(agent: OSINTAgent) -> None:
-    """Register signal handlers for graceful shutdown."""
-
-    def handle_signal(_signum: int, _frame: FrameType | None) -> None:
-        console.print("\n[bold red]Interrupt received! Aborting scans gracefully...[/]")
-        if hasattr(agent, "abort_scan"):
-            agent.abort_scan()
-        elif hasattr(agent, "orchestrator") and hasattr(agent.orchestrator, "abort"):
-            agent.orchestrator.abort()
-        else:
-            asyncio.get_running_loop().stop()
-
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
-            loop.add_signal_handler(sig, lambda s=sig: handle_signal(s, None))
-        except NotImplementedError:
-            signal.signal(sig, handle_signal)

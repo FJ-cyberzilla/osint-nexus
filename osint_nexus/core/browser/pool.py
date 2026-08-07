@@ -9,13 +9,12 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
-    from playwright.async_api import (
-        BrowserContext,
-        Playwright,
-    )
-    from playwright.async_api import (
-        Error as PlaywrightError,
-    )
+    from playwright.async_api import BrowserContext, Playwright, async_playwright
+    from playwright.async_api import Error as PlaywrightError
+else:
+    # Minimal mocks for runtime
+    PlaywrightError = Exception
+    async_playwright = Any  # Placeholder
 
 from osint_nexus.core.browser.config import BrowserPoolConfig
 from osint_nexus.core.browser.factory import BrowserContextFactory
@@ -31,8 +30,6 @@ try:
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
-    async_playwright = Any
-    PlaywrightError = Exception
 
 logger = logging.getLogger("osint_nexus.core.browser.pool")
 

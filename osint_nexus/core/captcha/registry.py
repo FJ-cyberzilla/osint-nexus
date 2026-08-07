@@ -68,7 +68,13 @@ class CaptchaSolverRegistry:
         return None
 
     async def _perform_solve(
-        self, solver: CaptchaSolver, site_key: str, url: str, captcha_type: CaptchaType, cache_key: str, **kwargs: Any
+        self,
+        solver: CaptchaSolver,
+        site_key: str,
+        url: str,
+        captcha_type: CaptchaType,
+        cache_key: str,
+        **kwargs: Any,
     ) -> CaptchaSolveResult:
         """Performs the actual solving and handles caching."""
         try:

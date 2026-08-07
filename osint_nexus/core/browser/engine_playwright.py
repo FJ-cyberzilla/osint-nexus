@@ -33,9 +33,7 @@ class PlaywrightBrowserEngine:
             raise TypeError("Expected dictionary")
 
         return {
-            k: v
-            for k, v in data_obj.items()
-            if isinstance(k, str) and isinstance(v, (str, float, int, bool))
+            k: v for k, v in data_obj.items() if isinstance(k, str) and isinstance(v, (str, float, int, bool))
         }
 
     def _process_telemetry(self, data: TelemetryDict) -> None:

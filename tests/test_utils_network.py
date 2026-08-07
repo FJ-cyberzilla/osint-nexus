@@ -10,7 +10,9 @@ sys.modules["osint_nexus.core.provider_runner"] = MagicMock()
 sys.modules["osint_nexus.core.orchestrator"] = MagicMock()
 
 from osint_nexus.core.evasion_agent import EvasionAgent  # noqa: E402
-from osint_nexus.utils.network import NetworkManager, NetworkMonitor, SessionManager  # noqa: E402
+from osint_nexus.utils.network import NetworkManager  # noqa: E402
+from osint_nexus.utils.network_monitor import NetworkMonitor  # noqa: E402
+from osint_nexus.utils.session_manager import SessionManager  # noqa: E402
 
 
 @pytest.fixture
@@ -63,7 +65,7 @@ async def test_network_monitor_handle_status(mock_config, mock_evasion):
 async def test_session_manager_get_session(mock_config, mock_evasion):
     session_manager = SessionManager(mock_config, mock_evasion, 10.0)
 
-    with patch("osint_nexus.utils.network.curl_requests.AsyncSession") as mock_session_class:
+    with patch("osint_nexus.utils.session_manager.curl_requests.AsyncSession") as mock_session_class:
         mock_session = AsyncMock()
         mock_session_class.return_value = mock_session
 
@@ -91,7 +93,7 @@ async def test_network_manager_fetch_curl(mock_config, mock_evasion):
 
     manager = NetworkManager(mock_config, mock_evasion, mock_mimicry, mock_browser_pool, mock_rate_limiter)
 
-    with patch.object(manager, "_fetch_http", new_callable=AsyncMock) as mock_fetch:
+    with patch.object(manager.http_fetcher, "fetch", new_callable=AsyncMock) as mock_fetch:
         mock_fetch.return_value = (True, "<html></html>")
 
         success, content = await manager.fetch("http://example.com")
