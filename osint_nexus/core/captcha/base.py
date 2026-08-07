@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Protocol, TypedDict, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import aiohttp
 
@@ -15,7 +15,7 @@ from osint_nexus.core.captcha.exceptions import (
     CaptchaTimeoutError,
 )
 from osint_nexus.core.captcha.models import CaptchaSolveResult, CaptchaType
-from osint_nexus.core.types import JSONObject
+from osint_nexus.core.types import JSONValue
 from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger("osint_nexus.captcha")
@@ -30,22 +30,18 @@ __all__ = [
     "CaptchaSolveResult",
     "CaptchaType",
     "CaptchaSolverProtocol",
-    "CaptchaTask",
 ]
-
-
-class CaptchaTask(TypedDict):
-    id: str
-    payload: JSONObject
-    provider: str
-    priority: int
 
 
 @runtime_checkable
 class CaptchaSolverProtocol(Protocol):
     async def health_check(self) -> bool: ...
     async def solve(
-        self, site_key: str, url: str, captcha_type: CaptchaType = CaptchaType.RECAPTCHA_V2, **kwargs: Any
+        self,
+        site_key: str,
+        url: str,
+        captcha_type: CaptchaType = CaptchaType.RECAPTCHA_V2,
+        **kwargs: JSONValue,
     ) -> CaptchaSolveResult: ...
     async def close(self) -> None: ...
 
@@ -65,7 +61,7 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
 
     @abstractmethod
     async def _solve_impl(
-        self, site_key: str, url: str, captcha_type: CaptchaType, **kwargs: Any
+        self, site_key: str, url: str, captcha_type: CaptchaType, **kwargs: JSONValue
     ) -> CaptchaSolveResult:
         pass
 
@@ -74,7 +70,11 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
         pass
 
     async def solve(
-        self, site_key: str, url: str, captcha_type: CaptchaType = CaptchaType.RECAPTCHA_V2, **kwargs: Any
+        self,
+        site_key: str,
+        url: str,
+        captcha_type: CaptchaType = CaptchaType.RECAPTCHA_V2,
+        **kwargs: JSONValue,
     ) -> CaptchaSolveResult:
         self._check_budget(captcha_type)
         return await self._retry_solve_impl(site_key, url, captcha_type, **kwargs)
@@ -90,7 +90,7 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
                 raise CaptchaBudgetExceeded("Daily budget exceeded")
 
     async def _retry_solve_impl(
-        self, site_key: str, url: str, captcha_type: CaptchaType, **kwargs: Any
+        self, site_key: str, url: str, captcha_type: CaptchaType, **kwargs: JSONValue
     ) -> CaptchaSolveResult:
         for attempt in range(self.config.max_retries):
             result = await self._perform_attempt(attempt, site_key, url, captcha_type, kwargs)
@@ -138,7 +138,7 @@ class CaptchaSolver(CaptchaSolverProtocol, ABC):
             raise
 
     async def _perform_attempt(
-        self, attempt: int, site_key: str, url: str, captcha_type: CaptchaType, kwargs: dict[str, Any]
+        self, attempt: int, site_key: str, url: str, captcha_type: CaptchaType, kwargs: dict[str, JSONValue]
     ) -> CaptchaSolveResult | None:
         try:
             result = await asyncio.wait_for(

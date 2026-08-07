@@ -15,6 +15,7 @@ from osint_nexus.core.captcha.base import (
     CaptchaType,
 )
 from osint_nexus.core.config import get_config
+from osint_nexus.core.types import JSONValue
 from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger(__name__)
@@ -88,7 +89,7 @@ class TwoCaptchaSolver(CaptchaSolver):
         site_key: str,
         url: str,
         captcha_type: CaptchaType,
-        **kwargs: str,
+        **kwargs: JSONValue,
     ) -> CaptchaSolveResult:
         session = self._ensure_session()
         method = self._get_method(captcha_type)
@@ -124,7 +125,7 @@ class TwoCaptchaSolver(CaptchaSolver):
         url: str,
         captcha_type: CaptchaType,
         method: str,
-        extra: dict[str, str],
+        extra: dict[str, JSONValue],
     ) -> TwoCaptchaSubmitParams:
         """Build the submit payload for 2captcha."""
         params: TwoCaptchaSubmitParams = {
@@ -136,9 +137,11 @@ class TwoCaptchaSolver(CaptchaSolver):
         }
         if captcha_type == CaptchaType.RECAPTCHA_V3:
             params["version"] = "v3"
-            params["action"] = extra.get("action", "verify")
+            action = extra.get("action", "verify")
+            params["action"] = str(action) if action is not None else "verify"
         elif captcha_type == CaptchaType.HCAPTCHA:
-            params["data_s"] = extra.get("data_s", "")
+            data_s = extra.get("data_s", "")
+            params["data_s"] = str(data_s) if data_s is not None else ""
         elif captcha_type == CaptchaType.TURNSTILE:
             params["sitekey"] = site_key
         return params

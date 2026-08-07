@@ -15,6 +15,7 @@ from osint_nexus.core.captcha.base import (
     CaptchaType,
 )
 from osint_nexus.core.config import get_config
+from osint_nexus.core.types import JSONValue
 from osint_nexus.utils.security import SecurityUtility
 
 
@@ -89,7 +90,7 @@ class AntiCaptchaSolver(CaptchaSolver):
         site_key: str,
         url: str,
         captcha_type: CaptchaType,
-        **kwargs: Any,
+        **kwargs: JSONValue,
     ) -> CaptchaSolveResult:
         session = self._ensure_session()
         task_data = self._build_task_data(site_key, url, captcha_type, kwargs)
