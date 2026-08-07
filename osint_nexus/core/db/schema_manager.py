@@ -109,4 +109,4 @@ class SchemaManager:
         if current_version < 2:
             current_version = await self._migrate_v2(db)
         if current_version < 3:
-            current_version = await self._migrate_v3(db)
+            await self._migrate_v3(db)
