@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from osint_nexus.core.detection import DetectionEngine
 from osint_nexus.core.intelligence import IntelligenceObject
@@ -14,10 +14,11 @@ from osint_nexus.core.provider_types import (
     MetadataDict,
 )
 from osint_nexus.core.report import TelemetryPayload
+from osint_nexus.core.type_defs import JSONValue
 from osint_nexus.providers.base import BaseProvider
 from osint_nexus.utils.network import NetworkManager
 
-from .types import OrchestratorDeps
+from .type_defs import OrchestratorDeps
 from .workers import ProviderWorker
 
 logger = logging.getLogger("osint_nexus.orchestrator.core")
@@ -34,7 +35,7 @@ class ProviderProtocol(Protocol):
         username: str,
         network: NetworkManager,
         mimicry: HumanMimicryEngine,
-        **kwargs: Any,
+        **kwargs: JSONValue,
     ) -> tuple[bool, MetadataDict]:
         """Check if username exists on provider."""
 
@@ -69,6 +70,7 @@ class ScanOrchestrator:
             mimicry=self.deps.mimicry,
             extractor=self.deps.extractor,
             device_inference=device_inference,
+            fingerprint_agent=self.deps.fingerprint,
         )
         self.worker = ProviderWorker(self.deps, self.provider_runner)
 
@@ -82,7 +84,7 @@ class ScanOrchestrator:
         username: str,
         providers: list[BaseProvider],
         timeout: float | None = 15.0,
-        **microlink_options: Any,
+        **microlink_options: JSONValue,
     ) -> AsyncGenerator[IntelligenceObject]:
         """
         Executes a bounded scan across providers.
@@ -90,7 +92,7 @@ class ScanOrchestrator:
         self._abort_event.clear()
         semaphore = asyncio.Semaphore(self.max_concurrency)
 
-        tasks = [
+        tasks: list[asyncio.Task[IntelligenceObject]] = [
             asyncio.create_task(
                 self.worker.semaphored_execute(
                     p, username, semaphore, self._abort_event, timeout, **microlink_options
@@ -109,14 +111,16 @@ class ScanOrchestrator:
 
         await self._run_detection_analysis(results)
 
-    async def _process_scan_tasks(self, tasks: list[asyncio.Task[Any]]) -> AsyncGenerator[IntelligenceObject]:
+    async def _process_scan_tasks(
+        self, tasks: list[asyncio.Task[IntelligenceObject]]
+    ) -> AsyncGenerator[IntelligenceObject]:
         """Processes completed scan tasks."""
         for coro in asyncio.as_completed(tasks):
             if self._abort_event.is_set():
                 break
             yield await coro
 
-    def _cancel_pending_tasks(self, tasks: list[asyncio.Task[Any]]) -> None:
+    def _cancel_pending_tasks(self, tasks: list[asyncio.Task[IntelligenceObject]]) -> None:
         """Cancels any pending tasks."""
         for task in tasks:
             if not task.done():

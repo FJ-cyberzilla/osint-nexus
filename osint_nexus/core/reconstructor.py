@@ -100,7 +100,7 @@ class DigitalFootprintReconstructor:
             for strategy in self.inference_strategies:
                 strategy.infer(account, accounts, self.graph_db)
 
-        return {"nodes": [], "edges": []}
+        return RelationshipGraph(nodes=[], edges=[])
 
     def discover_all_accounts(self, username: str) -> list[Account]:
         return []

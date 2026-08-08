@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import cast
+from typing import cast, overload
 
 logger = logging.getLogger("osint_nexus.core.compliance")
 
@@ -30,17 +30,24 @@ class ComplianceEngine:
             ),
         }
 
-    def sanitize(self, data: dict[str, Scrubbable]) -> dict[str, Scrubbable]:
+    @overload
+    def sanitize(self, data: dict[str, Scrubbable]) -> dict[str, Scrubbable]: ...
+
+    @overload
+    def sanitize(self, data: list[Scrubbable]) -> list[Scrubbable]: ...
+
+    def sanitize(
+        self, data: dict[str, Scrubbable] | list[Scrubbable]
+    ) -> dict[str, Scrubbable] | list[Scrubbable]:
         """
-        Scans a data dictionary and replaces detected PII with '[REDACTED]'.
+        Scans a data structure and replaces detected PII with '[REDACTED]'.
 
         Args:
-            data: The input dictionary containing scan results.
+            data: The input dictionary or list containing scan results.
 
         Returns:
-            A sanitized dictionary with PII redacted.
+            A sanitized data structure with PII redacted.
         """
-        sanitized = data.copy()
 
         # Recursive function to handle nested dicts/lists
         def _scrub(item: Scrubbable) -> Scrubbable:
@@ -58,4 +65,5 @@ class ComplianceEngine:
                         return "[REDACTED]"
             return item
 
-        return cast(dict[str, Scrubbable], _scrub(sanitized))
+        # Cast to match the expected return type structure
+        return cast(dict[str, Scrubbable] | list[Scrubbable], _scrub(data))

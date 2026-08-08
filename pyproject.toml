@@ -96,9 +96,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["F841"]
+"osint_nexus/api/main.py" = ["B008"]
+"tests/**/*" = ["F841"]
 "__init__.py" = ["F401"]
-"tests/test_network.py" = ["E402"]
+"tests/utils/test_network.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["osint_nexus"]
@@ -141,6 +142,12 @@ follow_imports = "skip"
 [tool.radon]
 cc_min = "A"
 cc_max = "B"
+
+[dependency-groups]
+dev = [
+    "pytest-xdist>=3.8.0",
+    "testcontainers>=4.15.0",
+]
 # We want to enforce max 4, which is technically A (1-5).
 # Radon doesn't allow custom complexity thresholds per se, 
 # so we use a custom script or rely on explicit 'cc' output 

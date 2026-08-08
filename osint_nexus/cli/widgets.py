@@ -1,6 +1,7 @@
 """UI widgets for the OSINT Nexus TUI."""
 
 from collections.abc import Mapping
+from enum import Enum
 from typing import Final
 
 from textual.app import ComposeResult
@@ -19,6 +20,17 @@ from osint_nexus.core.ui_models import ActivityLevel, TelemetryData
 
 # Widget Constants
 DEFAULT_PROGRESS_TOTAL: Final[int] = 0
+
+
+class FingerprintStrategy(Enum):
+    TCP = ("tcp_stack", "inferred_os", "TCP")
+    TLS = ("tls_ja3", "inferred_device", "TLS")
+    HTTP = ("http_headers", "platform", "HTTP")
+
+    def __init__(self, key: str, data_key: str, label: str) -> None:
+        self.key = key
+        self.data_key = data_key
+        self.label = label
 
 
 class ScanUpdate(Message):
@@ -82,22 +94,28 @@ class IntelligenceDashboard(Static):
         """Extracts and formats relevant information from intelligence."""
         metadata = intel.metadata
 
-        device_inference = metadata.get("device_inference")
-        # Ensure safe access to nested dictionary
-        if isinstance(device_inference, Mapping):
-            os_guess = str(device_inference.get("os_guess", "Generic"))
-        else:
-            os_guess = "Generic"
+        # New: Aggregate device fingerprint results using Enum registry
+        device_results = metadata.get("device_inference", {})
+
+        fingerprint_summary = []
+        if isinstance(device_results, Mapping):
+            for strategy in FingerprintStrategy:
+                result = device_results.get(strategy.key)
+                if isinstance(result, Mapping) and "data" in result:
+                    # Ensure we have data before displaying
+                    val = result["data"].get(strategy.data_key)
+                    if val:
+                        fingerprint_summary.append(f"{strategy.label}: {val}")
 
         return {
-            "Fingerprint": str(metadata.get("fingerprint", "Detected")),
+            "Fingerprint": ", ".join(fingerprint_summary) if fingerprint_summary else "No Data",
             "Footprint": str(metadata.get("footprint", "Active")),
             "Canvas": (
                 "Visuals Present"
                 if (intel.visuals and (intel.visuals.profile_picture or intel.visuals.banner_image))
                 else "Text/Data Only"
             ),
-            "Useragent": os_guess,
+            "Useragent": "See Fingerprint",
         }
 
     def update_data(self, intel: IntelligenceObject) -> None:
@@ -127,6 +145,14 @@ class TelemetryPanel(Static):
         table.add_row("DNS Leak", telemetry.dns_leak)
         table.add_row("Connection", telemetry.connection_type)
         table.add_row("HW Fingerprint", telemetry.hardware_fingerprint)
+
+        if telemetry.fingerprint_results:
+            table.add_row("[bold magenta]--- Fingerprint ---[/]", "")
+            table.add_row("Suspicious", str(telemetry.fingerprint_results.suspicious))
+            table.add_row("Risk Score", f"{telemetry.fingerprint_results.risk_score:.2f}")
+            table.add_row("Risk Level", telemetry.fingerprint_results.risk_level)
+            table.add_row("Recommended Action", telemetry.fingerprint_results.recommended_action)
+            table.add_row("Summary", telemetry.fingerprint_results.summary)
 
 
 class RelationshipPanel(Static):

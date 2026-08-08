@@ -12,13 +12,17 @@ import re
 from typing import Protocol, TypedDict, runtime_checkable
 from urllib.parse import urlparse
 
-import bs4
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 logger = logging.getLogger("osint_nexus.core.extractor")
 
-# Define a specific type for extracted pivots
-type ExtractedPivots = dict[str, list[str] | list[dict[str, str]] | str | None]
+
+class ExtractedPivots(TypedDict):
+    emails: list[str]
+    pgp_keys: list[str]
+    external_links: list[str]
+    social_handles: list[dict[str, str]]
+    bio: str | None
 
 
 class EmailExtractor:
@@ -167,24 +171,25 @@ class MetaTagBioStrategy:
         for attr, value in self.targets:
             # Use find with attrs dict for robust searching
             meta = soup.find("meta", attrs={attr: value})
-            # meta.attrs.get("content") is safer as meta is already checked as a Tag if found
-            content = meta.attrs.get("content") if meta and isinstance(meta, bs4.element.Tag) else None
-            if isinstance(content, str):
-                return content.strip()
+            if isinstance(meta, Tag):
+                content = meta.attrs.get("content")
+                if isinstance(content, str):
+                    return content.strip()
         return None
 
 
 class HeuristicElementBioStrategy:
     def __init__(self) -> None:
-        self.selectors: list[dict[str, re.Pattern[str]]] = [
+        self.selectors: list[dict[str, re.Pattern[str] | str]] = [
             {"class": re.compile(r"bio|profile-bio|user-bio|about|description|summary", re.I)},
             {"id": re.compile(r"bio|about|description|summary", re.I)},
         ]
 
     def extract(self, soup: BeautifulSoup) -> str | None:
         for selector in self.selectors:
-            element = soup.find(name=None, attrs=selector)
-            if element:
+            # BeautifulSoup find accepts dicts of attribute name to pattern/str
+            element = soup.find(attrs=selector)
+            if isinstance(element, Tag):
                 text = element.get_text(strip=True)
                 if len(text) > 5:
                     return text

@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import aiosqlite
-
-from osint_nexus.core.db.base import DatabaseConnection
+from osint_nexus.core.db.base import DatabaseEngine
 
 
 class SchemaManager:
-    def __init__(self, connection: DatabaseConnection) -> None:
-        self.connection = connection
+    def __init__(self, engine: DatabaseEngine) -> None:
+        self.engine = engine
 
-    async def _migrate_v1(self, db: aiosqlite.Connection) -> int:
+    async def _migrate_v1(self) -> int:
         # Create results table
-        await db.execute(
+        await self.engine.execute(
             "CREATE TABLE IF NOT EXISTS results ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
             "username TEXT NOT NULL,"
@@ -20,12 +18,12 @@ class SchemaManager:
             "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP"
             ")"
         )
-        await db.execute("INSERT INTO schema_version (version) VALUES (1)")
+        await self.engine.execute("INSERT INTO schema_version (version) VALUES (1)")
         return 1
 
-    async def _migrate_v2(self, db: aiosqlite.Connection) -> int:
+    async def _migrate_v2(self) -> int:
         # Phase 1: Modernization Tables
-        await db.execute(
+        await self.engine.execute(
             "CREATE TABLE IF NOT EXISTS entities ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
             "main_username TEXT UNIQUE NOT NULL,"
@@ -34,7 +32,7 @@ class SchemaManager:
             "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
             ")"
         )
-        await db.execute(
+        await self.engine.execute(
             "CREATE TABLE IF NOT EXISTS pivots ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
             "entity_id INTEGER,"
@@ -44,7 +42,7 @@ class SchemaManager:
             "FOREIGN KEY (entity_id) REFERENCES entities(id)"
             ")"
         )
-        await db.execute(
+        await self.engine.execute(
             "CREATE TABLE IF NOT EXISTS avatars ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
             "entity_id INTEGER,"
@@ -55,7 +53,7 @@ class SchemaManager:
             "FOREIGN KEY (entity_id) REFERENCES entities(id)"
             ")"
         )
-        await db.execute(
+        await self.engine.execute(
             "CREATE TABLE IF NOT EXISTS historical_scans ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
             "username TEXT NOT NULL,"
@@ -65,48 +63,50 @@ class SchemaManager:
             "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP"
             ")"
         )
-        await db.execute("INSERT INTO schema_version (version) VALUES (2)")
+        await self.engine.execute("INSERT INTO schema_version (version) VALUES (2)")
         return 2
 
-    async def _migrate_v3(self, db: aiosqlite.Connection) -> int:
+    async def _migrate_v3(self) -> int:
         # Cache table
-        await db.execute(
+        await self.engine.execute(
             "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY,value TEXT,expires_at DATETIME)"
         )
         # FTS5 table
-        await db.execute("""
+        await self.engine.execute("""
             CREATE VIRTUAL TABLE IF NOT EXISTS content_search USING fts5(
                 url, title, body, domain
             )
         """)
-        await db.execute("INSERT INTO schema_version (version) VALUES (3)")
+        await self.engine.execute("INSERT INTO schema_version (version) VALUES (3)")
         return 3
 
     async def initialize(self) -> None:
         """Set up initial database schema with versioning."""
-        async with self.connection.connect() as db:
-            await self._ensure_version_table(db)
-            current_version = await self._get_current_version(db)
-            await self._run_migrations(db, current_version)
-            await db.commit()
+        await self._ensure_version_table()
+        current_version = await self._get_current_version()
+        await self._run_migrations(current_version)
 
-    async def _ensure_version_table(self, db: aiosqlite.Connection) -> None:
-        await db.execute(
+    async def _ensure_version_table(self) -> None:
+        await self.engine.execute(
             "CREATE TABLE IF NOT EXISTS schema_version ("
             "version INTEGER PRIMARY KEY,"
             "applied_at DATETIME DEFAULT CURRENT_TIMESTAMP"
             ")"
         )
 
-    async def _get_current_version(self, db: aiosqlite.Connection) -> int:
-        async with db.execute("SELECT MAX(version) FROM schema_version") as cur:
-            row: aiosqlite.Row | None = await cur.fetchone()
-            return int(row[0]) if row and row[0] else 0
+    async def _get_current_version(self) -> int:
+        row = await self.engine.fetchone("SELECT MAX(version) FROM schema_version")
+        if row:
+            # The result keys are often depending on row factory but `fetchone` returns `dict` now.
+            # Select MAX(version) can return dict with key like 'MAX(version)'
+            val = list(row.values())[0]
+            return int(val) if val is not None else 0
+        return 0
 
-    async def _run_migrations(self, db: aiosqlite.Connection, current_version: int) -> None:
+    async def _run_migrations(self, current_version: int) -> None:
         if current_version < 1:
-            current_version = await self._migrate_v1(db)
+            current_version = await self._migrate_v1()
         if current_version < 2:
-            current_version = await self._migrate_v2(db)
+            current_version = await self._migrate_v2()
         if current_version < 3:
-            await self._migrate_v3(db)
+            await self._migrate_v3()

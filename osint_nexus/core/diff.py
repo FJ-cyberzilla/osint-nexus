@@ -4,7 +4,7 @@ import logging
 from typing import TypedDict
 
 from osint_nexus.core.database import DatabaseManager
-from osint_nexus.core.types import JSONObject
+from osint_nexus.core.type_defs import JSONObject
 
 logger = logging.getLogger("osint_nexus.core.diff")
 

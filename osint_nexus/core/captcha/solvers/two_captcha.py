@@ -15,7 +15,7 @@ from osint_nexus.core.captcha.base import (
     CaptchaType,
 )
 from osint_nexus.core.config import get_config
-from osint_nexus.core.types import JSONValue
+from osint_nexus.core.type_defs import JSONValue
 from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger(__name__)

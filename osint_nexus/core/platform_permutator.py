@@ -17,8 +17,9 @@ class TLDVariationStrategy:
     """Generates variations like .com, .org, .io."""
 
     def apply(self, platform: str) -> set[str]:
-        # Implementation placeholder
-        return {f"{platform.split('.')[0]}.com", f"{platform.split('.')[0]}.org"}
+        base = platform.split(".")[0]
+        tlds = [".com", ".org", ".net", ".io", ".co", ".biz", ".dev", ".ai"]
+        return {f"{base}{tld}" for tld in tlds}
 
 
 class SubdomainVariationStrategy:

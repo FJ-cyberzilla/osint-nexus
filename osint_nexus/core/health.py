@@ -35,7 +35,7 @@ class HealthTracker:
         """
         self.provider_timeouts[provider_name] = timeout
 
-    def is_healthy(self, provider_name: str) -> bool:
+    async def is_healthy(self, provider_name: str) -> bool:
         """
         Checks if a provider is considered healthy.
 
@@ -77,7 +77,7 @@ class HealthTracker:
         failures = self.platform_failures.get(provider_name, 0)
         return (self.failure_threshold / 2) <= failures < self.failure_threshold
 
-    def record_failure(self, provider_name: str) -> None:
+    async def record_failure(self, provider_name: str) -> None:
         """
         Records a failure for the specified provider.
 
@@ -93,7 +93,7 @@ class HealthTracker:
         elif self.is_degraded(provider_name):
             logger.warning("Provider %s is DEGRADED (failures: %d)", provider_name, count)
 
-    def record_success(self, provider_name: str) -> None:
+    async def record_success(self, provider_name: str) -> None:
         """
         Clears the failure state for a provider on successful execution.
 

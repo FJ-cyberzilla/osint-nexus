@@ -9,20 +9,20 @@ from pathlib import Path
 
 from osint_nexus.core.bootstrap import DATABASE_PATH
 from osint_nexus.core.config import Config
-from osint_nexus.core.db.base import DatabaseConnection
 from osint_nexus.core.db.cache_repository import CacheRepository
 from osint_nexus.core.db.health_manager import HealthManager
 from osint_nexus.core.db.result_repository import ResultRepository
 from osint_nexus.core.db.schema_manager import SchemaManager
 from osint_nexus.core.db.search_repository import SearchRepository
-from osint_nexus.core.types import JSONObject, JSONValue
+from osint_nexus.core.db.sqlite_engine import SQLiteEngine
+from osint_nexus.core.type_defs import JSONObject, JSONValue
 
 logger = logging.getLogger("osint_nexus.database")
 
 
 class DatabaseManager:
     """
-    Manages SQLite storage for OSINT scan results using aiosqlite.
+    Manages database storage for OSINT scan results using an engine.
     Acts as a Facade for various database repositories.
     """
 
@@ -30,14 +30,15 @@ class DatabaseManager:
         self.config = config or Config()
         custom_path = db_path or getattr(self.config, "DB_PATH", str(DATABASE_PATH))
         self.db_path = Path(str(custom_path)).resolve()
-        self.connection = DatabaseConnection(self.db_path)
-        self.results = ResultRepository(self.connection)
-        self.cache = CacheRepository(self.connection)
-        self.schema = SchemaManager(self.connection)
-        self.search_repo = SearchRepository(self.connection)
+        self.engine = SQLiteEngine(self.db_path)
+        self.results = ResultRepository(self.engine)
+        self.cache = CacheRepository(self.engine)
+        self.schema = SchemaManager(self.engine)
+        self.search_repo = SearchRepository(self.engine)
         self.health = HealthManager(self.db_path)
 
     async def _init_db(self) -> None:
+        await self.engine.connect()
         await self.schema.initialize()
 
     # --- Delegation for backward compatibility ---
@@ -77,4 +78,4 @@ class DatabaseManager:
 
     async def close(self) -> None:
         """Closes the database connection."""
-        await self.connection.close()
+        await self.engine.close()

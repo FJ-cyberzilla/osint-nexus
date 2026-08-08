@@ -28,12 +28,15 @@ OSINT Nexus is a modular, facade-based system designed to automate username reco
 ## Key Features
 
 *   **Modular Architecture**: Decoupled orchestration and subsystem design.
-*   **Intelligent Recon**: Advanced device inference, platform fingerprinting, and timing-entropy based detection.
+*   **Intelligent Recon**: Advanced passive fingerprinting (HTTP/TLS/TCP/DNS/NTP) for device inference, platform fingerprinting, and timing-entropy based detection.
 *   **Resilient Design**: Health tracking, automatic circuit breaking, self-healing, and adaptive request handling (evasion agent).
 *   **Browser & Captcha Management**: Built-in browser pooling, recycling, and multi-provider captcha solving, featuring a cross-platform engine (PyQt6/Playwright) with automatic environment detection.
 *   **Telemetry & Data Integrity**: Comprehensive telemetry collection (DNS, hardware) and data export support (e.g., STIX).
 *   **Persistence**: Async-ready SQLite database with support for caching and FTS5 full-text search.
-*   **Aesthetic & Informative UI**: Rich CLI TUI featuring real-time intelligence dashboards (Telemetry, Relationships, Activity Heatmaps) and comprehensive reporting.
+*   **Fingerbank Integration**: Full API integration for advanced device profiling, including hardware, OS, and vulnerability (CVE) detection, exposed via a unified facade. Supports DHCP fingerprinting.
+*   **Secure Credential Management**: Automatic `.env` management to keep API keys secure and untracked by Git, with an interactive TUI modal for secure configuration.
+*   **Resilient Fallback Mode**: Fingerbank profiling gracefully degrades if API keys are missing.
+*   **Aesthetic & Informative UI**: Rich CLI TUI featuring real-time intelligence dashboards (Telemetry, Relationships, Activity Heatmaps, Device Profiling) and comprehensive reporting.
 *   **Android/Termux Optimized**: Configured for high-performance mobile execution.
 
 ## Architecture
@@ -73,6 +76,8 @@ All operational commands are managed via `make`.
 
 - **Tech Stack**: Python 3.13, FastAPI, Pydantic, SQLite (aiosqlite), Rich, Playwright.
 - **Standards**: Strict typing (`mypy`), linting (`ruff`), and comprehensive unit testing (`pytest`).
+- **Parallel Testing & Coverage**: The test suite is optimized for parallel execution using `pytest-xdist` (`pytest -n auto`) and includes automated code coverage analysis (`pytest-cov`).
+- **CI/CD**: Fully automated testing, coverage reporting, and security scanning on every push/PR via GitHub Actions.
 
 ---
 *Developed by FJ™ Cybertronic Systems.*

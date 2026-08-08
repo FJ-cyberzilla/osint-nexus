@@ -15,7 +15,7 @@ from osint_nexus.core.captcha.exceptions import (
     CaptchaTimeoutError,
 )
 from osint_nexus.core.captcha.models import CaptchaSolveResult, CaptchaType
-from osint_nexus.core.types import JSONValue
+from osint_nexus.core.type_defs import JSONValue
 from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger("osint_nexus.captcha")

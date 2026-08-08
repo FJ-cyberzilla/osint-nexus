@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
 
 
@@ -20,6 +22,7 @@ class BrowserContextProtocol(Protocol):
 @runtime_checkable
 class BrowserProtocol(Protocol):
     def is_connected(self) -> bool: ...
+    async def close(self) -> None: ...
     async def new_context(
         self,
         *,
@@ -29,3 +32,16 @@ class BrowserProtocol(Protocol):
         extra_http_headers: dict[str, str] | None = None,
         bypass_csp: bool = False,
     ) -> BrowserContextProtocol: ...
+
+
+@runtime_checkable
+class ChromiumProtocol(Protocol):
+    async def launch(self, *, headless: bool = False, args: list[str] | None = None) -> BrowserProtocol: ...
+
+
+@runtime_checkable
+class PlaywrightProtocol(Protocol):
+    @property
+    def chromium(self) -> ChromiumProtocol: ...
+    async def stop(self) -> None: ...
+    async def start(self) -> PlaywrightProtocol: ...

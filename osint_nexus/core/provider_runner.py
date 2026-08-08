@@ -8,6 +8,7 @@ import logging
 import typing
 
 from osint_nexus.core.extractor import ExtractedPivots, PivotExtractor
+from osint_nexus.core.fingerprint import FingerprintAgent
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
 from osint_nexus.core.provider_types import (
@@ -35,6 +36,7 @@ class ProviderRunner:
         mimicry: HumanMimicryEngine,
         extractor: PivotExtractor,
         device_inference: DeviceInferenceProtocol | None = None,
+        fingerprint_agent: FingerprintAgent | None = None,
     ) -> None:
         self._validator = validator
         self._db_manager = db_manager
@@ -42,6 +44,7 @@ class ProviderRunner:
         self._mimicry = mimicry
         self._extractor = extractor
         self._device_inference = device_inference
+        self._fingerprint_agent = fingerprint_agent
 
     async def run(
         self, provider: BaseProvider, username: str, **microlink_options: JSONValue
@@ -52,11 +55,22 @@ class ProviderRunner:
         final_found = result.found and self._validator.validate(result.content, provider.name)
 
         # Harvest secondary identifiers if found
-        pivots: ExtractedPivots = {}
+        pivots: ExtractedPivots = {
+            "emails": [],
+            "pgp_keys": [],
+            "external_links": [],
+            "social_handles": [],
+            "bio": None,
+        }
         if final_found:
             pivots = await self._extractor.extract(result.content)
 
         metadata = await self._infer_metadata(provider, username, result.content, final_found)
+
+        # Include fingerprinting results in metadata
+        if self._fingerprint_agent:
+            metadata["fingerprint_results"] = self._fingerprint_agent.collect_all_fingerprints(result.content)
+
         # Cast pivots to MetadataDict for update, ensuring compatibility with JSONValue
         metadata.update(typing.cast(MetadataDict, pivots))
 

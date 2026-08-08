@@ -10,12 +10,24 @@ Provides:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
 
 from osint_nexus.core.config import Config
+from osint_nexus.core.constants import DeviceInferenceConstants
+from osint_nexus.core.detectors.cdn import CdnFingerprintStrategy
+from osint_nexus.core.detectors.dns import DnsFingerprintStrategy
+from osint_nexus.core.detectors.extensions import ExtensionFingerprintStrategy
+from osint_nexus.core.detectors.http import HttpFingerprintStrategy
+from osint_nexus.core.detectors.http2 import Http2FingerprintStrategy
+from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
+from osint_nexus.core.detectors.tcp import TcpFingerprintStrategy
+from osint_nexus.core.detectors.timezone import TimezoneFingerprintStrategy
+from osint_nexus.core.detectors.tls import TlsFingerprintStrategy
 from osint_nexus.core.exceptions import NexusError
+from osint_nexus.core.fingerprint_decider import ClientFingerprintValidator as ComprehensiveValidator
+from osint_nexus.core.type_defs import JSONValue
 
 logger = logging.getLogger("osint_nexus.fingerprint")
 
@@ -24,16 +36,16 @@ logger = logging.getLogger("osint_nexus.fingerprint")
 class DeviceInfo:
     """Structured result of device fingerprint inference."""
 
-    device_model: str = "Unknown"
-    os_family: str = "Unknown"
-    confidence: float = 0.0
+    device_model: str | None = None
+    os_family: str | None = None
+    confidence: float = DeviceInferenceConstants.MIN_CONFIDENCE
     raw_matches: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, JSONValue]:
         """Convert to dictionary for backward compatibility."""
         return {
-            "device_model": self.device_model,
-            "os_family": self.os_family,
+            "device_model": self.device_model or DeviceInferenceConstants.UNIDENTIFIED,
+            "os_family": self.os_family or DeviceInferenceConstants.UNIDENTIFIED,
             "confidence": self.confidence,
             "matches": self.raw_matches,
         }
@@ -67,7 +79,41 @@ class FingerprintAgent:
         # Load custom patterns from config if provided
         self._device_patterns = self._load_patterns()
 
-    def collect_scan_telemetry(self, proxy: str | None, user_agent: str) -> dict[str, Any]:
+        # New: Orchestration of strategies
+        self.registry = FingerprintStrategyRegistry()
+        self.registry.register(HttpFingerprintStrategy())
+        self.registry.register(TcpFingerprintStrategy())
+        self.registry.register(TlsFingerprintStrategy())
+        self.registry.register(DnsFingerprintStrategy())
+        self.registry.register(CdnFingerprintStrategy())
+        self.registry.register(ExtensionFingerprintStrategy())
+        self.registry.register(Http2FingerprintStrategy())
+        self.registry.register(TimezoneFingerprintStrategy())
+        self.registry.register(ComprehensiveValidator())
+
+    def collect_all_fingerprints(self, data: JSONValue) -> dict[str, JSONValue]:
+        """Aggregate results from all registered strategies."""
+        results: dict[str, JSONValue] = {}
+        confidence_scores: list[float] = []
+
+        for strategy in self.registry.get_all():
+            try:
+                res = strategy.extract(data)
+                results[strategy.name] = res["data"]
+                confidence_scores.append(float(res.get("confidence", 0.0)))
+            except Exception as exc:
+                logger.warning("Strategy %s failed: %s", strategy.name, exc)
+
+        # Simple combined confidence score calculation
+        avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
+
+        return {
+            "fingerprints": results,
+            "combined_confidence": avg_confidence,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+
+    def collect_scan_telemetry(self, proxy: str | None, user_agent: str) -> dict[str, JSONValue]:
         """
         Collect environment metadata for the current scan.
 
@@ -89,7 +135,7 @@ class FingerprintAgent:
             logger.error("Telemetry collection failed: %s", exc, exc_info=True)
             return {"error": "Telemetry collection failed"}
 
-    def infer_target_device(self, content: str) -> dict[str, Any]:
+    def infer_target_device(self, content: JSONValue) -> dict[str, JSONValue]:
         """
         Infer the target's device model and OS from response content.
 
@@ -101,24 +147,28 @@ class FingerprintAgent:
             Backward compatible with the agent's current usage.
         """
         try:
-            if not content:
+            if not isinstance(content, str) or not content:
                 return DeviceInfo().to_dict()
 
             result = DeviceInfo()
             # Check patterns in order; first match wins (highest priority)
             for pattern, device, os_family in self._device_patterns:
-                if pattern in content:  # simple substring match; could be regex in future
+                if re.search(pattern, content):
                     result.device_model = device
                     result.os_family = os_family
-                    result.confidence = 0.8  # moderate confidence for substring
+                    result.confidence = (
+                        DeviceInferenceConstants.REGEX_MATCH_CONFIDENCE
+                    )  # moderate confidence for regex
                     result.raw_matches.append(pattern)
                     # Stop at first match; most specific patterns are listed first
                     break
 
             return result.to_dict()
-        except NexusError as exc:
+        except Exception as exc:
             logger.error("Device inference failed: %s", exc, exc_info=True)
-            return DeviceInfo(device_model="Error", os_family="Error").to_dict()
+            return DeviceInfo(
+                device_model=DeviceInferenceConstants.UNKNOWN, os_family=DeviceInferenceConstants.UNKNOWN
+            ).to_dict()
 
     async def health_check(self) -> bool:
         """Fingerprint agent is stateless and always healthy."""

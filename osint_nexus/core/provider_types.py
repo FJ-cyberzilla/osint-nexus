@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
-from osint_nexus.core.types import JSONValue, MetadataDict
+from osint_nexus.core.type_defs import JSONValue, MetadataDict
 
 
 @dataclass(frozen=True)

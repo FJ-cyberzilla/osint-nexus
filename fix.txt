@@ -1,0 +1,529 @@
+tests/
+├── conftest.py                   # Global fixtures (DB rollback, Docker containers)
+│
+├── unit/                         # Fast (ms), zero I/O, no network or DB
+│   ├── conftest.py               # Unit-specific mocks
+│   ├── test_confidence.py
+│   ├── test_config.py
+│   ├── test_diff.py
+│   ├── test_hierarchy.py
+│   ├── test_mimicry.py
+│   ├── test_permutator.py
+│   ├── test_timing_entropy.py
+│   └── test_security_utils.py
+│
+├── core/                         # Core engines & business logic
+│   ├── test_agent.py
+│   ├── test_aggregator.py
+│   ├── test_core.py
+│   ├── test_database_new.py
+│   ├── test_detection.py
+│   ├── test_detectors.py
+│   ├── test_device_inference.py
+│   ├── test_device_inference_integrated.py
+│   ├── test_evasion_agent.py
+│   ├── test_extractor.py
+│   ├── test_fingerprint.py
+│   ├── test_fingerprint_decider.py
+│   ├── test_health_recovery.py
+│   ├── test_health_tracker.py
+│   ├── test_orchestrator.py
+│   ├── test_orchestrator_workers.py
+│   ├── test_platform_fingerprinter.py
+│   ├── test_platform_permutator.py
+│   ├── test_reconstructor.py
+│   ├── test_relation_mapper.py
+│   └── test_validator.py
+│
+├── browser/                      # Heavy browser engine & pool tests
+│   ├── conftest.py               # Shared browser context fixtures
+│   ├── test_browser_engine.py
+│   ├── test_browser_pool.py
+│   ├── test_browser_pool_extended.py
+│   ├── test_webview_bridge.py
+│   └── test_compliance.py
+│
+├── captcha/                      # Anti-captcha & provider integrations
+│   ├── test_anti_captcha.py
+│   ├── test_captcha.py
+│   ├── test_captcha_base.py
+│   ├── test_captcha_registry.py
+│   ├── test_two_captcha.py
+│   └── test_generic_provider.py
+│
+├── network/                      # Network, DNS, proxies & providers
+│   ├── test_dns_leak.py
+│   ├── test_dork.py
+│   ├── test_network.py
+│   ├── test_provider_registry.py
+│   ├── test_sessions.py
+│   ├── test_stix_exporter.py
+│   └── test_telemetry.py
+│
+├── cli/                          # CLI, UI, and Widget testing
+│   ├── test_cli_main.py
+│   ├── test_cli_scanner.py
+│   ├── test_cli_ui.py
+│   └── test_cli_widgets.py
+│
+└── utils/                        # Shared utility helpers
+    ├── test_troubleshoot.py
+    ├── test_troubleshoot_extended.py
+    ├── test_utils_helpers.py
+    ├── test_utils_limiter.py
+    ├── test_utils_network.py
+    ├── test_utils_network_extended.py
+    └── test_utils_retry.py
+
+
+
+
+
+
+Parallelizing Execution (pytest-xdist)
+​Since you are using uv, install pytest-xdist to run tests across multiple CPU cores:
+
+
+uv add --dev pytest-xdist pytest-asyncio
+
+
+Configure pyproject.toml
+​Add custom markers so you can run heavy tests selectively and set default flags:
+
+
+
+
+
+Handling Isolated Databases with pytest-xdist
+​When running tests in parallel with pytest-xdist (pytest -n auto), each worker process needs its own database isolation if your tests write to disk or create schemas.
+​If you are using the PostgreSQL Testcontainers/Savepoint pattern we built earlier:
+
+
+
+
+
+
+When running pytest-xdist (pytest -n auto), multiple test worker processes run concurrently. If all workers target the exact same database, schema migrations will race and destroy each other, and parallel transactions will lock or corrupt state.
+​To solve this at an industry level:
+​Single Database Container: Spin up one shared PostgreSQL container for the entire test session.
+​Worker-Isolated Databases: Each xdist worker dynamically creates its own isolated database (e.g., testdb_gw0, testdb_gw1) inside that container on startup.
+​Session-Level Migrations: Each worker runs Alembic migrations independently against its own database.
+​Function-Level Rollbacks: Every test runs inside a nested SAVEPOINT transaction block on its worker’s database, ensuring 0ms cleanup and total isolation between tests running on the same worker.
+​Production conftest.py for xdist + Async SQLAlchemy + FastAPI
+​Place this file at tests/conftest.py:
+
+
+
+import asyncio
+import os
+import pytest
+import pytest_asyncio
+from alembic.config import Config
+from alembic import command
+from fastapi import FastAPI
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy import event, text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.engine import make_url
+from testcontainers.postgres import PostgresContainer
+
+# Import your FastAPI app and get_db dependency
+from myapp.main import app
+from myapp.database import get_db
+
+
+# -----------------------------------------------------------------------------
+# 1. xdist Worker Identification
+# -----------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def worker_id(request) -> str:
+    """
+    Returns 'master' for single-threaded runs, or 'gw0', 'gw1', etc. when using xdist.
+    """
+    config = getattr(request, "config", None)
+    if config is not None and hasattr(config, "workerinput"):
+        return config.workerinput["workerid"]
+    return "master"
+
+
+# -----------------------------------------------------------------------------
+# 2. Shared Container Lifecycle (xdist lock safe)
+# -----------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def postgres_container(tmp_path_factory, worker_id):
+    """
+    Ensures only ONE Postgres container is started across all xdist workers using
+    a file-based lock mechanism.
+    """
+    if worker_id == "master":
+        # Single process run (no xdist)
+        with PostgresContainer("postgres:16-alpine") as postgres:
+            yield postgres
+        return
+
+    # Multi-process xdist run: use a lockfile to synchronize container startup
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent
+    lock_file = root_tmp_dir / "postgres_container.lock"
+    info_file = root_tmp_dir / "postgres_container.json"
+
+    # Worker 0 starts the container and writes connection info
+    if worker_id == "gw0":
+        container = PostgresContainer("postgres:16-alpine")
+        container.start()
+        
+        # Save connection details for other workers
+        info_file.write_text(container.get_connection_url())
+        lock_file.write_text("ready")
+        
+        yield container
+        
+        container.stop()
+        if lock_file.exists():
+            lock_file.unlink()
+        if info_file.exists():
+            info_file.unlink()
+    else:
+        # Other workers wait for gw0 to finish spinning up the container
+        while not lock_file.exists():
+            asyncio.run(asyncio.sleep(0.1))
+        
+        # Mock-like object holding the connection string for non-gw0 workers
+        class ContainerProxy:
+            def get_connection_url(self):
+                return info_file.read_text().strip()
+
+        yield ContainerProxy()
+
+
+# -----------------------------------------------------------------------------
+# 3. Dynamic Per-Worker Database Creation & Migration
+# -----------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def worker_db_url(postgres_container, worker_id) -> str:
+    """
+    Creates a unique, isolated database for this specific worker (e.g. app_test_gw0),
+    runs Alembic migrations on it, and drops it when the worker finishes.
+    """
+    base_url = postgres_container.get_connection_url()
+    url_obj = make_url(base_url)
+    
+    # Define worker-specific DB name
+    target_db_name = f"app_test_{worker_id.lower()}"
+    
+    # 1. Connect to default postgres DB to create worker DB
+    admin_url = url_obj._replace(database="postgres").render_as_string(hide_password=False)
+    
+    from sqlalchemy import create_engine
+    admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    with admin_engine.connect() as conn:
+        conn.execute(text(f"DROP DATABASE IF EXISTS {target_db_name};"))
+        conn.execute(text(f"CREATE DATABASE {target_db_name};"))
+    admin_engine.dispose()
+
+    # 2. Build connection URL for this worker's database
+    worker_sync_url = url_obj._replace(database=target_db_name).render_as_string(hide_password=False)
+    sync_url = worker_sync_url.replace("postgresql://", "postgresql+psycopg2://")
+
+    # 3. Run Alembic Migrations on this worker's fresh database
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
+    command.upgrade(alembic_cfg, "head")
+
+    yield worker_sync_url.replace("postgresql://", "postgresql+asyncpg://")
+
+    # Teardown: Drop worker DB when this worker completes its session
+    admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    with admin_engine.connect() as conn:
+        # Terminate active worker connections before dropping
+        conn.execute(text(f"""
+            SELECT pg_terminate_backend(pg_stat_activity.pid)
+            FROM pg_stat_activity
+            WHERE pg_stat_activity.datname = '{target_db_name}'
+              AND pid <> pg_backend_pid();
+        """))
+        conn.execute(text(f"DROP DATABASE IF EXISTS {target_db_name};"))
+    admin_engine.dispose()
+
+
+# -----------------------------------------------------------------------------
+# 4. Async Engine & Transaction Rollback Fixtures
+# -----------------------------------------------------------------------------
+@pytest_asyncio.fixture(scope="session")
+async def async_engine(worker_db_url):
+    """Creates an AsyncEngine targeting the worker's isolated database."""
+    engine = create_async_engine(worker_db_url, echo=False, pool_pre_ping=True)
+    yield engine
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session(async_engine):
+    """
+    Savepoint Transaction Rollback Pattern:
+    Runs inside a nested transaction (SAVEPOINT). Re-establishes SAVEPOINT if 
+    FastAPI endpoints call `await session.commit()`, then rolls back completely at test end.
+    """
+    async with async_engine.connect() as connection:
+        transaction = await connection.begin()
+        
+        session = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+        )
+
+        await connection.begin_nested()
+
+        @event.listens_for(session.sync_session, "after_transaction_end")
+        def restart_savepoint(sync_session, trans):
+            if trans.nested and not trans._parent.nested:
+                sync_session.begin_nested()
+
+        yield session
+
+        await session.close()
+        await transaction.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def client(db_session: AsyncSession) -> AsyncClient:
+    """FastAPI AsyncClient overriding get_db dependency with worker's rollback session."""
+    async def _override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override_get_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver"
+    ) as async_client:
+        yield async_client
+
+    app.dependency_overrides.clear()
+
+
+How to Execute
+​Run tests across all CPU cores automatically:
+
+uv run pytest -n auto
+
+
+Or specify exact worker worker counts:
+
+uv run pytest -n 4
+
+
+
+ add  these  to  doxumwntation  and  readme.md  and  structure.mmd  
+
+
+
+
+
+
+Here is a production-grade GitHub Actions workflow (.github/workflows/test.yml) optimized for speed, reliability, and security when running pytest-xdist and Testcontainers with uv.
+​GitHub Actions Workflow (.github/workflows/test.yml)
+
+
+
+
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run Pytest (Parallel)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-suffix: "ubuntu-latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version" # or specify e.g. "3.12"
+
+      - name: Install Dependencies
+        run: uv sync --frozen
+
+      # Testcontainers requires Docker access
+      - name: Verify Docker Status
+        run: docker info
+
+      - name: Run Tests with pytest-xdist
+        env:
+          PYTHONUNBUFFERED: "1"
+          # Optional: Control Testcontainers timeout or reuse settings if needed
+          TESTCONTAINERS_RYUK_DISABLED: "false"
+        run: |
+          # 'auto' automatically detects available vCPUs on the GitHub runner
+          uv run pytest -n auto --durations=10
+
+      - name: Upload Test Artifacts on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-failure-logs
+          path: |
+            .pytest_cache/
+            *.log
+          retention-days: 7
+
+
+
+
+add theae  as  tup  and  troubleshooting   ,  
+
+
+Performance & Optimization Notes
+​astral-sh/setup-uv Built-in Caching:
+Using enable-cache: true with setup-uv automatically caches your wheels and dependency layer, reducing uv sync execution down to ~2–5 seconds on subsequent workflow runs.
+​Docker Pre-Installed on ubuntu-latest:
+GitHub Actions' ubuntu-latest runners come with Docker pre-configured and running out of the box. No secondary Docker container setup or Docker-in-Docker (dind) service wrapper is required for Testcontainers to work seamlessly.
+​vCPU Allocation:
+Standard GitHub-hosted ubuntu-latest runners provide 2 vCPUs. Passing -n auto instructs pytest-xdist to spawn 2 parallel worker processes (gw0, gw1). If you upgrade to a GitHub Larger Runner (e.g., 8 or 16 vCPUs), -n auto automatically scales up to utilize all cores without changing your workflow configuration.
+​Workflow Concurrency (cancel-in-progress):
+If a developer pushes multiple commits in rapid succession to the same PR, concurrency automatically cancels the older running workflow to save GitHub Actions runner minutes and avoid database container thrashing.
+
+
+
+
+
+
+uv add --dev pytest-cov
+
+
+
+
+Create or update .coveragerc in your project root to configure paths and sub-process coverage collection:
+
+
+
+
+
+[run]
+# Source directories to measure coverage for
+source = 
+    myapp     # write  app  name  here
+
+# Enable sub-process measurement for xdist workers
+parallel = True
+
+# Omit test directories and auto-generated files
+omit =
+    tests/*
+    */site-packages/*
+
+[report]
+# Exclude lines from coverage calculations
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if TYPE_CHECKING:
+    raise NotImplementedError
+
+
+
+
+Update your pyproject.toml to include coverage flags by default:
+
+
+
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# --cov specifies the module, --cov-report=xml generates output for Codecov
+addopts = "-ra -q --import-mode=importlib --cov=myapp --cov-report=xml"
+asyncio_mode = "auto"
+
+
+
+
+2. GitHub Actions Workflow (.github/workflows/test.yml)
+​Update your workflow to execute pytest with coverage, upload the merged coverage report using the official codecov/codecov-action v5, and attach coverage artifacts.
+
+
+
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run Pytest & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-suffix: "ubuntu-latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install Dependencies
+        run: uv sync --frozen
+
+      - name: Verify Docker Status
+        run: docker info
+
+      - name: Run Tests with Coverage & xdist
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          # pytest-cov automatically collects per-worker data (.coverage.gw0, .coverage.gw1, etc.)
+          # and merges them into coverage.xml at session completion
+          uv run pytest -n auto --cov=myapp --cov-report=xml --durations=10
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # Required for private repos
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true
+
+      - name: Upload Test Artifacts on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-failure-logs
+          path: |
+            .pytest_cache/
+            coverage.xml
+            *.log
+          retention-days: 7
+
+
+

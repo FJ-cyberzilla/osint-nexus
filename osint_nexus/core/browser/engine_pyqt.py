@@ -1,5 +1,3 @@
-from typing import Any
-
 from PyQt6.QtCore import QUrl
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -19,8 +17,8 @@ class PyQtBrowserEngine(QWebEngineView):  # type: ignore
     def __init__(
         self,
         telemetry_client: TelemetryLoggerProtocol | None = None,
-        *args: Any,
-        **kwargs: Any,
+        *args: object,
+        **kwargs: object,
     ) -> None:
         super().__init__(*args, **kwargs)
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from osint_nexus.core.type_defs import JSONObject
+
 if TYPE_CHECKING:
     # Avoid circular imports
     pass
@@ -76,18 +78,18 @@ class IdentityProfile:
 
 @dataclass
 class RelationshipGraph:
-    nodes: list[dict]
-    edges: list[dict]
+    nodes: list[JSONObject]
+    edges: list[JSONObject]
 
 
 @dataclass
 class Timeline:
-    events: list[dict]
+    events: list[JSONObject]
 
 
 @dataclass
 class Correlations:
-    data: dict
+    data: JSONObject
 
 
 class Neo4jConnection:

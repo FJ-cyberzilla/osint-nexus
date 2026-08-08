@@ -12,3 +12,13 @@ JITTER_MAX: Final[float] = 3.0
 DEFAULT_TIMEOUT: Final[int] = 10
 RETRY_ATTEMPTS: Final[int] = 3
 BACKOFF_FACTOR: Final[float] = 0.5
+
+
+class DeviceInferenceConstants:
+    """Constants for device inference."""
+
+    UNIDENTIFIED: Final[str] = "Unidentified"
+    UNKNOWN: Final[str] = "Unknown"
+    MIN_CONFIDENCE: Final[float] = 0.0
+    MAX_CONFIDENCE: Final[float] = 1.0
+    REGEX_MATCH_CONFIDENCE: Final[float] = 0.8

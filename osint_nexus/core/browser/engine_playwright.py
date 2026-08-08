@@ -6,10 +6,11 @@ from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
     DeviceProfile,
 )
-from osint_nexus.core.telemetry.bridge import TelemetryDict, TelemetryLoggerProtocol
+from osint_nexus.core.telemetry.bridge import TelemetryLoggerProtocol
 from osint_nexus.core.telemetry.probes.hardware_telemetry import (
     ADVANCED_TELEMETRY_JS,
 )
+from osint_nexus.core.type_defs import TelemetryDict
 
 logger = logging.getLogger(__name__)
 

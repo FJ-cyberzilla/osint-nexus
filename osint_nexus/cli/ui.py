@@ -25,7 +25,7 @@ from osint_nexus.cli.widgets import (
 )
 from osint_nexus.core.agent import OSINTAgent
 from osint_nexus.core.intelligence import IntelligenceObject
-from osint_nexus.core.ui_models import ActivityLevel, TelemetryData
+from osint_nexus.core.ui_models import ActivityLevel, FingerprintData, TelemetryData
 
 console = Console()
 
@@ -161,12 +161,35 @@ class OSINTApp(App[None]):
     def _update_telemetry_panel(self, metadata: dict) -> None:
         """Helper to update telemetry panel."""
         telemetry_raw = metadata.get("telemetry")
+        fingerprint_raw = metadata.get("fingerprint_results")
+
+        telemetry_data = None
         if isinstance(telemetry_raw, dict):
             try:
-                telemetry = TelemetryData(**telemetry_raw)
-                self.query_one("#telemetry", TelemetryPanel).update_telemetry(telemetry)
+                telemetry_data = TelemetryData(**telemetry_raw)
             except ValueError:
                 console.log("Invalid telemetry data format.")
+
+        if isinstance(fingerprint_raw, dict):
+            try:
+                # Assuming fingerprint_results has a structure compatible with FingerprintData
+                # If not, might need a mapper here. Based on previous work, this should align.
+                fingerprint = FingerprintData(**fingerprint_raw)
+                if telemetry_data:
+                    telemetry_data.fingerprint_results = fingerprint
+                else:
+                    # Create a dummy TelemetryData if only fingerprint is present
+                    telemetry_data = TelemetryData(
+                        dns_leak="N/A",
+                        connection_type="N/A",
+                        hardware_fingerprint="N/A",
+                        fingerprint_results=fingerprint,
+                    )
+            except ValueError:
+                console.log("Invalid fingerprint data format.")
+
+        if telemetry_data:
+            self.query_one("#telemetry", TelemetryPanel).update_telemetry(telemetry_data)
 
     def _update_relationship_panel(self, metadata: dict) -> None:
         """Helper to update relationship panel."""

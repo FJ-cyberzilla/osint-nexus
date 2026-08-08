@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 
 from osint_nexus.core import bootstrap, constants
 from osint_nexus.core.evasion import EvasionWeights
-from osint_nexus.core.types import JSONList, JSONObject
+from osint_nexus.core.type_defs import JSONList, JSONObject
 
 # Guarantee directories exist at runtime before modules try to write to them
 bootstrap.initialize_directories()
@@ -48,6 +48,7 @@ class Config(BaseSettings):
     default_rate_limit_delay: float = 0.5
     require_proxy: bool = False
     proxy_api_url: str = ""
+    fingerbank_api_key: str | None = None
 
     # Use JSON aliases for types that might come from ENV as strings to avoid auto-json-parsing
     user_agents: list[str] | str = Field(default_factory=lambda: _DEFAULT_USER_AGENTS.copy())

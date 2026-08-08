@@ -6,13 +6,19 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum, auto
 from types import TracebackType
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self, cast
+
+from osint_nexus.core.browser.protocols import BrowserContextProtocol, BrowserProtocol, PlaywrightProtocol
 
 if TYPE_CHECKING:
-    from playwright.async_api import BrowserContext, Playwright, async_playwright
-    from playwright.async_api import Error as PlaywrightError
+    from playwright.async_api import (  # type: ignore[import-untyped]
+        BrowserContext,
+        Playwright,
+        async_playwright,
+    )
+    from playwright.async_api import Error as PlaywrightError  # type: ignore[import-untyped]
 else:
-    # Runtime placeholders if playwright is not present
+    # Optional dependency stubs if playwright is not present
     class Playwright:
         pass
 
@@ -29,17 +35,19 @@ else:
 from osint_nexus.core.browser.config import BrowserPoolConfig
 from osint_nexus.core.browser.factory import BrowserContextFactory
 from osint_nexus.core.browser.monitor import PoolMonitor
-from osint_nexus.core.browser.protocols import BrowserProtocol
 from osint_nexus.core.telemetry.bridge import WebViewBridge
 
 # Runtime availability check
 try:
-    from playwright.async_api import BrowserContext, Playwright, async_playwright
-    from playwright.async_api import Error as PlaywrightError
+    from playwright.async_api import Error as PlaywrightError  # type: ignore[import-untyped]
+    from playwright.async_api import (  # type: ignore[import-untyped]
+        async_playwright,
+    )
 
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
+
 
 logger = logging.getLogger("osint_nexus.core.browser.pool")
 
@@ -67,7 +75,7 @@ class BrowserPoolManager:
         self._factory = BrowserContextFactory(self.config)
         self._monitor = PoolMonitor()
         self._bridge = bridge
-        self._playwright: Playwright | None = None
+        self._playwright: PlaywrightProtocol | None = None
         self._browser: BrowserProtocol | None = None
         self._state: BrowserPoolState = BrowserPoolState.UNINITIALIZED
         self._lifecycle_lock = asyncio.Lock()
@@ -104,20 +112,23 @@ class BrowserPoolManager:
         if self._browser is None:
             raise BrowserPoolError("Browser initialization failed.")
 
-    async def _configure_bridge(self, context: BrowserContext) -> None:
+    async def _configure_bridge(self, context: BrowserContextProtocol) -> None:
         """Configures the bridge handler if available."""
         if self._bridge:
-            page = context.pages[0] if context.pages else await context.new_page()
+            # Explicitly cast context.pages to allow index access if type inference fails
+            pages = cast(list[Any], context.pages)
+            page = pages[0] if pages else await context.new_page()
             await page.expose_function("webviewBridge", self._bridge.handle_message)
 
     @asynccontextmanager
     async def acquire_context(
         self, proxy_url: str | None = None, extra_headers: dict[str, str] | None = None
-    ) -> AsyncGenerator[BrowserContext]:
+    ) -> AsyncGenerator[BrowserContextProtocol]:
         """Acquires a hardened browser context using the factory."""
         await self._ensure_browser()
+        assert self._browser is not None
 
-        context: BrowserContext | None = None
+        context: BrowserContextProtocol | None = None
         try:
             # Type hint needed as factory.create can return any browser context based on factory impl
             context = await self._factory.create(

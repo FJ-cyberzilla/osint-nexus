@@ -1,16 +1,29 @@
-from abc import ABC, abstractmethod
+from typing import Any, Protocol, TypeVar, runtime_checkable
+
+from beartype import beartype
+
+T_Data = TypeVar("T_Data", contravariant=True)
+T_Result = TypeVar("T_Result", covariant=True, bound=dict[str, Any])
 
 
-class BaseDetector(ABC):
-    """Abstract base class for all detection techniques."""
+@runtime_checkable
+class FingerprintStrategy(Protocol[T_Data, T_Result]):
+    """Protocol for all fingerprinting strategies."""
 
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Name of the detector."""
-        pass
+    name: str
 
-    @abstractmethod
-    async def analyze(self, telemetry: dict[str, object]) -> float:
-        """Analyze telemetry data and return a detection score [0.0, 1.0]."""
-        pass
+    @beartype
+    def extract(self, data: T_Data) -> T_Result:
+        """Extract fingerprint from given data."""
+        ...
+
+
+class BaseDetector(Protocol):
+    """Base protocol for novel detectors."""
+
+    name: str
+
+    @beartype
+    async def analyze(self, data: Any) -> float:
+        """Analyze data and return evasion probability."""
+        ...

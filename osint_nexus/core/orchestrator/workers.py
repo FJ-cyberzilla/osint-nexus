@@ -7,9 +7,10 @@ import os
 from osint_nexus.core.exceptions import ProviderError
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.provider_runner import ProviderRunner
+from osint_nexus.core.type_defs import JSONValue
 from osint_nexus.providers.base import BaseProvider
 
-from .types import OrchestratorDeps
+from .type_defs import OrchestratorDeps
 
 logger = logging.getLogger("osint_nexus.orchestrator.workers")
 
@@ -20,7 +21,11 @@ class ProviderWorker:
         self.provider_runner = provider_runner
 
     async def execute(
-        self, provider: BaseProvider, username: str, abort_event: asyncio.Event, **microlink_options: object
+        self,
+        provider: BaseProvider,
+        username: str,
+        abort_event: asyncio.Event,
+        **microlink_options: JSONValue,
     ) -> IntelligenceObject:
         """
         Executes provider logic with injected tools.
@@ -29,18 +34,18 @@ class ProviderWorker:
             return self._build_error_intel(provider.name, username, "Scan aborted")
 
         # Circuit breaker check
-        if not getattr(self.deps.health, "is_healthy", lambda _: True)(provider.name):
+        if not await self.deps.health.is_healthy(provider.name):
             return self._build_error_intel(provider.name, username, "Skipped (Circuit Breaker Tripped)")
 
         try:
             intel = await self.provider_runner.run(provider, username, **microlink_options)
-            getattr(self.deps.health, "record_success", lambda _: None)(provider.name)
+            await self.deps.health.record_success(provider.name)
             return intel
         except Exception as exc:
+            await self.deps.health.record_failure(provider.name)
             if os.getenv("DEBUG_PROVIDERS"):
                 raise
             logger.error("Scan failure in %s: %s", provider.name, exc, exc_info=True)
-            getattr(self.deps.health, "record_failure", lambda _: None)(provider.name)
             return self._build_error_intel(
                 provider.name, username, f"{ProviderError.__name__}: {type(exc).__name__}"
             )
@@ -52,7 +57,7 @@ class ProviderWorker:
         semaphore: asyncio.Semaphore,
         abort_event: asyncio.Event,
         timeout: float | None = None,
-        **microlink_options: object,
+        **microlink_options: JSONValue,
     ) -> IntelligenceObject:
         """
         Wraps execution in semaphore and timeout.

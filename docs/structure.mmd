@@ -48,6 +48,53 @@ classDiagram
     
     class DeviceInferenceService {
         +infer_context()
+        +profile_device()
+    }
+
+    class FingerbankClient {
+        +interrogate(payload)
+        +devices
+        +oui
+        +static
+        +users
+    }
+
+    class DevicesClient {
+        +get_device(id)
+        +get_vulnerabilities(id)
+    }
+
+    class OuiClient {
+        +get_device_id(oui)
+    }
+
+    class StaticDataClient {
+        +download_db()
+    }
+
+    DeviceInferenceService --> FingerbankClient
+    FingerbankClient --> DevicesClient
+    FingerbankClient --> OuiClient
+    FingerbankClient --> StaticDataClient
+    
+    class CredentialManager {
+        +get_credential(key)
+        +set_credential(key, value)
+    }
+
+    class ApiKeyModal {
+        +on_save()
+    }
+    
+    OSINTApp --> ApiKeyModal
+    ApiKeyModal --> CredentialManager
+
+    class PassiveFingerprintingEngine {
+        +fingerprint_http()
+        +fingerprint_tls()
+        +fingerprint_tcp()
+        +fingerprint_dns()
+        +fingerprint_ntp()
     }
     
     class DatabaseManager {
@@ -94,9 +141,13 @@ classDiagram
         +export_stix()
     }
     
-    class Provider {
-        <<interface>>
-        +scan()
+    class CI_CD_Pipeline {
+        <<workflow>>
+        +checkout()
+        +setup_uv()
+        +run_parallel_tests()
+        +report_coverage()
+        +security_scan()
     }
 
     class ComplianceEngine {
@@ -108,6 +159,7 @@ classDiagram
     AdvancedReportGenerator --> DatabaseManager
     ScanOrchestrator --> HealthTracker
     ScanOrchestrator --> DeviceInferenceService
+    ScanOrchestrator --> PassiveFingerprintingEngine
     ScanOrchestrator --> DatabaseManager
     ScanOrchestrator --> CaptchaRegistry
     ScanOrchestrator --> BrowserPool

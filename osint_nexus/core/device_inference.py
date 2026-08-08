@@ -1,12 +1,134 @@
-import re
-from typing import TypedDict
+from __future__ import annotations
 
+import re
+from typing import Any, Protocol, TypedDict, TypeVar, runtime_checkable
+
+from beartype import beartype
 from pydantic import BaseModel, Field
+
+from osint_nexus.core.db.fingerprint_repository import FingerprintRepository
+from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
+from osint_nexus.core.type_defs import JSONValue, TelemetryDict
+
+T_Data = TypeVar("T_Data")
+
+
+@runtime_checkable
+class FingerprintStrategy(Protocol[T_Data]):
+    name: str
+
+    def extract(self, data: T_Data) -> FingerprintResult: ...
 
 
 class PortMapping(TypedDict):
+    """Mapping structure for port to OS/role inference."""
+
     os: list[str]
     role: str
+
+
+class FingerprintResult(TypedDict):
+    """Result structure from a fingerprinting strategy."""
+
+    name: str
+    data: dict[str, JSONValue]
+    confidence: float
+
+
+class HttpFingerprintStrategy:
+    """Strategy for parsing HTTP headers for device info."""
+
+    name: str = "http_headers"
+
+    def extract(self, data: dict[str, str]) -> FingerprintResult:
+        # More precise: ensure all header values are strings
+        headers = {k: str(v) for k, v in data.items()}
+
+        # Deep extraction of all Sec-CH-UA headers
+        sec_ch_ua_headers = {k: v for k, v in headers.items() if k.lower().startswith("sec-ch-ua")}
+
+        fingerprint: dict[str, Any] = {
+            "platform": headers.get("sec-ch-ua-platform"),
+            "mobile": headers.get("sec-ch-ua-mobile") == "?1",
+            "architecture": headers.get("sec-ch-ua-arch"),
+            "language": headers.get("accept-language"),
+            "full_headers": sec_ch_ua_headers,
+        }
+
+        return {
+            "name": self.name,
+            "data": fingerprint,
+            "confidence": 0.85,
+        }
+
+
+class TlsFingerprintStrategy:
+    """Strategy for TLS (JA3) fingerprinting."""
+
+    name: str = "tls_ja3"
+
+    def __init__(self, repo: FingerprintRepository | None = None) -> None:
+        self.repo = repo or FingerprintRepository()
+
+    def extract(self, data: str) -> FingerprintResult:
+        # Expecting data to be the ja3 hash string
+        ja3_hash = data
+
+        device_info = self.repo.get_signature("ja3", ja3_hash)
+
+        return {
+            "name": self.name,
+            "data": {"ja3_hash": ja3_hash, "inferred_device": device_info},
+            "confidence": 0.90 if device_info is not None else 0.10,
+        }
+
+
+class TcpData(TypedDict):
+    ttl: int
+    window_size: int
+    tcp_options: list[str]
+
+
+class TcpFingerprintStrategy:
+    """Strategy for TCP/IP stack fingerprinting (TTL/Window/Options)."""
+
+    name: str = "tcp_stack"
+
+    def extract(self, data: TcpData) -> FingerprintResult:
+        # Expecting data: {"ttl": int, "window_size": int, "tcp_options": list[str]}
+        ttl = data.get("ttl", 0)
+        options = data.get("tcp_options", [])
+
+        fingerprint: str | None = None
+        confidence: float = 0.1
+
+        # More comprehensive detection
+        if ttl == 128:
+            if "wscale" in options:
+                fingerprint = "Windows 10/11"
+                confidence = 0.85
+            else:
+                fingerprint = "Windows (older)"
+                confidence = 0.7
+        elif ttl == 64:
+            if "timestamps" in options and "sack" in options:
+                fingerprint = "Linux (modern)"
+                confidence = 0.75
+            elif "timestamps" in options:
+                fingerprint = "macOS/iOS"
+                confidence = 0.7
+            else:
+                fingerprint = "Linux (older)"
+                confidence = 0.5
+        elif ttl == 255:
+            fingerprint = "Network device (Cisco/Juniper)"
+            confidence = 0.9
+
+        return {
+            "name": "tcp_stack",
+            "data": {"inferred_os": fingerprint},
+            "confidence": confidence,
+        }
 
 
 class InferenceResult(BaseModel):
@@ -20,8 +142,8 @@ class InferenceResult(BaseModel):
 
 
 class DeviceProfile(TypedDict):
-    device_model: str
-    hardware_tier: str
+    device_model: str | None
+    hardware_tier: str | None
     anomaly_detected: bool
     throttle_status: str | None
     raw_telemetry: dict[str, str | float | int | bool]
@@ -58,12 +180,12 @@ class DeviceInferenceNetworkEngine:
     def _get_os_from_mappings(self, mappings: list[PortMapping]) -> list[str]:
         """Extract OS from mappings."""
         inferred = {os_name for m in mappings for os_name in m["os"]}
-        return list(inferred) or ["Unknown OS"]
+        return list(inferred)
 
     def _get_roles_from_mappings(self, mappings: list[PortMapping]) -> list[str]:
         """Extract roles from mappings."""
         roles = [m["role"] for m in mappings]
-        return roles or ["No clear exposed roles"]
+        return roles
 
     def _calculate_confidence(self, mappings: list[PortMapping], open_ports: list[int]) -> int:
         """Calculate confidence score."""
@@ -77,7 +199,7 @@ class DeviceInferenceNetworkEngine:
 
         return InferenceResult(
             target=target_host,
-            manufacturer="Unknown Host",
+            manufacturer=None,
             possible_os=self._get_os_from_mappings(mappings),
             detected_roles=self._get_roles_from_mappings(mappings),
             confidence_score=self._calculate_confidence(mappings, open_ports),
@@ -112,43 +234,55 @@ class DeviceInferenceNetworkEngine:
 class DeviceInferenceEngine:
     """Parses raw hardware telemetry and maps them against known device profiles."""
 
-    def __init__(self) -> None:
-        self.gpu_database: dict[str, dict[str, str]] = {
-            "Adreno (TM) 740": {
-                "model": "Snapdragon 8 Gen 2 (Galaxy S23 / Pixel 8)",
-                "tier": "High-End",
-            },
-            "Adreno (TM) 650": {
-                "model": "Snapdragon 865 (Galaxy S20)",
-                "tier": "Mid-High",
-            },
-            "Mali-G710": {
-                "model": "MediaTek Dimensity / Tensor G2",
-                "tier": "Flagship",
-            },
-        }
+    def __init__(self, registry: FingerprintStrategyRegistry | None = None) -> None:
+        self.registry = registry or FingerprintStrategyRegistry()
 
-    def analyze(self, telemetry_data: dict[str, str | float | int | bool]) -> DeviceProfile:
-        result: DeviceProfile = {
-            "device_model": "Unknown",
-            "hardware_tier": "Unknown",
-            "anomaly_detected": False,
-            "throttle_status": None,
-            "raw_telemetry": telemetry_data,
-        }
+    @beartype
+    def infer(self, raw_data: JSONValue) -> dict[str, JSONValue]:
+        """Aggregate results from all registered strategies."""
+        results: dict[str, JSONValue] = {}
+        for strategy in self.registry.get_all():
+            # For now, cast to Any to satisfy mypy until registry is generic
+            from typing import cast
 
-        renderer = str(telemetry_data.get("webgl_renderer", ""))
+            result = cast(Any, strategy).extract(raw_data)
+            results[strategy.name] = {
+                "data": result["data"],
+                "confidence": result.get("confidence", 0.0),
+            }
+        return results
 
-        for signature, details in self.gpu_database.items():
-            if signature in renderer:
-                result["device_model"] = details["model"]
-                result["hardware_tier"] = details["tier"]
-                break
+    def analyze(self, data: TelemetryDict) -> DeviceProfile:
+        """
+        Analyzes telemetry and returns a structured DeviceProfile.
+        """
+        aggregated_results = self.infer(data)
 
-        cpu_time_val = telemetry_data.get("cpu_benchmark_ms", 0.0)
-        cpu_time = float(cpu_time_val) if isinstance(cpu_time_val, (int, float)) else 0.0
-        if cpu_time > 50.0:
-            result["anomaly_detected"] = True
-            result["throttle_status"] = "Active thermal or power saving state detected"
+        # Heuristics-based profile construction
+        tcp_result = aggregated_results.get("tcp_stack", {"data": {"inferred_os": None}, "confidence": 0})
 
-        return result
+        # Determine model/OS based on high-confidence inference
+        model = tcp_result["data"].get("inferred_os")
+
+        # Simple tier heuristic
+        hardware_tier = None
+        if model:
+            hardware_tier = "Standard"
+            if model.lower().startswith("network"):
+                hardware_tier = "Enterprise"
+            elif model.lower().startswith("windows"):
+                hardware_tier = "High-Performance"
+
+        return DeviceProfile(
+            device_model=model,
+            hardware_tier=hardware_tier,
+            anomaly_detected=self._detect_anomaly(data),
+            throttle_status=None,
+            raw_telemetry=data,
+        )
+
+    def _detect_anomaly(self, data: TelemetryDict) -> bool:
+        """Heuristic check for telemetry anomalies."""
+        # Check for extreme TTL values indicative of spoofing
+        ttl = data.get("ttl")
+        return isinstance(ttl, int) and (ttl < 1 or ttl > 255)

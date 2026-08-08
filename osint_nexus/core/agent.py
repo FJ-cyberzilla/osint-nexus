@@ -21,6 +21,7 @@ from osint_nexus.core.device_inference import DeviceInferenceNetworkEngine
 from osint_nexus.core.evasion import EvasionWeights
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.core.extractor import PivotExtractor
+from osint_nexus.core.fingerprint import FingerprintAgent
 from osint_nexus.core.health import HealthTracker
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
@@ -57,6 +58,7 @@ class OSINTAgent:
         self.username = username
         self.config = Config()
         self.evasion_weights = EvasionWeights()
+        self.fingerprint_agent = FingerprintAgent(self.config)
 
         # Initialize subsystems
         self.health = HealthTracker()
@@ -87,6 +89,7 @@ class OSINTAgent:
                     network=self.network,
                     mimicry=self.mimicry,
                     extractor=self.extractor,
+                    fingerprint=self.fingerprint_agent,
                 ),
                 detection_engine=DetectionEngine(weights=self.evasion_weights),
                 device_inference=DeviceInferenceNetworkEngine(),

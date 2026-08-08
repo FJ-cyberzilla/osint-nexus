@@ -154,12 +154,16 @@ class EdgeGenerator:
             self._add_email_edges_for_account(edges, acc, data["emails"])
             self._add_phone_edges_for_account(edges, acc, data["phones"])
 
-    def _add_email_edges_for_account(self, edges: list[GraphEdge], acc: AccountData, emails: list[ConnectionData]) -> None:
+    def _add_email_edges_for_account(
+        self, edges: list[GraphEdge], acc: AccountData, emails: list[ConnectionData]
+    ) -> None:
         for conn in emails:
             if "email" in conn:
                 edges.append({"source": acc["username"], "target": conn["email"], "type": "uses_email"})
 
-    def _add_phone_edges_for_account(self, edges: list[GraphEdge], acc: AccountData, phones: list[ConnectionData]) -> None:
+    def _add_phone_edges_for_account(
+        self, edges: list[GraphEdge], acc: AccountData, phones: list[ConnectionData]
+    ) -> None:
         for conn in phones:
             if "phone" in conn:
                 edges.append({"source": acc["username"], "target": conn["phone"], "type": "uses_phone"})

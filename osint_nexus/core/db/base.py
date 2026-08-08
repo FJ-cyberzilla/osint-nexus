@@ -3,9 +3,11 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import aiosqlite
+
+from osint_nexus.core.type_defs import JSONValue
 
 if TYPE_CHECKING:
     pass
@@ -18,6 +20,18 @@ class DatabaseProtocol(Protocol):
 
     async def close(self) -> None:
         """Close the database connection."""
+
+
+@runtime_checkable
+class DatabaseEngine(Protocol):
+    """Protocol for database backend engines."""
+
+    async def connect(self) -> None: ...
+    async def execute(self, query: str, params: tuple[JSONValue, ...] = ()) -> None: ...
+    async def executemany(self, query: str, params: list[tuple[JSONValue, ...]]) -> None: ...
+    async def fetchall(self, query: str, params: tuple[JSONValue, ...] = ()) -> list[dict[str, Any]]: ...
+    async def fetchone(self, query: str, params: tuple[JSONValue, ...] = ()) -> dict[str, Any] | None: ...
+    async def close(self) -> None: ...
 
 
 class DatabaseConnection(DatabaseProtocol):

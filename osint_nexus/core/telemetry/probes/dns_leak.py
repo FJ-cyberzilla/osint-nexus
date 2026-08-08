@@ -20,6 +20,6 @@ class DNSLeakProbe(TelemetryProbe):
             success, content = await self.network_manager.fetch(url, use_browser=False)
             results[url] = {
                 "success": success,
-                "leaked": success,  # Simplified logic for now
+                "is_reachable": success,
             }
         return results
