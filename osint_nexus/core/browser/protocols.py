@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Protocol, runtime_checkable, ParamSpec, TypeVar
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 @runtime_checkable
 class PageProtocol(Protocol):
     async def close(self) -> None: ...
     async def goto(self, url: str) -> None: ...
     async def content(self) -> str: ...
+    async def expose_function(self, name: str, callback: Callable[_P, _R]) -> None: ...
 
 
 @runtime_checkable

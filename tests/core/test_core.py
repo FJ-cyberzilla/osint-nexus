@@ -25,5 +25,5 @@ async def test_evasion_manager() -> None:
     # The EvasionAgent no longer has apply_rate_limit directly.
     # This was likely testing the evasion's ability to delay.
     # We can test mimicry directly or via evasion if exposed.
-    # For now, let's test that evasion is configured.
+    # Ensure evasion is properly configured.
     assert manager.config is not None

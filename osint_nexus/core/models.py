@@ -77,9 +77,22 @@ class IdentityProfile:
 
 
 @dataclass
+class Node:
+    id: str
+    node_type: str
+
+
+@dataclass
+class Edge:
+    source: str
+    target: str
+    relationship_type: str
+
+
+@dataclass
 class RelationshipGraph:
-    nodes: list[JSONObject]
-    edges: list[JSONObject]
+    nodes: list[Node]
+    edges: list[Edge]
 
 
 @dataclass

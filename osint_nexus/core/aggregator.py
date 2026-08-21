@@ -1,8 +1,15 @@
-from typing import Any
+from typing import TypedDict, cast
 
 from beartype import beartype
 
 from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
+from osint_nexus.core.type_defs import MetadataDict
+
+
+class FingerprintResult(TypedDict):
+    name: str
+    data: MetadataDict
+    confidence: float
 
 
 class FullFingerprintEngine:
@@ -23,16 +30,23 @@ class FullFingerprintEngine:
         }
 
     @beartype
-    def aggregate(self, telemetry_data: dict[str, Any]) -> dict[str, Any]:
+    def aggregate(self, telemetry_data: MetadataDict) -> MetadataDict:
         """Aggregate results and compute weighted score."""
-        aggregated_data = {}
+        aggregated_data: MetadataDict = {}
         total_weighted_confidence = 0.0
         total_weight = 0.0
 
         for strategy in self.registry.get_all():
             # Extract data relevant to the strategy
-            strategy_data = telemetry_data.get(strategy.name, {})
-            result = strategy.extract(strategy_data)
+            # T_Data bound is dict[str, JSONValue]
+            raw_data = telemetry_data.get(strategy.name, {})
+            if not isinstance(raw_data, dict):
+                strategy_data: MetadataDict = {}
+            else:
+                strategy_data = cast(MetadataDict, raw_data)
+
+            # Cast result to match expected FingerprintResult
+            result = cast(FingerprintResult, strategy.extract(strategy_data))
 
             name = result["name"]
             data = result["data"]

@@ -10,6 +10,8 @@ from pydantic import (
     field_validator,
 )
 
+from osint_nexus.core.type_defs import JSONValue
+
 # ---------------------------------------------------------
 # Nested Sub-Models (Strong Typing for complex structures)
 # ---------------------------------------------------------
@@ -18,7 +20,9 @@ from pydantic import (
 class VisualIntelligence(BaseModel):
     """Strongly typed schema for visual OSINT data."""
 
-    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+    class Config:
+        frozen = True
+        str_strip_whitespace = True
 
     profile_picture: HttpUrl | None = Field(default=None, description="URL to the target's avatar")
     banner_image: HttpUrl | None = Field(default=None, description="URL to the background/banner")
@@ -63,11 +67,12 @@ class IntelligenceObject(BaseModel):
         default=0.0, ge=0.0, le=1.0, description="Probability score of exact match (0.0 to 1.0)"
     )
 
-    # --- Extracted Intelligence ---
+    # Extracted Intelligence
     # We keep metadata flexible for platform-specific quirks (e.g., repo count vs follower count)
-    metadata: Mapping[str, object] = Field(default_factory=dict)
+    metadata: Mapping[str, JSONValue] = Field(default_factory=dict)
 
     # We use a strict nested model for visuals rather than a loose dict
+
     visuals: VisualIntelligence = Field(default_factory=VisualIntelligence)
 
     # --- Raw / Debug Data ---

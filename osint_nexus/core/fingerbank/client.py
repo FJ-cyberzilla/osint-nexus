@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from osint_nexus.utils.network_types import ResponseProtocol, SessionProtocol
 
 from osint_nexus.core.fingerbank.clients.devices import DevicesClient
 from osint_nexus.core.fingerbank.clients.oui import OuiClient
@@ -24,12 +27,12 @@ logger = logging.getLogger("osint_nexus.core.fingerbank.client")
 class FingerbankHttpFetcher(HttpFetcher):
     async def _execute_http_request(
         self,
-        session: Any,
+        session: SessionProtocol,
         url: str,
         headers: dict[str, str],
         method: str = "GET",
         payload: dict[str, Any] | None = None,
-    ) -> Any:
+    ) -> ResponseProtocol:
         if method == "POST":
             return await session.post(
                 url, json=payload, headers=headers, timeout=self.monitor.dynamic_timeout
@@ -53,7 +56,7 @@ class FingerbankClient:
         self.static = StaticDataClient(self)
         self.users = UsersClient(self)
 
-    def _handle_response(self, response: Any) -> Any:
+    def _handle_response(self, response: ResponseProtocol) -> ResponseProtocol:
         if response.status_code == 401:
             raise FingerbankUnauthorizedError("Invalid API key.")
         if response.status_code == 403:
@@ -70,7 +73,7 @@ class FingerbankClient:
 
         return response
 
-    async def _get(self, endpoint: str) -> Any:
+    async def _get(self, endpoint: str) -> ResponseProtocol | None:
         if not self.is_enabled:
             return None
         url = f"{self.BASE_URL}{endpoint}?key={self.api_key}"
@@ -92,4 +95,4 @@ class FingerbankClient:
         )
 
         response = self._handle_response(response)
-        return InterrogateResponse.from_dict(response.json())
+        return InterrogateResponse.model_validate(response.json())

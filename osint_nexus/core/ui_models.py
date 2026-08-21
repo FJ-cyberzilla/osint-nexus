@@ -1,8 +1,8 @@
 """Structured data models for UI components to ensure type safety."""
 
-from typing import Any
-
 from pydantic import BaseModel, Field
+
+from osint_nexus.core.type_defs import JSONValue
 
 
 class FingerprintData(BaseModel):
@@ -42,5 +42,5 @@ class DeviceProfile(BaseModel):
     version: str
     confidence_score: int
     vulnerability_message: str
-    cve_devices: dict[str, Any]
-    cve_os: dict[str, Any]
+    cve_devices: dict[str, JSONValue]
+    cve_os: dict[str, JSONValue]

@@ -28,7 +28,6 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="OSINT_",
         env_nested_delimiter="__",
-        env_parse_json=False,
     )
 
     @classmethod
@@ -83,7 +82,7 @@ class Config(BaseSettings):
 
     @field_validator("user_agents", "mimicry_profiles", "device_patterns", "dork_templates", mode="before")
     @classmethod
-    def validate_json_fields(cls, v: Any, info: ValidationInfo) -> Any:
+    def validate_json_fields(cls, v: object, info: ValidationInfo) -> object:
         if isinstance(v, str):
             try:
                 return json.loads(v)
@@ -97,7 +96,7 @@ class Config(BaseSettings):
                 return {}
         return v
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: object = None) -> object:
         return getattr(self, key, default)
 
     @classmethod

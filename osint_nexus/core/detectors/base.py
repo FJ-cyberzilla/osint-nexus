@@ -1,9 +1,11 @@
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Protocol, TypeVar, runtime_checkable
 
 from beartype import beartype
 
-T_Data = TypeVar("T_Data", contravariant=True)
-T_Result = TypeVar("T_Result", covariant=True, bound=dict[str, Any])
+from osint_nexus.core.type_defs import JSONObject, JSONValue
+
+T_Data = TypeVar("T_Data", contravariant=True, bound=JSONValue)
+T_Result = TypeVar("T_Result", covariant=True, bound=JSONObject)
 
 
 @runtime_checkable
@@ -24,6 +26,6 @@ class BaseDetector(Protocol):
     name: str
 
     @beartype
-    async def analyze(self, data: Any) -> float:
+    async def analyze(self, data: JSONObject) -> float:
         """Analyze data and return evasion probability."""
         ...

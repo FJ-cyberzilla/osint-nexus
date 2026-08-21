@@ -100,7 +100,12 @@ class SchemaManager:
             # The result keys are often depending on row factory but `fetchone` returns `dict` now.
             # Select MAX(version) can return dict with key like 'MAX(version)'
             val = list(row.values())[0]
-            return int(val) if val is not None else 0
+            if isinstance(val, int):
+                return val
+            if isinstance(val, float):
+                return int(val)
+            if isinstance(val, str) and val.isdigit():
+                return int(val)
         return 0
 
     async def _run_migrations(self, current_version: int) -> None:

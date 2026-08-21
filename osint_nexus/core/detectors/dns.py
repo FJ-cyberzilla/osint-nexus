@@ -1,25 +1,26 @@
-from typing import Any
+from typing import cast
 
 from beartype import beartype
 
+from osint_nexus.core.detectors.base import FingerprintStrategy
+from osint_nexus.core.type_defs import JSONObject, JSONValue
 
-class DnsFingerprintStrategy:
+
+class DnsFingerprintStrategy(FingerprintStrategy[JSONValue, JSONObject]):
     """Strategy for DNS fingerprinting."""
 
     name: str = "dns_patterns"
 
     @beartype
-    def extract(self, data: Any) -> dict[str, Any]:
+    def extract(self, data: JSONValue) -> JSONObject:
         # Expecting data: {"resolver_ip": str, "query_types": list[str]}
-        if not isinstance(data, dict):
-            return {"name": self.name, "data": {}, "confidence": 0.0}
-
-        resolver = data.get("resolver_ip")
-        query_types = data.get("query_types", [])
+        data_obj = cast(JSONObject, data)
+        resolver = data_obj.get("resolver_ip")
+        query_types: list[str] = cast(list[str], data_obj.get("query_types", []))
 
         # Heuristic analysis: Resolver + Query pattern
-        fingerprint = {
-            "resolver": resolver,
+        fingerprint: JSONObject = {
+            "resolver": cast(str, resolver) if resolver else None,
             "query_type_count": len(set(query_types)),
             "supports_dnssec": "DNSSEC" in query_types,
         }

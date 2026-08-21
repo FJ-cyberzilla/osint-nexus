@@ -48,17 +48,18 @@ class OSINTAgent:
     Facade providing a unified interface for the OSINT Nexus scanner.
     """
 
-    def __init__(self, username: str) -> None:
+    def __init__(self, username: str, ja3_hash: str | None = None) -> None:
         """
         Initialize the OSINT Agent for a specific target username.
 
         Args:
             username: The username to scan.
+            ja3_hash: Optional JA3 hash extracted from infrastructure headers.
         """
         self.username = username
         self.config = Config()
         self.evasion_weights = EvasionWeights()
-        self.fingerprint_agent = FingerprintAgent(self.config)
+        self.fingerprint_agent = FingerprintAgent(self.config, ja3_hash=ja3_hash)
 
         # Initialize subsystems
         self.health = HealthTracker()

@@ -1,36 +1,22 @@
-from typing import NotRequired, TypedDict
+from typing import cast
 
 from beartype import beartype
 
 from osint_nexus.core.detectors.base import FingerprintStrategy
+from osint_nexus.core.type_defs import JSONObject, JSONValue
 
 
-class TcpData(TypedDict):
-    ttl: NotRequired[int]
-    window_size: NotRequired[int]
-    tcp_options: NotRequired[list[str]]
-
-
-class TcpResultData(TypedDict):
-    inferred_os: str | None
-
-
-class TcpResult(TypedDict):
-    name: str
-    data: TcpResultData
-    confidence: float
-
-
-class TcpFingerprintStrategy(FingerprintStrategy[TcpData, TcpResult]):
+class TcpFingerprintStrategy(FingerprintStrategy[JSONValue, JSONObject]):
     """Strategy for TCP/IP stack fingerprinting (TTL/Window/Options)."""
 
     name: str = "tcp_stack"
 
     @beartype
-    def extract(self, data: TcpData) -> TcpResult:
+    def extract(self, data: JSONValue) -> JSONObject:
         # Heuristic implementation, CC should be low (1 per block)
-        ttl = data.get("ttl", 0)
-        options = data.get("tcp_options", [])
+        data_obj = cast(JSONObject, data)
+        ttl = cast(int, data_obj.get("ttl", 0))
+        options = cast(list[str], data_obj.get("tcp_options", []))
 
         inferred_os, confidence = self._detect_os(ttl, options)
 

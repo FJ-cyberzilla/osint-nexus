@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import cast
 
 from osint_nexus.core.db.base import DatabaseEngine
 from osint_nexus.core.type_defs import JSONObject, JSONValue
@@ -35,7 +35,7 @@ class ResultRepository:
         limit: int = 100,
     ) -> list[JSONObject]:
         query = "SELECT id, username, platform, found, timestamp FROM results WHERE 1=1"
-        params: list[Any] = []
+        params: list[JSONValue] = []
         if username:
             query += " AND username = ?"
             params.append(username)

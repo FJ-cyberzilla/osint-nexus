@@ -3,11 +3,15 @@
 import asyncio
 import logging
 import re
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from osint_nexus.core.detectors.base import BaseDetector
 from osint_nexus.core.evasion import EvasionWeights
 from osint_nexus.core.report import TelemetryPayload
+from osint_nexus.core.type_defs import MetadataDict
+
+if TYPE_CHECKING:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +88,7 @@ class DetectionEngine:
             The total score contribution from novel detectors.
         """
         score = 0.0
-        tasks = [d.analyze(payload.raw_metadata) for d in self.detectors]
+        tasks = [d.analyze(cast(MetadataDict, payload.raw_metadata)) for d in self.detectors]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for i, result in enumerate(results):
@@ -130,9 +134,10 @@ class DetectionEngine:
         Returns:
             The total score contribution from browser signatures.
         """
-        browser = payload.browser
-        if not browser:
+        if not payload.browser:
             return 0.0
+
+        browser = payload.browser
 
         score = 0.0
         checks = [

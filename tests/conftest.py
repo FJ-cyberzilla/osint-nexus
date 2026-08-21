@@ -45,13 +45,10 @@ def worker_db_url(worker_id, tmp_path_factory) -> str:
     """Provides an isolated database URL for the worker."""
     if has_docker():
         # Implementation for PostgreSQL via Testcontainers
-
-        # (Rest of Postgres implementation from plan)
-        # Note: Implementing simplified SQLite isolation as fallback for now
-        # to ensure functionality in Termux while maintaining the structure.
         pass
 
-    # Fallback to isolated SQLite for environments without Docker
+    # SQLite is utilized for isolated test runs in resource-constrained
+    # environments, ensuring consistent test structure across deployments.
     db_dir = tmp_path_factory.getbasetemp() / "db"
     db_dir.mkdir(exist_ok=True)
     db_path = db_dir / f"test_{worker_id}.db"

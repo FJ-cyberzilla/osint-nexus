@@ -32,7 +32,7 @@ def test_device_inference_engine_integration():
         if strategy.name == "http_headers":
             results[strategy.name] = strategy.extract(mock_data.get("headers"))
         elif strategy.name == "tls_ja3":
-            results[strategy.name] = strategy.extract(mock_data.get("ja3_hash"))
+            results[strategy.name] = strategy.extract({"ja3_hash": mock_data.get("ja3_hash")})  # type: ignore
         elif strategy.name == "tcp_stack":
             results[strategy.name] = strategy.extract(mock_data.get("tcp"))
 

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from beartype import beartype
 
@@ -247,7 +247,7 @@ class FingerprintDecider:
                     description=f"Language ({', '.join(languages)}) doesn't match IP country ({ip_country})",
                     risk_level=RiskLevel.MEDIUM,
                     confidence=0.6,
-                    evidence={"languages": languages, "ip_country": ip_country},
+                    evidence=cast(dict[str, JSONValue], {"languages": languages, "ip_country": ip_country}),
                 )
         return None
 
@@ -345,36 +345,26 @@ class ClientFingerprintValidator:
             return {"name": self.name, "data": {"detection": "failed"}, "confidence": 0.0}
 
         # Extract metrics
+        from osint_nexus.core.type_defs import ensure_type
+
         metrics: ClientMetrics = {
-            "font_fingerprint": data.get("font_fingerprint")
-            if isinstance(data.get("font_fingerprint"), str)
-            else None,
-            "canvas_hash": data.get("canvas_hash") if isinstance(data.get("canvas_hash"), str) else None,
-            "webgl_vendor": data.get("webgl_vendor") if isinstance(data.get("webgl_vendor"), str) else None,
-            "timezone_offset": data.get("timezone_offset")
-            if isinstance(data.get("timezone_offset"), int)
-            else None,
-            "screen_width": data.get("screen_width") if isinstance(data.get("screen_width"), int) else None,
-            "screen_height": data.get("screen_height")
-            if isinstance(data.get("screen_height"), int)
-            else None,
-            "color_depth": data.get("color_depth") if isinstance(data.get("color_depth"), int) else None,
-            "audio_hash": data.get("audio_hash") if isinstance(data.get("audio_hash"), str) else None,
-            "device_memory": data.get("device_memory")
-            if isinstance(data.get("device_memory"), (int, float))
-            else None,
-            "user_agent": data.get("user_agent") if isinstance(data.get("user_agent"), str) else None,
-            "os_from_ua": data.get("os_from_ua") if isinstance(data.get("os_from_ua"), str) else None,
-            "os_from_metrics": data.get("os_from_metrics")
-            if isinstance(data.get("os_from_metrics"), str)
-            else None,
-            "languages": data.get("languages") if isinstance(data.get("languages"), list) else [],
-            "ip_country": data.get("ip_country") if isinstance(data.get("ip_country"), str) else None,
-            "ip_timezone": data.get("ip_timezone") if isinstance(data.get("ip_timezone"), str) else None,
-            "max_touch_points": data.get("max_touch_points")
-            if isinstance(data.get("max_touch_points"), int)
-            else None,
-            "resolution": data.get("resolution") if isinstance(data.get("resolution"), str) else None,
+            "font_fingerprint": ensure_type(data.get("font_fingerprint"), str),
+            "canvas_hash": ensure_type(data.get("canvas_hash"), str),
+            "webgl_vendor": ensure_type(data.get("webgl_vendor"), str),
+            "timezone_offset": ensure_type(data.get("timezone_offset"), int),
+            "screen_width": ensure_type(data.get("screen_width"), int),
+            "screen_height": ensure_type(data.get("screen_height"), int),
+            "color_depth": ensure_type(data.get("color_depth"), int),
+            "audio_hash": ensure_type(data.get("audio_hash"), str),
+            "device_memory": ensure_type(data.get("device_memory"), (int, float)),
+            "user_agent": ensure_type(data.get("user_agent"), str),
+            "os_from_ua": ensure_type(data.get("os_from_ua"), str),
+            "os_from_metrics": ensure_type(data.get("os_from_metrics"), str),
+            "languages": ensure_type(data.get("languages"), list),
+            "ip_country": ensure_type(data.get("ip_country"), str),
+            "ip_timezone": ensure_type(data.get("ip_timezone"), str),
+            "max_touch_points": ensure_type(data.get("max_touch_points"), int),
+            "resolution": ensure_type(data.get("resolution"), str),
         }
 
         # Make decision
@@ -391,15 +381,18 @@ class ClientFingerprintValidator:
             "suspicious": decision.is_suspicious,
             "risk_score": decision.risk_score,
             "risk_level": decision.risk_level.value,
-            "flags": [
-                {
-                    "id": f.flag,
-                    "description": f.description,
-                    "risk_level": f.risk_level.value,
-                    "confidence": f.confidence,
-                }
-                for f in decision.flags
-            ],
+            "flags": cast(
+                list[JSONValue],
+                [
+                    {
+                        "id": f.flag,
+                        "description": f.description,
+                        "risk_level": f.risk_level.value,
+                        "confidence": f.confidence,
+                    }
+                    for f in decision.flags
+                ],
+            ),
             "recommended_action": decision.recommended_action.value,
             "summary": decision.summary,
         }

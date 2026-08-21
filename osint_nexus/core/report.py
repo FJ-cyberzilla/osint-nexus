@@ -11,9 +11,20 @@ if TYPE_CHECKING:
     from osint_nexus.core.database import DatabaseManager
 
 
+from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable
+class BrowserProtocol(Protocol):
+    user_agent: str
+    headless: bool
+    webdriver: bool
+    automation_plugins: bool
+
+
 @dataclass
 class TelemetryPayload:
-    browser: object | None = None
+    browser: BrowserProtocol | None = None
     raw_metadata: dict[str, object] = Field(default_factory=dict)
     pipeline_status: str = ""
 

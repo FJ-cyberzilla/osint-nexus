@@ -79,3 +79,22 @@ class TestFingerprintAgent:
         assert "http_headers" in result["fingerprints"]
         assert "tcp_stack" in result["fingerprints"]
         assert result["combined_confidence"] > 0.0
+
+    def test_collect_all_fingerprints_with_ja3(self):
+        """Test aggregation of all strategies with injected JA3."""
+        from osint_nexus.core.type_defs import JSONValue
+
+        ja3_hash = "72a589da586844d7f0818ce684948eea"
+        agent = FingerprintAgent(ja3_hash=ja3_hash)
+        test_data: dict[str, JSONValue] = {"user-agent": "Mozilla/5.0"}
+
+        result = agent.collect_all_fingerprints(test_data)
+
+        assert "fingerprints" in result
+        assert "tls_ja3" in result["fingerprints"]
+
+        # Need to cast for mypy as fingerprint results are `JSONValue`
+        tls_data = result["fingerprints"]["tls_ja3"]
+        assert isinstance(tls_data, dict)
+        assert tls_data["ja3_hash"] == ja3_hash
+        assert "inferred_device" in tls_data

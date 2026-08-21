@@ -17,11 +17,11 @@ def test_relation_mapper() -> None:
     graph = mapper.generate_network_graph(data)
 
     # 1 primary + 2 accounts + 1 email + 1 phone = 5 nodes
-    assert len(graph["nodes"]) == 5
+    assert len(graph.nodes) == 5
     # Edges:
     # 2 owns edges (testuser -> acc1, testuser -> acc2)
     # 2 * 1 uses_email edges (acc1->email, acc2->email)
     # 2 * 1 uses_phone edges (acc1->phone, acc2->phone)
     # 2 interacts edges (acc1->acc2, acc2->acc1)
     # Total = 2 + 2 + 2 + 2 = 8 edges
-    assert len(graph["edges"]) == 8
+    assert len(graph.edges) == 8

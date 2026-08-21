@@ -1,25 +1,29 @@
-from typing import Any
+from typing import cast
 
 from beartype import beartype
 
+from osint_nexus.core.detectors.base import FingerprintStrategy
+from osint_nexus.core.type_defs import JSONObject, JSONValue
 
-class TimezoneFingerprintStrategy:
+
+class TimezoneFingerprintStrategy(FingerprintStrategy[JSONValue, JSONObject]):
     """Strategy for Timezone/NTP fingerprinting."""
 
     name: str = "timezone_ntp"
 
     @beartype
-    def extract(self, data: dict[str, Any]) -> dict[str, Any]:
+    def extract(self, data: JSONValue) -> JSONObject:
         # Expecting data: {"timezone": str, "offset_seconds": int}
-        tz = data.get("timezone")
-        offset = data.get("offset_seconds", 0)
+        data_obj = cast(JSONObject, data)
+        tz = data_obj.get("timezone")
+        offset = data_obj.get("offset_seconds", 0)
 
         # Ensure types for dictionary content
         tz_str = str(tz) if tz is not None else "unknown"
-        offset_int = int(offset)
+        offset_int = int(cast(int, offset))
 
         # Heuristic analysis
-        fingerprint: dict[str, str | int] = {
+        fingerprint = {
             "timezone": tz_str,
             "offset_seconds": offset_int,
         }

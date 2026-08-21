@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Mapping, Sequence
 from typing import cast, overload
 
 logger = logging.getLogger("osint_nexus.core.compliance")
 
-type Scrubbable = dict[str, "Scrubbable"] | list["Scrubbable"] | str | int | float | bool | None
+type Scrubbable = Mapping[str, "Scrubbable"] | Sequence["Scrubbable"] | str | int | float | bool | None
 
 
 class ComplianceEngine:
@@ -31,14 +32,14 @@ class ComplianceEngine:
         }
 
     @overload
-    def sanitize(self, data: dict[str, Scrubbable]) -> dict[str, Scrubbable]: ...
+    def sanitize(self, data: Mapping[str, Scrubbable]) -> Mapping[str, Scrubbable]: ...
 
     @overload
-    def sanitize(self, data: list[Scrubbable]) -> list[Scrubbable]: ...
+    def sanitize(self, data: Sequence[Scrubbable]) -> Sequence[Scrubbable]: ...
 
     def sanitize(
-        self, data: dict[str, Scrubbable] | list[Scrubbable]
-    ) -> dict[str, Scrubbable] | list[Scrubbable]:
+        self, data: Mapping[str, Scrubbable] | Sequence[Scrubbable]
+    ) -> Mapping[str, Scrubbable] | Sequence[Scrubbable]:
         """
         Scans a data structure and replaces detected PII with '[REDACTED]'.
 
@@ -54,9 +55,9 @@ class ComplianceEngine:
             """
             Recursively scans an item and redacts PII if found.
             """
-            if isinstance(item, dict):
+            if isinstance(item, Mapping):
                 return {k: _scrub(v) for k, v in item.items()}
-            elif isinstance(item, list):
+            elif isinstance(item, Sequence) and not isinstance(item, (str, bytes)):
                 return [_scrub(i) for i in item]
             elif isinstance(item, str):
                 for p_type, pattern in self.redaction_patterns.items():
@@ -66,4 +67,4 @@ class ComplianceEngine:
             return item
 
         # Cast to match the expected return type structure
-        return cast(dict[str, Scrubbable] | list[Scrubbable], _scrub(data))
+        return cast(Mapping[str, Scrubbable] | Sequence[Scrubbable], _scrub(data))

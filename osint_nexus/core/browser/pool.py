@@ -6,17 +6,17 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum, auto
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Self, cast
+from typing import TYPE_CHECKING, Self
 
 from osint_nexus.core.browser.protocols import BrowserContextProtocol, BrowserProtocol, PlaywrightProtocol
 
 if TYPE_CHECKING:
-    from playwright.async_api import (  # type: ignore[import-untyped]
+    from playwright.async_api import (
         BrowserContext,
         Playwright,
         async_playwright,
     )
-    from playwright.async_api import Error as PlaywrightError  # type: ignore[import-untyped]
+    from playwright.async_api import Error as PlaywrightError
 else:
     # Optional dependency stubs if playwright is not present
     class Playwright:
@@ -39,8 +39,8 @@ from osint_nexus.core.telemetry.bridge import WebViewBridge
 
 # Runtime availability check
 try:
-    from playwright.async_api import Error as PlaywrightError  # type: ignore[import-untyped]
-    from playwright.async_api import (  # type: ignore[import-untyped]
+    from playwright.async_api import Error as PlaywrightError
+    from playwright.async_api import (
         async_playwright,
     )
 
@@ -115,8 +115,7 @@ class BrowserPoolManager:
     async def _configure_bridge(self, context: BrowserContextProtocol) -> None:
         """Configures the bridge handler if available."""
         if self._bridge:
-            # Explicitly cast context.pages to allow index access if type inference fails
-            pages = cast(list[Any], context.pages)
+            pages = context.pages
             page = pages[0] if pages else await context.new_page()
             await page.expose_function("webviewBridge", self._bridge.handle_message)
 

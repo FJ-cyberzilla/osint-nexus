@@ -9,6 +9,8 @@ from __future__ import annotations
 import logging
 from typing import NotRequired, TypedDict
 
+from osint_nexus.core.models import Edge, Node, RelationshipGraph
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,22 +35,6 @@ class UserData(TypedDict):
     accounts: list[AccountData]
     emails: list[ConnectionData]
     phones: list[ConnectionData]
-
-
-class GraphNode(TypedDict):
-    id: str
-    type: str
-
-
-class GraphEdge(TypedDict):
-    source: str
-    target: str
-    type: str
-
-
-class NetworkGraph(TypedDict):
-    nodes: list[GraphNode]
-    edges: list[GraphEdge]
 
 
 class CorrelationEngine:
@@ -98,7 +84,7 @@ class CorrelationEngine:
 class NodeGenerator:
     """Generates nodes for the relationship graph."""
 
-    def generate(self, username_data: UserData) -> list[GraphNode]:
+    def generate(self, username_data: UserData) -> list[Node]:
         """
         Generates graph nodes from username data.
 
@@ -106,28 +92,32 @@ class NodeGenerator:
             username_data: Object containing username information and accounts.
 
         Returns:
-            A list of node dictionaries.
+            A list of Node instances.
         """
-        nodes: list[GraphNode] = [{"id": username_data["username"], "type": "primary"}]
+        nodes: list[Node] = [Node(id=username_data["username"], node_type="primary")]
         nodes.extend(self._get_account_nodes(username_data))
         nodes.extend(self._get_email_nodes(username_data))
         nodes.extend(self._get_phone_nodes(username_data))
         return nodes
 
-    def _get_account_nodes(self, username_data: UserData) -> list[GraphNode]:
-        return [{"id": acc["username"], "type": acc["type"]} for acc in username_data["accounts"]]
+    def _get_account_nodes(self, username_data: UserData) -> list[Node]:
+        return [Node(id=acc["username"], node_type=acc["type"]) for acc in username_data["accounts"]]
 
-    def _get_email_nodes(self, username_data: UserData) -> list[GraphNode]:
-        return [{"id": conn["email"], "type": "email"} for conn in username_data["emails"] if "email" in conn]
+    def _get_email_nodes(self, username_data: UserData) -> list[Node]:
+        return [
+            Node(id=conn["email"], node_type="email") for conn in username_data["emails"] if "email" in conn
+        ]
 
-    def _get_phone_nodes(self, username_data: UserData) -> list[GraphNode]:
-        return [{"id": conn["phone"], "type": "phone"} for conn in username_data["phones"] if "phone" in conn]
+    def _get_phone_nodes(self, username_data: UserData) -> list[Node]:
+        return [
+            Node(id=conn["phone"], node_type="phone") for conn in username_data["phones"] if "phone" in conn
+        ]
 
 
 class EdgeGenerator:
     """Generates edges for the relationship graph."""
 
-    def generate(self, username_data: UserData) -> list[GraphEdge]:
+    def generate(self, username_data: UserData) -> list[Edge]:
         """
         Generates graph edges from username data.
 
@@ -135,46 +125,50 @@ class EdgeGenerator:
             username_data: Object containing username information and accounts.
 
         Returns:
-            A list of edge dictionaries.
+            A list of Edge instances.
         """
-        edges: list[GraphEdge] = []
+        edges: list[Edge] = []
         self._add_ownership_edges(edges, username_data)
         self._add_usage_edges(edges, username_data)
         self._add_interaction_edges(edges, username_data)
         return edges
 
-    def _add_ownership_edges(self, edges: list[GraphEdge], data: UserData) -> None:
+    def _add_ownership_edges(self, edges: list[Edge], data: UserData) -> None:
         """Adds ownership edges to the list of edges."""
         for acc in data["accounts"]:
-            edges.append({"source": data["username"], "target": acc["username"], "type": "owns"})
+            edges.append(Edge(source=data["username"], target=acc["username"], relationship_type="owns"))
 
-    def _add_usage_edges(self, edges: list[GraphEdge], data: UserData) -> None:
+    def _add_usage_edges(self, edges: list[Edge], data: UserData) -> None:
         """Adds usage edges for email and phone."""
         for acc in data["accounts"]:
             self._add_email_edges_for_account(edges, acc, data["emails"])
             self._add_phone_edges_for_account(edges, acc, data["phones"])
 
     def _add_email_edges_for_account(
-        self, edges: list[GraphEdge], acc: AccountData, emails: list[ConnectionData]
+        self, edges: list[Edge], acc: AccountData, emails: list[ConnectionData]
     ) -> None:
         for conn in emails:
             if "email" in conn:
-                edges.append({"source": acc["username"], "target": conn["email"], "type": "uses_email"})
+                edges.append(
+                    Edge(source=acc["username"], target=conn["email"], relationship_type="uses_email")
+                )
 
     def _add_phone_edges_for_account(
-        self, edges: list[GraphEdge], acc: AccountData, phones: list[ConnectionData]
+        self, edges: list[Edge], acc: AccountData, phones: list[ConnectionData]
     ) -> None:
         for conn in phones:
             if "phone" in conn:
-                edges.append({"source": acc["username"], "target": conn["phone"], "type": "uses_phone"})
+                edges.append(
+                    Edge(source=acc["username"], target=conn["phone"], relationship_type="uses_phone")
+                )
 
-    def _add_interaction_edges(self, edges: list[GraphEdge], data: UserData) -> None:
+    def _add_interaction_edges(self, edges: list[Edge], data: UserData) -> None:
         """Adds interaction edges between accounts."""
         for acc1 in data["accounts"]:
             for acc2 in data["accounts"]:
                 if acc1 != acc2:
                     edges.append(
-                        {"source": acc1["username"], "target": acc2["username"], "type": "interacts"}
+                        Edge(source=acc1["username"], target=acc2["username"], relationship_type="interacts")
                     )
 
 
@@ -186,7 +180,7 @@ class RelationMapper:
         self.node_gen = NodeGenerator()
         self.edge_gen = EdgeGenerator()
 
-    def generate_network_graph(self, username_data: UserData) -> NetworkGraph:
+    def generate_network_graph(self, username_data: UserData) -> RelationshipGraph:
         """
         Generates a network graph based on username data.
 
@@ -194,9 +188,9 @@ class RelationMapper:
             username_data: Object containing username information and accounts.
 
         Returns:
-            A dictionary containing nodes and edges of the graph.
+            A RelationshipGraph instance.
         """
-        return {
-            "nodes": self.node_gen.generate(username_data),
-            "edges": self.edge_gen.generate(username_data),
-        }
+        return RelationshipGraph(
+            nodes=self.node_gen.generate(username_data),
+            edges=self.edge_gen.generate(username_data),
+        )

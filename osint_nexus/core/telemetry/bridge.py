@@ -2,7 +2,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
@@ -11,27 +11,22 @@ from osint_nexus.core.device_inference import (
 from osint_nexus.core.telemetry.registry import TelemetryRegistry
 from osint_nexus.core.type_defs import TelemetryDict, TelemetryValue
 
-if TYPE_CHECKING:
+try:
     from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
     PYQT_AVAILABLE = True
-else:
-    # Minimal stub to allow inheritance
+except ImportError:
+    # Stub to satisfy mypy and allow inheritance when PyQt6 is not available
     class QObject:
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
+        def __init__(self, *args: object, **kwargs: object) -> None: ...
+        def emit(self, *args: object, **kwargs: object) -> None: ...
 
-        def emit(self, *args: object, **kwargs: object) -> None:
-            pass
-
-    # Stub functions for type hinting when PyQt is unavailable
-    def pyqtSignal(*args: object, **kwargs: object) -> object:
+    def pyqtSignal(*args: object, **kwargs: object) -> Any:
         return None
 
-    def pyqtSlot(*args: object, **kwargs: object) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
+    def pyqtSlot(*args: object, **kwargs: object) -> Callable[..., Any]:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             return func
-
         return decorator
 
     PYQT_AVAILABLE = False
@@ -66,7 +61,7 @@ class TelemetryAction(WebViewAction):
 
 
 class WebViewBridge(QObject):
-    telemetry_received: SignalProtocol | None = pyqtSignal(dict) if PYQT_AVAILABLE else None  # type: ignore[assignment]
+    telemetry_received: SignalProtocol | None = pyqtSignal(dict) if PYQT_AVAILABLE else None
 
     def __init__(
         self,

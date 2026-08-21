@@ -13,6 +13,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import cast
 
 from osint_nexus.core.config import Config
 from osint_nexus.core.constants import DeviceInferenceConstants
@@ -47,7 +48,7 @@ class DeviceInfo:
             "device_model": self.device_model or DeviceInferenceConstants.UNIDENTIFIED,
             "os_family": self.os_family or DeviceInferenceConstants.UNIDENTIFIED,
             "confidence": self.confidence,
-            "matches": self.raw_matches,
+            "matches": cast(list[JSONValue], self.raw_matches),
         }
 
 
@@ -74,8 +75,9 @@ class FingerprintAgent:
         (r"CrOS", "Chromebook", "Chrome OS"),
     ]
 
-    def __init__(self, config: Config | None = None) -> None:
+    def __init__(self, config: Config | None = None, ja3_hash: str | None = None) -> None:
         self.config = config or Config()
+        self.ja3_hash = ja3_hash
         # Load custom patterns from config if provided
         self._device_patterns = self._load_patterns()
 
@@ -96,9 +98,22 @@ class FingerprintAgent:
         results: dict[str, JSONValue] = {}
         confidence_scores: list[float] = []
 
+        # If JA3 hash is present, inject/override for TlsFingerprintStrategy
+        strategy_data = data
+        if self.ja3_hash:
+            # We must be careful about how strategies expect data.
+            # TlsFingerprintStrategy.extract() expects a string if it's the direct JA3 hash.
+            # But here, we might need to update the data dictionary for the TLS strategy specifically.
+            pass
+
         for strategy in self.registry.get_all():
             try:
-                res = strategy.extract(data)
+                # Specific override for TLS strategy
+                if strategy.name == "tls_ja3" and self.ja3_hash:
+                    res = strategy.extract({"ja3_hash": self.ja3_hash})
+                else:
+                    res = strategy.extract(strategy_data)
+
                 results[strategy.name] = res["data"]
                 confidence_scores.append(float(res.get("confidence", 0.0)))
             except Exception as exc:

@@ -154,6 +154,11 @@ classDiagram
         +sanitize(data)
     }
 
+    class OSINTAgent {
+        +execute_mission()
+        +correlate_targets()
+    }
+
     OSINTAgent --> ScanOrchestrator
     OSINTAgent --> AdvancedReportGenerator
     AdvancedReportGenerator --> DatabaseManager

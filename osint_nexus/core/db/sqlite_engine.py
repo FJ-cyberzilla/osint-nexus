@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import aiosqlite
 
 from osint_nexus.core.type_defs import JSONValue
 
 from .base import DatabaseEngine
+
+if TYPE_CHECKING:
+    from osint_nexus.core.type_defs import MetadataDict
 
 
 class SQLiteEngine(DatabaseEngine):
@@ -25,27 +28,31 @@ class SQLiteEngine(DatabaseEngine):
             self._connection.row_factory = aiosqlite.Row
 
     async def execute(self, query: str, params: tuple[JSONValue, ...] = ()) -> None:
-        if not self._connection:
+        if self._connection is None:
             await self.connect()
+        assert self._connection is not None
         await self._connection.execute(query, params)
         await self._connection.commit()
 
     async def executemany(self, query: str, params: list[tuple[JSONValue, ...]]) -> None:
-        if not self._connection:
+        if self._connection is None:
             await self.connect()
+        assert self._connection is not None
         await self._connection.executemany(query, params)
         await self._connection.commit()
 
-    async def fetchall(self, query: str, params: tuple[JSONValue, ...] = ()) -> list[dict[str, Any]]:
-        if not self._connection:
+    async def fetchall(self, query: str, params: tuple[JSONValue, ...] = ()) -> list[MetadataDict]:
+        if self._connection is None:
             await self.connect()
+        assert self._connection is not None
         async with self._connection.execute(query, params) as cursor:
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
 
-    async def fetchone(self, query: str, params: tuple[JSONValue, ...] = ()) -> dict[str, Any] | None:
-        if not self._connection:
+    async def fetchone(self, query: str, params: tuple[JSONValue, ...] = ()) -> MetadataDict | None:
+        if self._connection is None:
             await self.connect()
+        assert self._connection is not None
         async with self._connection.execute(query, params) as cursor:
             row = await cursor.fetchone()
             return dict(row) if row else None

@@ -1,14 +1,37 @@
 import asyncio
 import contextlib
 import random
-from typing import Any
+from typing import Any, cast
 
 from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
-from osint_nexus.utils.network_types import HAS_CURL_CFFI, SessionProtocol
+from osint_nexus.utils.network_types import HAS_CURL_CFFI, ResponseProtocol, SessionProtocol
 
 with contextlib.suppress(ImportError):
     import curl_cffi.requests as curl_requests
+
+
+class SessionWrapper:
+    def __init__(self, session: Any) -> None:
+        self._session = session
+
+    async def aclose(self) -> None:
+        if hasattr(self._session, "aclose"):
+            await self._session.aclose()
+        else:
+            await self._session.close()
+
+    async def close(self) -> None:
+        if hasattr(self._session, "aclose"):
+            await self._session.aclose()
+        else:
+            await self._session.close()
+
+    async def get(self, url: str, **kwargs: Any) -> ResponseProtocol:
+        return cast(ResponseProtocol, await self._session.get(url, **kwargs))
+
+    async def post(self, url: str, **kwargs: Any) -> ResponseProtocol:
+        return cast(ResponseProtocol, await self._session.post(url, **kwargs))
 
 
 class SessionManager:
@@ -23,20 +46,22 @@ class SessionManager:
         self._current_profile: str | None = None
         self._session_lock = asyncio.Lock()
 
-    def _init_curl_session(self, new_proxy: str | None) -> Any:
+    def _init_curl_session(self, new_proxy: str | None) -> SessionProtocol:
         profiles = getattr(self.config, "TLS_PROFILES", ["chrome120", "edge114", "safari15_3"])
-        self._current_profile = random.choice(profiles)  # nosec B311
-        return curl_requests.AsyncSession(
-            impersonate=str(self._current_profile),
-            proxy=new_proxy,
-            timeout=self.dynamic_timeout,
+        self._current_profile = str(random.choice(profiles))  # nosec B311
+        return SessionWrapper(
+            curl_requests.AsyncSession(
+                impersonate=self._current_profile,
+                proxy=new_proxy,
+                timeout=self.dynamic_timeout,
+            )
         )
 
-    def _init_httpx_session(self, new_proxy: str | None) -> Any:
+    def _init_httpx_session(self, new_proxy: str | None) -> SessionProtocol:
         import httpx
 
-        proxies = {"http://": new_proxy, "https://": new_proxy} if new_proxy else None
-        return httpx.AsyncClient(proxies=proxies, timeout=self.dynamic_timeout, follow_redirects=True)
+        client = httpx.AsyncClient(proxy=new_proxy, timeout=self.dynamic_timeout, follow_redirects=True)
+        return SessionWrapper(client)
 
     async def _handle_existing_session(self) -> None:
         if self._session is not None:

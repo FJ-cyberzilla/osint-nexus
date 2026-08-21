@@ -10,7 +10,7 @@ class FingerbankInferenceService:
     def __init__(self, network: NetworkManager, api_key: str) -> None:
         self.client = FingerbankClient(network, api_key)
 
-    async def infer(self, content: str, metadata: MetadataDict) -> InterrogateResponse:
+    async def infer(self, content: str, metadata: MetadataDict) -> InterrogateResponse | None:
         """
         Infer device information using Fingerbank API.
         'content' is ignored here as Fingerbank uses structured parameters in 'metadata'.

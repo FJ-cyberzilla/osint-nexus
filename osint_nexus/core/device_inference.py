@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Protocol, TypedDict, TypeVar, runtime_checkable
+from typing import TypedDict, cast
 
 from beartype import beartype
 from pydantic import BaseModel, Field
 
 from osint_nexus.core.db.fingerprint_repository import FingerprintRepository
+from osint_nexus.core.detectors.base import FingerprintStrategy
 from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
 from osint_nexus.core.type_defs import JSONValue, TelemetryDict
 
-T_Data = TypeVar("T_Data")
-
-
-@runtime_checkable
-class FingerprintStrategy(Protocol[T_Data]):
-    name: str
-
-    def extract(self, data: T_Data) -> FingerprintResult: ...
+# Re-alias for local use or update code
+# Since FingerprintStrategy now takes (T_Data, T_Result), I need to update all implementations.
+# For now, I will use FingerprintStrategy[T_Data, FingerprintResult]
 
 
 class PortMapping(TypedDict):
@@ -27,42 +23,53 @@ class PortMapping(TypedDict):
     role: str
 
 
-class FingerprintResult(TypedDict):
+class FingerprintResult(dict[str, JSONValue]):
     """Result structure from a fingerprinting strategy."""
 
-    name: str
-    data: dict[str, JSONValue]
-    confidence: float
+    def __init__(self, name: str, data: dict[str, JSONValue], confidence: float) -> None:
+        super().__init__(name=name, data=data, confidence=confidence)
+        self["name"] = name
+        self["data"] = data
+        self["confidence"] = confidence
+
+    @property
+    def name(self) -> str:
+        return cast(str, self["name"])
+
+    @property
+    def data(self) -> dict[str, JSONValue]:
+        return cast(dict[str, JSONValue], self["data"])
+
+    @property
+    def confidence(self) -> float:
+        return cast(float, self["confidence"])
 
 
-class HttpFingerprintStrategy:
+class HttpFingerprintStrategy(FingerprintStrategy[dict[str, JSONValue], FingerprintResult]):
     """Strategy for parsing HTTP headers for device info."""
 
     name: str = "http_headers"
 
-    def extract(self, data: dict[str, str]) -> FingerprintResult:
+    @beartype
+    def extract(self, data: dict[str, JSONValue]) -> FingerprintResult:
         # More precise: ensure all header values are strings
         headers = {k: str(v) for k, v in data.items()}
 
         # Deep extraction of all Sec-CH-UA headers
         sec_ch_ua_headers = {k: v for k, v in headers.items() if k.lower().startswith("sec-ch-ua")}
 
-        fingerprint: dict[str, Any] = {
+        fingerprint: dict[str, JSONValue] = {
             "platform": headers.get("sec-ch-ua-platform"),
             "mobile": headers.get("sec-ch-ua-mobile") == "?1",
             "architecture": headers.get("sec-ch-ua-arch"),
             "language": headers.get("accept-language"),
-            "full_headers": sec_ch_ua_headers,
+            "full_headers": cast(JSONValue, sec_ch_ua_headers),
         }
 
-        return {
-            "name": self.name,
-            "data": fingerprint,
-            "confidence": 0.85,
-        }
+        return FingerprintResult(self.name, fingerprint, 0.85)
 
 
-class TlsFingerprintStrategy:
+class TlsFingerprintStrategy(FingerprintStrategy[str, FingerprintResult]):
     """Strategy for TLS (JA3) fingerprinting."""
 
     name: str = "tls_ja3"
@@ -70,30 +77,32 @@ class TlsFingerprintStrategy:
     def __init__(self, repo: FingerprintRepository | None = None) -> None:
         self.repo = repo or FingerprintRepository()
 
+    @beartype
     def extract(self, data: str) -> FingerprintResult:
         # Expecting data to be the ja3 hash string
         ja3_hash = data
 
         device_info = self.repo.get_signature("ja3", ja3_hash)
 
-        return {
-            "name": self.name,
-            "data": {"ja3_hash": ja3_hash, "inferred_device": device_info},
-            "confidence": 0.90 if device_info is not None else 0.10,
-        }
+        return FingerprintResult(
+            self.name,
+            {"ja3_hash": ja3_hash, "inferred_device": cast(JSONValue, device_info)},
+            0.90 if device_info is not None else 0.10,
+        )
 
 
 class TcpData(TypedDict):
     ttl: int
     window_size: int
-    tcp_options: list[str]
+    tcp_options: list[JSONValue]
 
 
-class TcpFingerprintStrategy:
+class TcpFingerprintStrategy(FingerprintStrategy[TcpData, FingerprintResult]):
     """Strategy for TCP/IP stack fingerprinting (TTL/Window/Options)."""
 
     name: str = "tcp_stack"
 
+    @beartype
     def extract(self, data: TcpData) -> FingerprintResult:
         # Expecting data: {"ttl": int, "window_size": int, "tcp_options": list[str]}
         ttl = data.get("ttl", 0)
@@ -124,11 +133,11 @@ class TcpFingerprintStrategy:
             fingerprint = "Network device (Cisco/Juniper)"
             confidence = 0.9
 
-        return {
-            "name": "tcp_stack",
-            "data": {"inferred_os": fingerprint},
-            "confidence": confidence,
-        }
+        return FingerprintResult(
+            "tcp_stack",
+            {"inferred_os": cast(JSONValue, fingerprint)},
+            confidence,
+        )
 
 
 class InferenceResult(BaseModel):
@@ -210,7 +219,7 @@ class DeviceInferenceNetworkEngine:
         if "ports" in metadata and isinstance(metadata["ports"], list):
             return await self.infer_by_ports("target", metadata["ports"])
         if "mac_address" in metadata and isinstance(metadata["mac_address"], str):
-            # Fallback for now if mac_address is present
+            # MAC address is present, prioritize OUI-based manufacturer inference.
             return InferenceResult(
                 target="target", manufacturer=await self.infer_by_mac(metadata["mac_address"])
             )
@@ -238,14 +247,13 @@ class DeviceInferenceEngine:
         self.registry = registry or FingerprintStrategyRegistry()
 
     @beartype
-    def infer(self, raw_data: JSONValue) -> dict[str, JSONValue]:
+    def infer(self, raw_data: JSONValue) -> dict[str, dict[str, JSONValue]]:
         """Aggregate results from all registered strategies."""
-        results: dict[str, JSONValue] = {}
+        results: dict[str, dict[str, JSONValue]] = {}
         for strategy in self.registry.get_all():
-            # For now, cast to Any to satisfy mypy until registry is generic
-            from typing import cast
-
-            result = cast(Any, strategy).extract(raw_data)
+            # Cast to the common base strategy type for inference.
+            typed_strategy = cast(FingerprintStrategy[JSONValue, FingerprintResult], strategy)
+            result = typed_strategy.extract(raw_data)
             results[strategy.name] = {
                 "data": result["data"],
                 "confidence": result.get("confidence", 0.0),
@@ -256,17 +264,19 @@ class DeviceInferenceEngine:
         """
         Analyzes telemetry and returns a structured DeviceProfile.
         """
-        aggregated_results = self.infer(data)
+        aggregated_results = self.infer(cast(dict[str, JSONValue], data))
 
         # Heuristics-based profile construction
         tcp_result = aggregated_results.get("tcp_stack", {"data": {"inferred_os": None}, "confidence": 0})
 
         # Determine model/OS based on high-confidence inference
-        model = tcp_result["data"].get("inferred_os")
+        # Cast to dict[str, JSONValue] to access "data" and "inferred_os"
+        tcp_data = cast(dict[str, JSONValue], tcp_result.get("data", {}))
+        model = tcp_data.get("inferred_os")
 
         # Simple tier heuristic
         hardware_tier = None
-        if model:
+        if isinstance(model, str):
             hardware_tier = "Standard"
             if model.lower().startswith("network"):
                 hardware_tier = "Enterprise"
@@ -274,7 +284,7 @@ class DeviceInferenceEngine:
                 hardware_tier = "High-Performance"
 
         return DeviceProfile(
-            device_model=model,
+            device_model=model if isinstance(model, str) else None,
             hardware_tier=hardware_tier,
             anomaly_detected=self._detect_anomaly(data),
             throttle_status=None,

@@ -11,7 +11,7 @@ logger = logging.getLogger("osint_nexus.db.search_repository")
 
 class SearchRepository:
     def __init__(self, engine: DatabaseEngine) -> None:
-        self.engine = engine
+        self.engine: DatabaseEngine = engine
 
     async def search(self, keyword: str) -> list[JSONObject]:
         """Perform FTS5 search."""

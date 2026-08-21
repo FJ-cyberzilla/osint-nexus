@@ -1,5 +1,21 @@
 from typing import Any, Protocol, runtime_checkable
 
+from osint_nexus.core.type_defs import JSONValue
+
+
+@runtime_checkable
+class ResponseProtocol(Protocol):
+    status_code: int
+
+    @property
+    def content(self) -> bytes: ...
+    @property
+    def text(self) -> str: ...
+    def json(self) -> JSONValue: ...
+
+
+...
+
 
 @runtime_checkable
 class SessionProtocol(Protocol):
@@ -7,10 +23,12 @@ class SessionProtocol(Protocol):
 
     async def aclose(self) -> None: ...
     async def close(self) -> None: ...
-    async def get(self, url: str, **kwargs: Any) -> Any: ...
+    async def get(self, url: str, **kwargs: Any) -> ResponseProtocol: ...
+    async def post(self, url: str, **kwargs: Any) -> ResponseProtocol: ...
 
 
 HAS_CURL_CFFI = False
+NETWORK_EXCEPTION: type[Exception]
 
 try:
     import curl_cffi.requests as curl_requests

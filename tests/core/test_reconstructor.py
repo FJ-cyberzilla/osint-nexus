@@ -34,12 +34,7 @@ def test_inference_strategies() -> None:
 
     email_strategy = SharedEmailStrategy()
     email_strategy.infer(accounts[0], accounts, mock_db)
-    # mypy might still complain about MagicMock methods, but let's test if it's the right approach
-    # We can cast or ignore if necessary. For now, try ignoring the specific mock call.
-    # The actual issue is that MagicMock doesn't have the attribute in the eyes of mypy,
-    # even with spec=Neo4jConnection.
-
-    # Try using type: ignore to focus on fixing the core type errors first
+    # Using type: ignore for MagicMock calls that lack explicit type definitions.
     mock_db.add_relationship.assert_called_with("SAME_EMAIL", accounts[0])  # type: ignore
 
     phone_strategy = SharedPhoneStrategy()

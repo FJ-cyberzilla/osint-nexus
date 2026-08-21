@@ -9,28 +9,69 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Protocol, TypedDict, runtime_checkable
+from dataclasses import dataclass
+from typing import Protocol, runtime_checkable, TYPE_CHECKING, TypeVar
 from urllib.parse import urlparse
 
+if TYPE_CHECKING:
+    _T = TypeVar("_T")
+    def beartype(obj: _T) -> _T:
+        return obj
+else:
+    from beartype import beartype
+
 from bs4 import BeautifulSoup, Tag
+
+from osint_nexus.core.type_defs import (
+    ExtractedIOC,
+    IOCType,
+    SocialHandle,
+    PlatformIdentity,
+    LinkHarvestResult,
+)
+from osint_nexus.core.type_defs import ExtractedPivots as ExtractedPivots
 
 logger = logging.getLogger("osint_nexus.core.extractor")
 
 
-class ExtractedPivots(TypedDict):
-    emails: list[str]
-    pgp_keys: list[str]
-    external_links: list[str]
-    social_handles: list[dict[str, str]]
-    bio: str | None
+@dataclass(frozen=True)
+class IOCRegexRegistry:
+    ipv4: re.Pattern[str] = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+    domain: re.Pattern[str] = re.compile(r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b")
+    sha256: re.Pattern[str] = re.compile(r"\b[a-fA-F0-9]{64}\b")
+    md5: re.Pattern[str] = re.compile(r"\b[a-fA-F0-9]{32}\b")
+    email: re.Pattern[str] = re.compile(r"\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b")
+
+    def get_pattern(self, ioc_type: IOCType) -> re.Pattern[str]:
+        if ioc_type == IOCType.IPV4:
+            return self.ipv4
+        elif ioc_type == IOCType.DOMAIN:
+            return self.domain
+        elif ioc_type == IOCType.SHA256:
+            return self.sha256
+        elif ioc_type == IOCType.MD5:
+            return self.md5
+        elif ioc_type == IOCType.EMAIL:
+            return self.email
+        raise ValueError(f"Unsupported IOC type: {ioc_type}")
+
+
+_PATTERNS = IOCRegexRegistry()
+
+
+@beartype
+def extract_ioc(content: str, ioc_type: IOCType) -> list[ExtractedIOC]:
+    """Extracts all occurrences of a specific IOC type from the content."""
+    pattern = _PATTERNS.get_pattern(ioc_type)
+    return [ExtractedIOC(type=ioc_type, value=match.group(0)) for match in pattern.finditer(content)]
 
 
 class EmailExtractor:
     def __init__(self) -> None:
-        self.email_pattern = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
+        self.email_pattern: re.Pattern[str] = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
     def extract(self, content: str, soup: BeautifulSoup) -> list[str]:
-        emails = set(self.email_pattern.findall(content))
+        emails: set[str] = {match.group(0) for match in self.email_pattern.finditer(content)}
         for a in soup.find_all("a", href=True):
             href_attr = a.get("href")
             if not isinstance(href_attr, str):
@@ -44,12 +85,12 @@ class EmailExtractor:
 
 class PgpExtractor:
     def __init__(self) -> None:
-        self.pgp_pattern = re.compile(
+        self.pgp_pattern: re.Pattern[str] = re.compile(
             r"-----BEGIN PGP PUBLIC KEY BLOCK-----[\s\S]*?-----END PGP PUBLIC KEY BLOCK-----"
         )
 
     def extract(self, content: str) -> list[str]:
-        return [block.strip() for block in self.pgp_pattern.findall(content)]
+        return [match.group(0).strip() for match in self.pgp_pattern.finditer(content)]
 
 
 class SocialPlatformRegistry:
@@ -66,7 +107,7 @@ class SocialPlatformRegistry:
     }
     IGNORED_PATHS = {"share", "home", "intent", "search", "p"}
 
-    def identify(self, domain: str, path: str) -> dict[str, str] | None:
+    def identify(self, domain: str, path: str) -> PlatformIdentity | None:
         platform = self._get_platform(domain)
         if not platform:
             return None
@@ -75,7 +116,7 @@ class SocialPlatformRegistry:
         if not username:
             return None
 
-        return {"platform": platform, "username": username}
+        return PlatformIdentity(platform=platform, username=username)
 
     def _get_platform(self, domain: str) -> str | None:
         for dom, name in self.PLATFORMS.items():
@@ -124,20 +165,19 @@ class SocialIdentityExtractor:
     def __init__(self, registry: SocialPlatformRegistry) -> None:
         self.registry = registry
 
-    def extract(self, links: set[str]) -> list[dict[str, str]]:
-        social_handles = []
+    def extract(self, links: set[str]) -> list[SocialHandle]:
+        social_handles: list[SocialHandle] = []
         for link in links:
             parsed = urlparse(link)
             identity = self.registry.identify(parsed.netloc.lower(), parsed.path)
             if identity:
-                identity["url"] = link
-                social_handles.append(identity)
+                handle = SocialHandle(
+                    platform=identity["platform"],
+                    username=identity["username"],
+                    url=link,
+                )
+                social_handles.append(handle)
         return social_handles
-
-
-class LinkHarvestResult(TypedDict):
-    external_links: list[str]
-    social_handles: list[dict[str, str]]
 
 
 class LinkSocialExtractor:
@@ -151,7 +191,7 @@ class LinkSocialExtractor:
     def extract(self, soup: BeautifulSoup, source_url: str | None = None) -> LinkHarvestResult:
         links = self.harvester.harvest(soup, source_url)
         social_handles = self.social_extractor.extract(links)
-        return {"external_links": list(links), "social_handles": social_handles}
+        return LinkHarvestResult(external_links=list(links), social_handles=social_handles)
 
 
 @runtime_checkable
@@ -179,20 +219,23 @@ class MetaTagBioStrategy:
 
 
 class HeuristicElementBioStrategy:
-    def __init__(self) -> None:
-        self.selectors: list[dict[str, re.Pattern[str] | str]] = [
-            {"class": re.compile(r"bio|profile-bio|user-bio|about|description|summary", re.I)},
-            {"id": re.compile(r"bio|about|description|summary", re.I)},
-        ]
-
     def extract(self, soup: BeautifulSoup) -> str | None:
-        for selector in self.selectors:
-            # BeautifulSoup find accepts dicts of attribute name to pattern/str
-            element = soup.find(attrs=selector)
-            if isinstance(element, Tag):
-                text = element.get_text(strip=True)
-                if len(text) > 5:
-                    return text
+        # Check by class
+        class_pattern = re.compile(r"bio|profile-bio|user-bio|about|description|summary", re.I)
+        element = soup.find(class_=class_pattern)
+        if isinstance(element, Tag):
+            text = element.get_text(strip=True)
+            if len(text) > 5:
+                return text
+
+        # Check by id
+        id_pattern = re.compile(r"bio|about|description|summary", re.I)
+        element = soup.find(id=id_pattern)
+        if isinstance(element, Tag):
+            text = element.get_text(strip=True)
+            if len(text) > 5:
+                return text
+
         return None
 
 
@@ -243,12 +286,12 @@ class PivotExtractor:
         links_info: LinkHarvestResult = self.link_social_extractor.extract(soup, source_url)
         bio: str | None = self.bio_extractor.extract(soup)
 
-        extracted: ExtractedPivots = {
-            "emails": emails,
-            "pgp_keys": pgp_keys,
-            "external_links": links_info["external_links"],
-            "social_handles": links_info["social_handles"],
-            "bio": bio,
-        }
-        logger.debug("Extracted pivots: %s", extracted)
+        extracted = ExtractedPivots(
+            emails=emails,
+            pgp_keys=pgp_keys,
+            external_links=links_info["external_links"],
+            social_handles=links_info["social_handles"],
+            bio=bio,
+        )
+        logger.debug("Extracted pivots: %s", str(extracted))
         return extracted
