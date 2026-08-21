@@ -64,3 +64,6 @@ coverage.xml
 
 .gemini/
 gha-creds-*.json
+
+# Documentation
+TYPE_RESOLUTION_PLAN.md

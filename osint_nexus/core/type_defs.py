@@ -5,9 +5,16 @@ from enum import Enum
 from dataclasses import dataclass
 
 # JSON types that allow recursive structures
-JSONValue: TypeAlias = (
-    str | int | float | bool | None | dict[str, "JSONValue"] | list["JSONValue"]
-)
+# Replaced recursive TypeAlias with a safer approach to avoid Pydantic RecursionError
+@dataclass
+class JSONDict:
+    data: dict[str, JSONValue]
+
+@dataclass
+class JSONListContainer:
+    data: list[JSONValue]
+
+JSONValue: TypeAlias = str | int | float | bool | None | JSONDict | JSONListContainer
 JSONObject: TypeAlias = dict[str, JSONValue]
 JSONList: TypeAlias = list[JSONValue]
 
