@@ -83,13 +83,15 @@ def test_extract_ioc_all_types() -> None:
     assert emails[1] == ExtractedIOC(type=IOCType.EMAIL, value="admin@security.com")
 
 
+from beartype.roar import BeartypeCallHintParamViolation
+
 def test_extract_ioc_beartype_runtime_safety() -> None:
     # Verify parameter type validation at the runtime boundary
-    with pytest.raises(TypeError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         # Passing an invalid type (integer) for content
         extract_ioc(12345, IOCType.EMAIL)  # type: ignore[arg-type]
 
-    with pytest.raises(TypeError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         # Passing an invalid type (string) for ioc_type
         extract_ioc("some content", "invalid_type")  # type: ignore[arg-type]
 

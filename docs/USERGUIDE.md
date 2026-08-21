@@ -52,8 +52,18 @@ To query the local database for previously stored results:
 make db-info
 ```
 
-## 5. Fingerbank Device Profiling
+## 5. Intelligence Harvesting and IOC Extraction
+OSINT Nexus employs a robust identification and harvesting system for various indicators of compromise (IOCs).
+
+### Automated IOC Extraction
+The system utilizes a high-performance, strictly-typed regex engine for identifier harvesting:
+- **Supported IOCs**: IPv4, Domain names, SHA256 hashes, MD5 hashes, and Email addresses.
+- **Reliability**: Based on a pre-compiled `IOCRegexRegistry` for deterministic and fast extraction, preventing hallucinations or false positives common with LLM-based approaches.
+- **Type Safety**: All extracted data is strictly typed using `ExtractedIOC` and `IOCType` definitions, ensuring data integrity across the reconnaissance pipeline.
+
+### Fingerbank Device Profiling
 OSINT Nexus integrates with Fingerbank to provide advanced device profiling during reconnaissance.
+...
 
 ### How it works
 During the scanning process, the system automatically collects available network patterns (DHCP, User-Agents, MAC address) and interrogates the Fingerbank API to infer device metadata, such as:

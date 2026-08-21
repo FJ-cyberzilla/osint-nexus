@@ -53,11 +53,13 @@ class IOCRegexRegistry:
             return self.md5
         elif ioc_type == IOCType.EMAIL:
             return self.email
-        raise ValueError(f"Unsupported IOC type: {ioc_type}")
-
+        # This part should be unreachable if IOCType covers all cases,
+        # but for Mypy strictness on exhaustive checks:
+        assert_never(ioc_type)
 
 _PATTERNS = IOCRegexRegistry()
 
+from typing import assert_never
 
 @beartype
 def extract_ioc(content: str, ioc_type: IOCType) -> list[ExtractedIOC]:

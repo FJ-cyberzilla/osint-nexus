@@ -29,6 +29,7 @@ OSINT Nexus is a modular, facade-based system designed to automate username reco
 
 *   **Modular Architecture**: Decoupled orchestration and subsystem design.
 *   **Intelligent Recon**: Advanced passive fingerprinting (HTTP/TLS/TCP/DNS/NTP) for device inference, platform fingerprinting, and timing-entropy based detection.
+*   **IOC Extraction**: High-performance, strictly-typed pre-compiled regex engine for reliable identifier harvesting (IPv4, Domains, Hashes, Emails).
 *   **Resilient Design**: Health tracking, automatic circuit breaking, self-healing, and adaptive request handling (evasion agent).
 *   **Browser & Captcha Management**: Built-in browser pooling, recycling, and multi-provider captcha solving, featuring a cross-platform engine (PyQt6/Playwright) with automatic environment detection.
 *   **Telemetry & Data Integrity**: Comprehensive telemetry collection (DNS, hardware) and data export support (e.g., STIX).
