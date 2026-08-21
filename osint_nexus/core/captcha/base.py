@@ -43,7 +43,8 @@ class CaptchaSolverProtocol(Protocol):
         captcha_type: CaptchaType = CaptchaType.RECAPTCHA_V2,
         **kwargs: JSONValue,
     ) -> CaptchaSolveResult: ...
-    async def close(self) -> None: ...
+    async def close(self) -> None:
+        pass
 
 
 class CaptchaSolver(CaptchaSolverProtocol, ABC):
