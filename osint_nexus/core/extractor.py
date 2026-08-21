@@ -56,6 +56,7 @@ class IOCRegexRegistry:
         # This part should be unreachable if IOCType covers all cases,
         # but for Mypy strictness on exhaustive checks:
         assert_never(ioc_type)
+        raise ValueError(f"Unsupported IOC type: {ioc_type!r}")
 
 _PATTERNS = IOCRegexRegistry()
 
