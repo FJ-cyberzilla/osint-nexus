@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 from osint_nexus.core.fingerbank.clients.devices import DevicesClient
 from osint_nexus.core.fingerbank.clients.oui import OuiClient
-from osint_nexus.core.fingerbank.clients.users import UsersClient
 from osint_nexus.core.fingerbank.exceptions import (
     FingerbankBackendError,
     FingerbankForbiddenError,
@@ -53,6 +52,7 @@ class FingerbankClient:
         self.devices = DevicesClient(self)
         self.oui = OuiClient(self)
         from osint_nexus.core.fingerbank.clients.static import StaticDataClient
+        from osint_nexus.core.fingerbank.clients.users import UsersClient
 
         self.static = StaticDataClient(self)
         self.users = UsersClient(self)
