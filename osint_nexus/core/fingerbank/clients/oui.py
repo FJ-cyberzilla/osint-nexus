@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -14,5 +13,5 @@ class OuiClient:
         response = await self.client._get(f"oui/{oui}/to_device_id")
         if response is None:
             raise ValueError("No response from Fingerbank")
-        data: dict[str, Any] = response.json()
+        data: dict[str, Any] = json.loads(response[1])
         return int(data["device_id"])

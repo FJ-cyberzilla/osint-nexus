@@ -1,3 +1,4 @@
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,9 +18,7 @@ async def test_fingerbank_interrogation():
 
     client = FingerbankClient(mock_network, "fake_key")
 
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
+    mock_data = {
         "device": {
             "created_at": "2014-09-09T15:09:51.000Z",
             "id": 33,
@@ -60,7 +59,7 @@ async def test_fingerbank_interrogation():
         "vulnerabilities": {"cve_devices": {}, "cve_os": {}, "message": "Thanks for using Fingerbank."},
     }
 
-    client.fetcher._execute_http_request = AsyncMock(return_value=mock_response)
+    client.fetcher._execute_http_request = AsyncMock(return_value=(200, json.dumps(mock_data)))
 
     response = await client.interrogate({"dhcp_fingerprint": "1,15"})
 
@@ -90,9 +89,7 @@ async def test_fingerbank_devices_client():
 
     client = FingerbankClient(mock_network, "fake_key")
 
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
+    mock_data = {
         "created_at": "2014-09-09T15:09:51.000Z",
         "id": 33,
         "name": "Microsoft Windows Kernel 6.0",
@@ -104,7 +101,7 @@ async def test_fingerbank_devices_client():
         "child_virtual_devices_count": 0,
     }
 
-    client.fetcher._execute_http_request = AsyncMock(return_value=mock_response)
+    client.fetcher._execute_http_request = AsyncMock(return_value=(200, json.dumps(mock_data)))
 
     device = await client.devices.get_device(33)
 
@@ -123,11 +120,9 @@ async def test_fingerbank_oui_client():
 
     client = FingerbankClient(mock_network, "fake_key")
 
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"device_id": 123}
+    mock_data = {"device_id": 123}
 
-    client.fetcher._execute_http_request = AsyncMock(return_value=mock_response)
+    client.fetcher._execute_http_request = AsyncMock(return_value=(200, json.dumps(mock_data)))
 
     device_id = await client.oui.get_device_id("00:11:22:33:44:55")
 
@@ -145,11 +140,7 @@ async def test_fingerbank_static_client():
 
     client = FingerbankClient(mock_network, "fake_key")
 
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.content = b"fake_db_content"
-
-    client.fetcher._execute_http_request = AsyncMock(return_value=mock_response)
+    client.fetcher._execute_http_request = AsyncMock(return_value=(200, "fake_db_content"))
 
     db_content = await client.static.download_db()
 

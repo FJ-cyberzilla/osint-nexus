@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import logging
+import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from osint_nexus.utils.network_types import ResponseProtocol, SessionProtocol
+    from osint_nexus.core.fingerbank.clients.devices import DevicesClient
+    from osint_nexus.core.fingerbank.clients.oui import OuiClient
+    from osint_nexus.core.fingerbank.clients.static import StaticDataClient
+    from osint_nexus.core.fingerbank.clients.users import UsersClient
 
-from osint_nexus.core.fingerbank.clients.devices import DevicesClient
-from osint_nexus.core.fingerbank.clients.oui import OuiClient
 from osint_nexus.core.fingerbank.exceptions import (
     FingerbankBackendError,
     FingerbankForbiddenError,
@@ -30,12 +33,14 @@ class FingerbankHttpFetcher(HttpFetcher):
         headers: dict[str, str],
         method: str = "GET",
         payload: dict[str, Any] | None = None,
-    ) -> ResponseProtocol:
+    ) -> tuple[int, str]:
         if method == "POST":
-            return await session.post(
+            resp = await session.post(
                 url, json=payload, headers=headers, timeout=self.monitor.dynamic_timeout
             )
-        return await session.get(url, headers=headers, timeout=self.monitor.dynamic_timeout)
+        else:
+            resp = await session.get(url, headers=headers, timeout=self.monitor.dynamic_timeout)
+        return resp.status_code, resp.text
 
 
 class FingerbankClient:
@@ -49,38 +54,40 @@ class FingerbankClient:
             network.config, network.evasion, network.monitor, network.session_manager, network.rate_limiter
         )
         # Facade components
-        self.devices = DevicesClient(self)
-        self.oui = OuiClient(self)
+        from osint_nexus.core.fingerbank.clients.devices import DevicesClient
+        from osint_nexus.core.fingerbank.clients.oui import OuiClient
         from osint_nexus.core.fingerbank.clients.static import StaticDataClient
         from osint_nexus.core.fingerbank.clients.users import UsersClient
 
+        self.devices = DevicesClient(self)
+        self.oui = OuiClient(self)
         self.static = StaticDataClient(self)
         self.users = UsersClient(self)
 
-    def _handle_response(self, response: ResponseProtocol) -> ResponseProtocol:
-        if response.status_code == 401:
+    def _handle_response(self, status_code: int, text: str) -> tuple[int, str]:
+        if status_code == 401:
             raise FingerbankUnauthorizedError("Invalid API key.")
-        if response.status_code == 403:
+        if status_code == 403:
             raise FingerbankForbiddenError("Account blocked.")
-        if response.status_code == 429:
+        if status_code == 429:
             raise FingerbankRateLimitedError("Rate limit exceeded.")
-        if response.status_code == 502:
+        if status_code == 502:
             raise FingerbankBackendError("Backend error.")
-        if response.status_code == 404:
+        if status_code == 404:
             raise FingerbankNotFoundError("No device result found.")
 
-        if response.status_code != 200:
-            raise Exception(f"Unexpected error: {response.status_code}")
+        if status_code != 200:
+            raise Exception(f"Unexpected error: {status_code}")
 
-        return response
+        return status_code, text
 
-    async def _get(self, endpoint: str) -> ResponseProtocol | None:
+    async def _get(self, endpoint: str) -> tuple[int, str] | None:
         if not self.is_enabled:
             return None
         url = f"{self.BASE_URL}{endpoint}?key={self.api_key}"
         session = await self.network.session_manager.get_session()
-        response = await self.fetcher._execute_http_request(session, url, {})
-        return self._handle_response(response)
+        status_code, text = await self.fetcher._execute_http_request(session, url, {})
+        return self._handle_response(status_code, text)
 
     async def interrogate(self, payload: dict[str, Any]) -> InterrogateResponse | None:
         if not self.is_enabled:
@@ -91,9 +98,9 @@ class FingerbankClient:
         headers = {"Content-type": "application/json"}
 
         session = await self.network.session_manager.get_session()
-        response = await self.fetcher._execute_http_request(
+        status_code, text = await self.fetcher._execute_http_request(
             session, url, headers, method="POST", payload=payload
         )
 
-        response = self._handle_response(response)
-        return InterrogateResponse.model_validate(response.json())
+        status_code, text = self._handle_response(status_code, text)
+        return InterrogateResponse.model_validate(json.loads(text))

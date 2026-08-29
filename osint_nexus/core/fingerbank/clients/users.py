@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import json
 from typing import TYPE_CHECKING
 
 from osint_nexus.core.fingerbank.models import AccountInfo
@@ -16,4 +15,4 @@ class UsersClient:
         response = await self.client._get(f"users/account_info/{account_key}")
         if response is None:
             raise ValueError("No response from Fingerbank")
-        return AccountInfo.model_validate(response.json())
+        return AccountInfo.model_validate(json.loads(response[1]))

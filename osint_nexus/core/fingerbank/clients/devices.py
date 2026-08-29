@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import json
 from typing import TYPE_CHECKING
 
 from osint_nexus.core.fingerbank.models import Device, DeviceVulnerabilities
@@ -16,10 +15,10 @@ class DevicesClient:
         response = await self.client._get(f"devices/{device_id}")
         if response is None:
             raise ValueError("No response from Fingerbank")
-        return Device.model_validate(response.json())
+        return Device.model_validate(json.loads(response[1]))
 
     async def get_vulnerabilities(self, device_id: int) -> DeviceVulnerabilities:
         response = await self.client._get(f"devices/{device_id}/vulnerabilities")
         if response is None:
             raise ValueError("No response from Fingerbank")
-        return DeviceVulnerabilities.model_validate(response.json())
+        return DeviceVulnerabilities.model_validate(json.loads(response[1]))
