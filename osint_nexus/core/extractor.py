@@ -9,27 +9,36 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable, TYPE_CHECKING, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Protocol,
+    TypeVar,
+    assert_never,
+    runtime_checkable,
+)
 from urllib.parse import urlparse
 
+from bs4 import BeautifulSoup, Tag
+
 if TYPE_CHECKING:
-    _T = TypeVar("_T")
-    def beartype(obj: _T) -> _T:
+    _F = TypeVar("_F", bound=Callable[..., Any])
+
+    def beartype[F: Callable[..., Any]](obj: _F) -> _F:
         return obj
 else:
     from beartype import beartype
 
-from bs4 import BeautifulSoup, Tag
-
 from osint_nexus.core.type_defs import (
     ExtractedIOC,
+    ExtractedPivots,
     IOCType,
-    SocialHandle,
-    PlatformIdentity,
     LinkHarvestResult,
+    PlatformIdentity,
+    SocialHandle,
 )
-from osint_nexus.core.type_defs import ExtractedPivots as ExtractedPivots
 
 logger = logging.getLogger("osint_nexus.core.extractor")
 
@@ -53,14 +62,11 @@ class IOCRegexRegistry:
             return self.md5
         elif ioc_type == IOCType.EMAIL:
             return self.email
-        # This part should be unreachable if IOCType covers all cases,
-        # but for Mypy strictness on exhaustive checks:
         assert_never(ioc_type)
-        raise ValueError(f"Unsupported IOC type: {ioc_type!r}")
+
 
 _PATTERNS = IOCRegexRegistry()
 
-from typing import assert_never
 
 @beartype
 def extract_ioc(content: str, ioc_type: IOCType) -> list[ExtractedIOC]:

@@ -1,8 +1,9 @@
 import pytest
+from beartype.roar import BeartypeCallHintParamViolation
 from bs4 import BeautifulSoup
 
 from osint_nexus.core.extractor import LinkSocialExtractor, extract_ioc
-from osint_nexus.core.type_defs import IOCType, ExtractedIOC, SocialHandle
+from osint_nexus.core.type_defs import ExtractedIOC, IOCType, SocialHandle
 
 
 def test_is_internal_domain_security() -> None:
@@ -67,7 +68,9 @@ def test_extract_ioc_all_types() -> None:
     content_sha256 = "File hash is e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855."
     shas = extract_ioc(content_sha256, IOCType.SHA256)
     assert len(shas) == 1
-    assert shas[0] == ExtractedIOC(type=IOCType.SHA256, value="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    assert shas[0] == ExtractedIOC(
+        type=IOCType.SHA256, value="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
 
     # Test MD5
     content_md5 = "Secondary hash is 098f6bcd4621d373cade4e832627b4f6 in registry."
@@ -83,8 +86,6 @@ def test_extract_ioc_all_types() -> None:
     assert emails[1] == ExtractedIOC(type=IOCType.EMAIL, value="admin@security.com")
 
 
-from beartype.roar import BeartypeCallHintParamViolation
-
 def test_extract_ioc_beartype_runtime_safety() -> None:
     # Verify parameter type validation at the runtime boundary
     with pytest.raises(BeartypeCallHintParamViolation):
@@ -94,4 +95,3 @@ def test_extract_ioc_beartype_runtime_safety() -> None:
     with pytest.raises(BeartypeCallHintParamViolation):
         # Passing an invalid type (string) for ioc_type
         extract_ioc("some content", "invalid_type")  # type: ignore[arg-type]
-

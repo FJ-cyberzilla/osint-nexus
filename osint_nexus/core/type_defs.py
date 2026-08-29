@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import cast, TypedDict, TypeAlias
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+from typing import TypedDict
+
 
 # JSON types that allow recursive structures
 # Replaced recursive TypeAlias with a safer approach to avoid Pydantic RecursionError
@@ -10,20 +11,23 @@ from dataclasses import dataclass
 class JSONDict:
     data: dict[str, JSONValue]
 
+
 @dataclass
 class JSONListContainer:
     data: list[JSONValue]
 
-JSONValue: TypeAlias = str | int | float | bool | None | JSONDict | JSONListContainer
-JSONObject: TypeAlias = dict[str, JSONValue]
-JSONList: TypeAlias = list[JSONValue]
+
+type JSONValue = str | int | float | bool | None | JSONDict | JSONListContainer
+type JSONObject = dict[str, JSONValue]
+type JSONList = list[JSONValue]
 
 # Telemetry types
-TelemetryValue: TypeAlias = str | float | int | bool
-TelemetryDict: TypeAlias = dict[str, TelemetryValue]
+type TelemetryValue = str | float | int | bool
+type TelemetryDict = dict[str, TelemetryValue]
 
 # Metadata dictionary for general usage
-MetadataDict: TypeAlias = dict[str, JSONValue]
+type MetadataDict = dict[str, JSONValue]
+
 
 class IOCType(Enum):
     IPV4 = "ipv4"
@@ -31,6 +35,7 @@ class IOCType(Enum):
     SHA256 = "sha256"
     MD5 = "md5"
     EMAIL = "email"
+
 
 @dataclass(frozen=True)
 class ExtractedIOC:
@@ -60,6 +65,17 @@ class ExtractedPivots(TypedDict):
     external_links: list[str]
     social_handles: list[SocialHandle]
     bio: str | None
+
+
+class IntelligenceMetadata(TypedDict, total=False):
+    fingerprint_results: dict[str, JSONValue]
+    device_inference: dict[str, JSONValue]
+    emails: list[str]
+    pgp_keys: list[str]
+    external_links: list[str]
+    social_handles: list[SocialHandle]
+    bio: str | None
+    error: str
 
 
 def ensure_type[T](value: JSONValue, expected_type: type[T] | tuple[type[T], ...]) -> T | None:

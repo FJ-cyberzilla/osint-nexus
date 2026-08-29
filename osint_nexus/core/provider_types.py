@@ -45,7 +45,14 @@ __all__ = [
 
 
 @runtime_checkable
+class ModelProtocol(Protocol):
+    """Interface for models with model_dump."""
+
+    def model_dump(self, mode: str) -> dict[str, JSONValue]: ...
+
+
+@runtime_checkable
 class DeviceInferenceProtocol(Protocol):
     """Interface for device inference."""
 
-    async def infer(self, content: str, metadata: MetadataDict) -> object: ...
+    async def infer(self, content: str, metadata: MetadataDict) -> ModelProtocol: ...

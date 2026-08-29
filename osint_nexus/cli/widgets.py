@@ -2,8 +2,10 @@
 
 from collections.abc import Mapping
 from enum import Enum
+from pathlib import Path
 from typing import Final
 
+from rich.panel import Panel
 from textual.app import ComposeResult
 from textual.message import Message
 from textual.widgets import DataTable, ProgressBar, RichLog, Static, Tree
@@ -20,6 +22,29 @@ from osint_nexus.core.ui_models import ActivityLevel, TelemetryData
 
 # Widget Constants
 DEFAULT_PROGRESS_TOTAL: Final[int] = 0
+
+
+class Banner(Static):
+    """Renders the banner from 1.txt in a green box."""
+
+    def __init__(self, id: str | None = None) -> None:
+        super().__init__(id=id)
+        # Load the banner from the root directory
+        try:
+            with open(Path(__file__).parent / "../../1.txt") as f:
+                self.banner = f.read()
+        except FileNotFoundError:
+            self.banner = "OSINT Nexus"
+
+    def compose(self) -> ComposeResult:
+        # Wrap the banner in a green box
+        yield Static(
+            Panel(
+                f"[green]{self.banner}[/]",
+                border_style="green",
+                title="OSINT Nexus",
+            )
+        )
 
 
 class FingerprintStrategy(Enum):

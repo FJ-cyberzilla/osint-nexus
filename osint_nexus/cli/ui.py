@@ -13,6 +13,7 @@ from osint_nexus.cli.theme import (
     PROGRESS_BAR_HEIGHT,
 )
 from osint_nexus.cli.widgets import (
+    Banner,
     Header,
     HeatmapPanel,
     IntelligenceDashboard,
@@ -25,6 +26,7 @@ from osint_nexus.cli.widgets import (
 )
 from osint_nexus.core.agent import OSINTAgent
 from osint_nexus.core.intelligence import IntelligenceObject
+from osint_nexus.core.type_defs import JSONDict, JSONListContainer, JSONValue, MetadataDict, ensure_type
 from osint_nexus.core.ui_models import ActivityLevel, FingerprintData, TelemetryData
 
 console = Console()
@@ -85,6 +87,7 @@ class OSINTApp(App[None]):
 
     def compose(self) -> ComposeResult:
         yield Container(
+            Banner(id="banner"),
             Header(self.username, id="header"),
             ReconProgress(self.total, id="progress"),
             Horizontal(
@@ -153,32 +156,59 @@ class OSINTApp(App[None]):
         if not intel.found:
             return
 
-        metadata = intel.metadata
+        metadata: MetadataDict = dict(intel.metadata)
         self._update_telemetry_panel(metadata)
         self._update_relationship_panel(metadata)
         self._update_activity_panel(metadata)
 
-    def _update_telemetry_panel(self, metadata: dict) -> None:
+    def _update_telemetry_panel(self, metadata: MetadataDict) -> None:
         """Helper to update telemetry panel."""
-        telemetry_raw = metadata.get("telemetry")
-        fingerprint_raw = metadata.get("fingerprint_results")
+        telemetry_val = metadata.get("telemetry")
+        fingerprint_val = metadata.get("fingerprint_results")
 
-        telemetry_data = None
-        if isinstance(telemetry_raw, dict):
+        telemetry_data: TelemetryData | None = None
+
+        # Helper to safely extract dictionary from JSONValue
+        def as_dict(val: JSONValue) -> dict[str, JSONValue] | None:
+            if isinstance(val, JSONDict):
+                return val.data
+            if isinstance(val, dict):
+                return val
+            return None
+
+        telemetry_raw = as_dict(telemetry_val)
+        if telemetry_raw:
             try:
-                telemetry_data = TelemetryData(**telemetry_raw)
+                # TelemetryData requires str values for specific fields,
+                # we must validate or map the dictionary values.
+                telemetry_data = TelemetryData(
+                    dns_leak=str(telemetry_raw.get("dns_leak", "N/A")),
+                    connection_type=str(telemetry_raw.get("connection_type", "N/A")),
+                    hardware_fingerprint=str(telemetry_raw.get("hardware_fingerprint", "N/A")),
+                )
             except ValueError:
                 console.log("Invalid telemetry data format.")
 
-        if isinstance(fingerprint_raw, dict):
+        fingerprint_raw = as_dict(fingerprint_val)
+        if fingerprint_raw:
             try:
-                # Assuming fingerprint_results has a structure compatible with FingerprintData
-                # If not, might need a mapper here. Based on previous work, this should align.
-                fingerprint = FingerprintData(**fingerprint_raw)
+                # Use ensure_type to ensure we have the correct types before passing to Pydantic
+                suspicious_val = fingerprint_raw.get("suspicious", False)
+                risk_score_val = fingerprint_raw.get("risk_score", 0.0)
+                risk_level_val = fingerprint_raw.get("risk_level", "Low")
+                action_val = fingerprint_raw.get("recommended_action", "None")
+                summary_val = fingerprint_raw.get("summary", "No summary")
+
+                fingerprint = FingerprintData(
+                    suspicious=bool(ensure_type(suspicious_val, bool)),
+                    risk_score=float(ensure_type(risk_score_val, (float, int)) or 0.0),
+                    risk_level=str(ensure_type(risk_level_val, str) or "Low"),
+                    recommended_action=str(ensure_type(action_val, str) or "None"),
+                    summary=str(ensure_type(summary_val, str) or "No summary"),
+                )
                 if telemetry_data:
                     telemetry_data.fingerprint_results = fingerprint
                 else:
-                    # Create a dummy TelemetryData if only fingerprint is present
                     telemetry_data = TelemetryData(
                         dns_leak="N/A",
                         connection_type="N/A",
@@ -191,18 +221,39 @@ class OSINTApp(App[None]):
         if telemetry_data:
             self.query_one("#telemetry", TelemetryPanel).update_telemetry(telemetry_data)
 
-    def _update_relationship_panel(self, metadata: dict) -> None:
+    def _update_relationship_panel(self, metadata: MetadataDict) -> None:
         """Helper to update relationship panel."""
-        relationships = metadata.get("relationships", [])
-        if isinstance(relationships, list):
-            self.query_one("#relationships", RelationshipPanel).update_relationships(relationships)
+        relationships_val = metadata.get("relationships")
+        relationships: list[str] = []
 
-    def _update_activity_panel(self, metadata: dict) -> None:
+        if isinstance(relationships_val, list):
+            relationships = [str(r) for r in relationships_val]
+        elif isinstance(relationships_val, JSONListContainer):
+            relationships = [str(r) for r in relationships_val.data]
+
+        self.query_one("#relationships", RelationshipPanel).update_relationships(relationships)
+
+    def _update_activity_panel(self, metadata: MetadataDict) -> None:
         """Helper to update activity panel."""
-        activity_raw = metadata.get("activity")
-        if isinstance(activity_raw, dict):
+        activity_val = metadata.get("activity")
+
+        # Helper to safely extract dictionary
+        def as_dict(val: JSONValue) -> dict[str, JSONValue] | None:
+            if isinstance(val, JSONDict):
+                return val.data
+            if isinstance(val, dict):
+                return val
+            return None
+
+        activity_raw = as_dict(activity_val)
+        if activity_raw:
             try:
-                activity = ActivityLevel(**activity_raw)
+                level_val = activity_raw.get("level", "Inactive")
+                trend_val = activity_raw.get("trend", "Neutral")
+                activity = ActivityLevel(
+                    level=str(ensure_type(level_val, str) or "Inactive"),
+                    trend=str(ensure_type(trend_val, str) or "Neutral"),
+                )
                 self.query_one("#heatmap", HeatmapPanel).update_heatmap(activity)
             except ValueError:
                 console.log("Invalid activity level data format.")

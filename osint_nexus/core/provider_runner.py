@@ -5,9 +5,8 @@ Handles the execution lifecycle of provider-specific OSINT checks.
 from __future__ import annotations
 
 import logging
-import typing
 
-from osint_nexus.core.extractor import ExtractedPivots, PivotExtractor
+from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.fingerprint import FingerprintAgent
 from osint_nexus.core.intelligence import IntelligenceObject
 from osint_nexus.core.mimicry import HumanMimicryEngine
@@ -15,11 +14,11 @@ from osint_nexus.core.provider_types import (
     DatabaseManagerProtocol,
     DeviceInferenceProtocol,
     JSONValue,
-    MetadataDict,
     ProviderExecutionResult,
     ValidatorProtocol,
 )
-from osint_nexus.providers.base import BaseProvider
+from osint_nexus.core.type_defs import ExtractedPivots, IntelligenceMetadata
+from osint_nexus.providers.base import ProviderProtocol
 from osint_nexus.utils.network import NetworkManager
 
 logger = logging.getLogger("osint_nexus.provider_runner")
@@ -47,7 +46,7 @@ class ProviderRunner:
         self._fingerprint_agent = fingerprint_agent
 
     async def run(
-        self, provider: BaseProvider, username: str, **microlink_options: JSONValue
+        self, provider: ProviderProtocol, username: str, **microlink_options: JSONValue
     ) -> IntelligenceObject:
         """Executes the provider check logic."""
         result = await self._perform_check(provider, username, **microlink_options)
@@ -71,8 +70,16 @@ class ProviderRunner:
         if self._fingerprint_agent:
             metadata["fingerprint_results"] = self._fingerprint_agent.collect_all_fingerprints(result.content)
 
-        # Cast pivots to MetadataDict for update, ensuring compatibility with JSONValue
-        metadata.update(typing.cast(MetadataDict, pivots))
+        # Merge pivots into metadata safely
+        metadata.update(
+            {
+                "emails": pivots["emails"],
+                "pgp_keys": pivots["pgp_keys"],
+                "external_links": pivots["external_links"],
+                "social_handles": pivots["social_handles"],
+                "bio": pivots["bio"],
+            }
+        )
 
         await self._db_manager.save_result(username, provider.name, final_found)
 
@@ -87,7 +94,7 @@ class ProviderRunner:
         )
 
     async def _perform_check(
-        self, provider: BaseProvider, username: str, **microlink_options: JSONValue
+        self, provider: ProviderProtocol, username: str, **microlink_options: JSONValue
     ) -> ProviderExecutionResult:
         """Executes the provider-specific check."""
         try:
@@ -98,10 +105,10 @@ class ProviderRunner:
             return ProviderExecutionResult(found=False, content="", error=e)
 
     async def _infer_metadata(
-        self, provider: BaseProvider, username: str, content: str, final_found: bool
-    ) -> MetadataDict:
+        self, provider: ProviderProtocol, username: str, content: str, final_found: bool
+    ) -> IntelligenceMetadata:
         """Infers metadata for a provider result."""
-        metadata: MetadataDict = {}
+        metadata: IntelligenceMetadata = {}
         if final_found and self._device_inference:
             profile = await self._device_inference.infer(content, provider.get_metadata(username))
             metadata["device_inference"] = profile.model_dump(mode="json")

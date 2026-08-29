@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Protocol, runtime_checkable, ParamSpec, TypeVar
+from typing import ParamSpec, Protocol, TypeVar, runtime_checkable
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
+
 
 @runtime_checkable
 class PageProtocol(Protocol):

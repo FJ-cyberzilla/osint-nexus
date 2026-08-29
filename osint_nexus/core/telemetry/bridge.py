@@ -2,7 +2,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from osint_nexus.core.device_inference import (
     DeviceInferenceEngine,
@@ -27,6 +27,7 @@ except ImportError:
     def pyqtSlot(*args: object, **kwargs: object) -> Callable[..., Any]:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             return func
+
         return decorator
 
     PYQT_AVAILABLE = False

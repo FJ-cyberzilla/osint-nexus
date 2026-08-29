@@ -72,26 +72,6 @@ class ProviderWorker:
             except TimeoutError:
                 return self._build_error_intel(provider.name, username, "Timeout")
 
-    def build_success_intel(
-        self,
-        provider: BaseProvider,
-        username: str,
-        final_found: bool,
-        dork: str,
-        content: str | None,
-        metadata: dict[str, str | int | float | bool],
-    ) -> IntelligenceObject:
-        """Constructs an IntelligenceObject for a successful scan."""
-        return IntelligenceObject(
-            platform=provider.name,
-            username=username,
-            found=final_found,
-            dork=dork,
-            confidence=1.0 if final_found else 0.0,
-            metadata=metadata,
-            raw_data=content if final_found else None,
-        )
-
     def _build_error_intel(self, platform: str, username: str, error_msg: str) -> IntelligenceObject:
         """Helper to safely construct an IntelligenceObject representing a failure."""
         return IntelligenceObject(

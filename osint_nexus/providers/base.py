@@ -10,13 +10,25 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from osint_nexus.core.provider_types import JSONValue, MetadataDict
     from osint_nexus.utils.network import NetworkManager
 
 logger = logging.getLogger("osint_nexus.providers.base")
+
+
+@runtime_checkable
+class ProviderProtocol(Protocol):
+    """Protocol for provider interface."""
+
+    name: str
+
+    async def check_username(self, username: str, **kwargs: JSONValue) -> tuple[bool, str]: ...
+    def get_dork_query(self, username: str) -> str: ...
+    def get_metadata(self, username: str) -> MetadataDict: ...
+    async def health_check(self) -> bool: ...
 
 
 class BaseProvider(ABC):

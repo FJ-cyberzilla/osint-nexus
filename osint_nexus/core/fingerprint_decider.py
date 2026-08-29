@@ -6,7 +6,7 @@ from typing import TypedDict, cast
 
 from beartype import beartype
 
-from osint_nexus.core.type_defs import JSONValue
+from osint_nexus.core.type_defs import JSONDict, JSONValue
 
 # Define a flexible but safer type for evidence
 type FingerprintEvidence = JSONValue
@@ -221,7 +221,6 @@ class FingerprintDecider:
                 confidence=0.8,
                 evidence=audio_hash,
             )
-        return None
 
     def _check_os_mismatch(self, metrics: ClientMetrics) -> DetectionResult | None:
         os_from_ua = metrics.get("os_from_ua", "")
@@ -232,7 +231,7 @@ class FingerprintDecider:
                 description=f"OS mismatch: UA says {os_from_ua}, metrics say {os_from_metrics}",
                 risk_level=RiskLevel.CRITICAL,
                 confidence=0.95,
-                evidence={"user_agent": os_from_ua, "metrics": os_from_metrics},
+                evidence=JSONDict(data={"user_agent": os_from_ua, "metrics": os_from_metrics}),
             )
         return None
 
