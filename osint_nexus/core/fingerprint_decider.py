@@ -339,10 +339,10 @@ class ClientFingerprintValidator:
         self.decider = FingerprintDecider()
 
     @beartype
-    def extract(self, data: JSONValue) -> dict[str, JSONValue]:
-        if not isinstance(data, dict):
-            return {"name": self.name, "data": {"detection": "failed"}, "confidence": 0.0}
+    def extract(self, data: Mapping[str, JSONValue]) -> Mapping[str, JSONValue]:
+        return cast(Mapping[str, JSONValue], self._extract_internal(data))
 
+    def _extract_internal(self, data: Mapping[str, JSONValue]) -> dict[str, JSONValue]:
         # Extract metrics
         from osint_nexus.core.type_defs import ensure_type
 

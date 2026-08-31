@@ -13,7 +13,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
-    Any,
     Protocol,
     TypeVar,
     assert_never,
@@ -24,9 +23,9 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup, Tag
 
 if TYPE_CHECKING:
-    _F = TypeVar("_F", bound=Callable[..., Any])
+    _F = TypeVar("_F", bound=Callable[..., object])
 
-    def beartype[F: Callable[..., Any]](obj: _F) -> _F:
+    def beartype[F: Callable[..., object]](obj: F) -> F:
         return obj
 else:
     from beartype import beartype

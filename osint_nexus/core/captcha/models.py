@@ -1,5 +1,6 @@
 import enum
 from dataclasses import dataclass
+from typing import TypedDict
 
 
 class CaptchaType(enum.Enum):
@@ -9,6 +10,12 @@ class CaptchaType(enum.Enum):
     TURNSTILE = "turnstile"
     IMAGE_CAPTCHA = "image"
     CUSTOM = "custom"
+
+
+class CaptchaExtraParameters(TypedDict, total=False):
+    action: str
+    min_score: float
+    data_s: str
 
 
 @dataclass

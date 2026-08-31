@@ -1,5 +1,4 @@
 import uuid
-from collections.abc import Mapping
 from datetime import UTC, datetime
 
 from pydantic import (
@@ -10,7 +9,7 @@ from pydantic import (
     field_validator,
 )
 
-from osint_nexus.core.type_defs import JSONValue
+from osint_nexus.core.type_defs import IntelligenceMetadata
 
 # ---------------------------------------------------------
 # Nested Sub-Models (Strong Typing for complex structures)
@@ -20,9 +19,7 @@ from osint_nexus.core.type_defs import JSONValue
 class VisualIntelligence(BaseModel):
     """Strongly typed schema for visual OSINT data."""
 
-    class Config:
-        frozen = True
-        str_strip_whitespace = True
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
     profile_picture: HttpUrl | None = Field(default=None, description="URL to the target's avatar")
     banner_image: HttpUrl | None = Field(default=None, description="URL to the background/banner")
@@ -69,11 +66,10 @@ class IntelligenceObject(BaseModel):
 
     # Extracted Intelligence
     # We keep metadata flexible for platform-specific quirks (e.g., repo count vs follower count)
-    metadata: Mapping[str, JSONValue] = Field(default_factory=dict)
+    metadata: IntelligenceMetadata = Field(default_factory=dict)
 
     # We use a strict nested model for visuals rather than a loose dict
-
-    visuals: VisualIntelligence = Field(default_factory=VisualIntelligence)
+    visuals: VisualIntelligence = Field(default_factory=lambda: VisualIntelligence())
 
     # --- Raw / Debug Data ---
     # exclude=True ensures it is NEVER sent to the DB or API by accident

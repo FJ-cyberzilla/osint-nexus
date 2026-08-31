@@ -1,6 +1,7 @@
 from typing import Any
 
 from osint_nexus.core.device_inference import DeviceInferenceEngine
+from osint_nexus.core.type_defs import to_json_value
 
 
 def test_device_inference_engine_integration():
@@ -30,11 +31,11 @@ def test_device_inference_engine_integration():
     results = {}
     for strategy in engine.registry.get_all():
         if strategy.name == "http_headers":
-            results[strategy.name] = strategy.extract(mock_data.get("headers"))
+            results[strategy.name] = strategy.extract(to_json_value(mock_data.get("headers")))
         elif strategy.name == "tls_ja3":
-            results[strategy.name] = strategy.extract({"ja3_hash": mock_data.get("ja3_hash")})  # type: ignore
+            results[strategy.name] = strategy.extract(to_json_value({"ja3_hash": mock_data.get("ja3_hash")}))
         elif strategy.name == "tcp_stack":
-            results[strategy.name] = strategy.extract(mock_data.get("tcp"))
+            results[strategy.name] = strategy.extract(to_json_value(mock_data.get("tcp")))
 
     assert "http_headers" in results
     assert "tls_ja3" in results

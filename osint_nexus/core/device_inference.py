@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 from osint_nexus.core.db.fingerprint_repository import FingerprintRepository
 from osint_nexus.core.detectors.base import FingerprintStrategy
 from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
-from osint_nexus.core.type_defs import JSONValue, TelemetryDict
+from osint_nexus.core.type_defs import JSONValue, TelemetryDict, to_json_value
+from osint_nexus.utils.data_loader import load_data
 
 # Re-alias for local use or update code
 # Since FingerprintStrategy now takes (T_Data, T_Result), I need to update all implementations.
@@ -108,36 +109,35 @@ class TcpFingerprintStrategy(FingerprintStrategy[TcpData, FingerprintResult]):
         ttl = data.get("ttl", 0)
         options = data.get("tcp_options", [])
 
-        fingerprint: str | None = None
-        confidence: float = 0.1
-
-        # More comprehensive detection
-        if ttl == 128:
-            if "wscale" in options:
-                fingerprint = "Windows 10/11"
-                confidence = 0.85
-            else:
-                fingerprint = "Windows (older)"
-                confidence = 0.7
-        elif ttl == 64:
-            if "timestamps" in options and "sack" in options:
-                fingerprint = "Linux (modern)"
-                confidence = 0.75
-            elif "timestamps" in options:
-                fingerprint = "macOS/iOS"
-                confidence = 0.7
-            else:
-                fingerprint = "Linux (older)"
-                confidence = 0.5
-        elif ttl == 255:
-            fingerprint = "Network device (Cisco/Juniper)"
-            confidence = 0.9
+        fingerprint, confidence = self._detect_os(ttl, options)
 
         return FingerprintResult(
             "tcp_stack",
             {"inferred_os": cast(JSONValue, fingerprint)},
             confidence,
         )
+
+    def _detect_os(self, ttl: int, options: list[JSONValue]) -> tuple[str | None, float]:
+        """Detect OS based on TCP parameters."""
+        if ttl == 128:
+            return self._detect_windows(options)
+        if ttl == 64:
+            return self._detect_linux_macos(options)
+        if ttl == 255:
+            return "Network device (Cisco/Juniper)", 0.9
+        return None, 0.1
+
+    def _detect_windows(self, options: list[JSONValue]) -> tuple[str, float]:
+        if "wscale" in options:
+            return "Windows 10/11", 0.85
+        return "Windows (older)", 0.7
+
+    def _detect_linux_macos(self, options: list[JSONValue]) -> tuple[str, float]:
+        if "timestamps" in options and "sack" in options:
+            return "Linux (modern)", 0.75
+        if "timestamps" in options:
+            return "macOS/iOS", 0.7
+        return "Linux (older)", 0.5
 
 
 class InferenceResult(BaseModel):
@@ -175,13 +175,7 @@ class DeviceInferenceNetworkEngine:
         5555: {"os": ["Android (ADB)"], "role": "Mobile Debug Node"},
     }
 
-    OUI_DATABASE: dict[str, str] = {
-        "00:1A:11": "Google LLC",
-        "00:25:90": "Super Micro Computer, Inc.",
-        "A4:77:33": "Apple, Inc.",
-        "2C:F0:EE": "Intel Corporation",
-        "D4:A1:48": "Ubiquiti Networks",
-    }
+    OUI_DATABASE: dict[str, str] = load_data("oui.json")
 
     def __init__(self) -> None:
         pass
@@ -264,7 +258,7 @@ class DeviceInferenceEngine:
         """
         Analyzes telemetry and returns a structured DeviceProfile.
         """
-        aggregated_results = self.infer(cast(dict[str, JSONValue], data))
+        aggregated_results = self.infer(to_json_value(data))
 
         # Heuristics-based profile construction
         tcp_result = aggregated_results.get("tcp_stack", {"data": {"inferred_os": None}, "confidence": 0})

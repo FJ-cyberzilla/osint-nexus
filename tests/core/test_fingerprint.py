@@ -3,6 +3,7 @@ import pytest
 from osint_nexus.core.config import Config
 from osint_nexus.core.constants import DeviceInferenceConstants
 from osint_nexus.core.fingerprint import FingerprintAgent
+from osint_nexus.core.type_defs import to_json_value
 
 
 class TestFingerprintAgent:
@@ -71,7 +72,7 @@ class TestFingerprintAgent:
 
     def test_collect_all_fingerprints(self, agent):
         """Test aggregation of all strategies."""
-        test_data = {"user-agent": "Mozilla/5.0", "ttl": 128, "tcp_options": ["wscale"]}
+        test_data = to_json_value({"user-agent": "Mozilla/5.0", "ttl": 128, "tcp_options": ["wscale"]})
 
         result = agent.collect_all_fingerprints(test_data)
 
@@ -82,11 +83,9 @@ class TestFingerprintAgent:
 
     def test_collect_all_fingerprints_with_ja3(self):
         """Test aggregation of all strategies with injected JA3."""
-        from osint_nexus.core.type_defs import JSONValue
-
         ja3_hash = "72a589da586844d7f0818ce684948eea"
         agent = FingerprintAgent(ja3_hash=ja3_hash)
-        test_data: dict[str, JSONValue] = {"user-agent": "Mozilla/5.0"}
+        test_data = to_json_value({"user-agent": "Mozilla/5.0"})
 
         result = agent.collect_all_fingerprints(test_data)
 

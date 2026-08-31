@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from osint_nexus.core.provider_types import JSONValue, MetadataDict
 
 from osint_nexus.core.config import get_config
 from osint_nexus.providers.base import BaseProvider
@@ -22,7 +25,7 @@ class AparatProvider(BaseProvider):
         super().__init__("Aparat", network)
         self.url_template = get_config().service_urls["aparat"]
 
-    async def check_username(self, username: str, **kwargs: Any) -> tuple[bool, str]:
+    async def check_username(self, username: str, **kwargs: JSONValue) -> tuple[bool, str]:
         """Check if a username exists on Aparat.
 
         Args:
@@ -46,7 +49,7 @@ class AparatProvider(BaseProvider):
         """
         return f"site:aparat.com {username}"
 
-    def get_metadata(self, username: str) -> dict[str, Any]:
+    def get_metadata(self, username: str) -> MetadataDict:
         """Get Aparat-specific metadata.
 
         Args:

@@ -24,8 +24,17 @@ async def test_scan_orchestrator_run_scan() -> None:
     mock_network = MagicMock(spec=NetworkManager)
     mock_mimicry = MagicMock(spec=HumanMimicryEngine)
     mock_extractor = MagicMock(spec=PivotExtractor)
-    mock_extractor.extract = AsyncMock(return_value={})
+    mock_extractor.extract = AsyncMock(
+        return_value={
+            "emails": [],
+            "pgp_keys": [],
+            "external_links": [],
+            "social_handles": [],
+            "bio": None,
+        }
+    )
     mock_fingerprint = MagicMock(spec=FingerprintAgent)
+    mock_fingerprint.collect_all_fingerprints = MagicMock(return_value={})
 
     deps = OrchestratorDeps(
         health=mock_health,

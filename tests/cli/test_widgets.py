@@ -27,7 +27,7 @@ def test_metrics_graph_update_metrics():
     assert graph.successes == 1
     assert graph.failures == 1
 
-    # Mocking update to verify call
-    with patch.object(graph, "update") as mock_update:
+    # Mocking _refresh_graph to verify call
+    with patch.object(graph, "_refresh_graph") as mock_refresh:
         graph.update_metrics(1, 1)
-        mock_update.assert_called_once()
+        mock_refresh.assert_called_once()

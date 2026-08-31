@@ -1,11 +1,12 @@
 from typing import TypedDict, cast
+from collections.abc import Mapping
 
 from beartype import beartype
 
 from osint_nexus.core.detectors.base import FingerprintStrategy
-from osint_nexus.core.type_defs import JSONObject, JSONValue
+from osint_nexus.core.type_defs import JSONValue
 
-HttpData = JSONObject
+HttpData = Mapping[str, JSONValue]
 
 
 class HttpResultData(TypedDict):
@@ -13,7 +14,7 @@ class HttpResultData(TypedDict):
     mobile: JSONValue
     architecture: JSONValue
     language: JSONValue
-    full_headers: JSONObject
+    full_headers: Mapping[str, JSONValue]
 
 
 class HttpResult(TypedDict):
@@ -22,13 +23,13 @@ class HttpResult(TypedDict):
     confidence: float
 
 
-class HttpFingerprintStrategy(FingerprintStrategy[HttpData, JSONObject]):
+class HttpFingerprintStrategy(FingerprintStrategy[HttpData, Mapping[str, JSONValue]]):
     """Strategy for parsing HTTP headers for device info."""
 
     name: str = "http_headers"
 
     @beartype
-    def extract(self, data: HttpData) -> JSONObject:
+    def extract(self, data: HttpData) -> Mapping[str, JSONValue]:
         # More precise: ensure all header values are strings
         headers: dict[str, str] = {k: str(v) for k, v in data.items()}
 
@@ -43,11 +44,8 @@ class HttpFingerprintStrategy(FingerprintStrategy[HttpData, JSONObject]):
             "full_headers": sec_ch_ua_headers,
         }
 
-        return cast(
-            JSONObject,
-            {
-                "name": self.name,
-                "data": fingerprint,
-                "confidence": 0.85,
-            },
-        )
+        return {
+            "name": self.name,
+            "data": fingerprint,
+            "confidence": 0.85,
+        }

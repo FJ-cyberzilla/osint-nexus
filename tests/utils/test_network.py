@@ -12,7 +12,7 @@ sys.modules["osint_nexus.core.orchestrator"] = MagicMock()
 from osint_nexus.core.evasion_agent import EvasionAgent  # noqa: E402
 from osint_nexus.utils.network import NetworkManager  # noqa: E402
 from osint_nexus.utils.network_monitor import NetworkMonitor  # noqa: E402
-from osint_nexus.utils.session_manager import SessionManager  # noqa: E402
+from osint_nexus.utils.session_manager import SessionManager, SessionWrapper  # noqa: E402
 
 
 @pytest.fixture
@@ -59,6 +59,7 @@ async def test_network_monitor_handle_status(mock_config, mock_evasion):
 
 
 # --- Test SessionManager ---
+...
 
 
 @pytest.mark.asyncio
@@ -70,7 +71,8 @@ async def test_session_manager_get_session(mock_config, mock_evasion):
         mock_session_class.return_value = mock_session
 
         session = await session_manager.get_session()
-        assert session == mock_session
+        assert isinstance(session, SessionWrapper)
+        assert session._session == mock_session
         assert session_manager._session is not None
 
         # Test reuse

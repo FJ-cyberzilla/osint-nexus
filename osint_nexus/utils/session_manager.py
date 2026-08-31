@@ -5,14 +5,19 @@ from typing import Any, cast
 
 from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
-from osint_nexus.utils.network_types import HAS_CURL_CFFI, ResponseProtocol, SessionProtocol
+from osint_nexus.utils.network_types import (
+    HAS_CURL_CFFI,
+    ResponseProtocol,
+    SessionProtocol,
+    ImpersonateProfile,
+)
 
 with contextlib.suppress(ImportError):
     import curl_cffi.requests as curl_requests
 
 
 class SessionWrapper:
-    def __init__(self, session: Any) -> None:
+    def __init__(self, session: SessionProtocol) -> None:
         self._session = session
 
     async def aclose(self) -> None:
@@ -28,10 +33,10 @@ class SessionWrapper:
             await self._session.close()
 
     async def get(self, url: str, **kwargs: Any) -> ResponseProtocol:
-        return cast(ResponseProtocol, await self._session.get(url, **kwargs))
+        return await self._session.get(url, **kwargs)
 
     async def post(self, url: str, **kwargs: Any) -> ResponseProtocol:
-        return cast(ResponseProtocol, await self._session.post(url, **kwargs))
+        return await self._session.post(url, **kwargs)
 
 
 class SessionManager:
@@ -43,12 +48,14 @@ class SessionManager:
         self.dynamic_timeout = dynamic_timeout
         self._session: SessionProtocol | None = None
         self._current_proxy: str | None = None
-        self._current_profile: str | None = None
+        self._current_profile: ImpersonateProfile | None = None
         self._session_lock = asyncio.Lock()
 
     def _init_curl_session(self, new_proxy: str | None) -> SessionProtocol:
-        profiles = getattr(self.config, "TLS_PROFILES", ["chrome120", "edge114", "safari15_3"])
-        self._current_profile = str(random.choice(profiles))  # nosec B311
+        profiles: list[ImpersonateProfile] = getattr(
+            self.config, "TLS_PROFILES", ["chrome120", "edge114", "safari15_3"]
+        )  # type: ignore
+        self._current_profile = cast(ImpersonateProfile, random.choice(profiles))
         return SessionWrapper(
             curl_requests.AsyncSession(
                 impersonate=self._current_profile,

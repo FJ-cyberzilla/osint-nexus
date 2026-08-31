@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-# Using Pydantic models for type safety and validation
-# Replaces raw dictionary parsing logic with schema enforcement
-
 
 class ParentDevice(BaseModel):
     created_at: str

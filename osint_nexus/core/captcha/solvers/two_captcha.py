@@ -10,12 +10,10 @@ from osint_nexus.core.captcha.base import (
     CaptchaConfig,
     CaptchaServiceError,
     CaptchaSolver,
-    CaptchaSolveResult,
     CaptchaTimeoutError,
-    CaptchaType,
 )
+from osint_nexus.core.captcha.models import CaptchaExtraParameters, CaptchaSolveResult, CaptchaType
 from osint_nexus.core.config import get_config
-from osint_nexus.core.type_defs import JSONValue
 from osint_nexus.utils.security import SecurityUtility
 
 logger = logging.getLogger(__name__)
@@ -89,11 +87,11 @@ class TwoCaptchaSolver(CaptchaSolver):
         site_key: str,
         url: str,
         captcha_type: CaptchaType,
-        **kwargs: JSONValue,
+        extra: CaptchaExtraParameters | None = None,
     ) -> CaptchaSolveResult:
         session = self._ensure_session()
         method = self._get_method(captcha_type)
-        submit_params = self._build_submit_params(site_key, url, captcha_type, method, kwargs)
+        submit_params = self._build_submit_params(site_key, url, captcha_type, method, extra)
 
         # 1. Submit captcha
         submit_url = f"{self.base_url}/in.php"
@@ -125,7 +123,7 @@ class TwoCaptchaSolver(CaptchaSolver):
         url: str,
         captcha_type: CaptchaType,
         method: str,
-        extra: dict[str, JSONValue],
+        extra: CaptchaExtraParameters | None = None,
     ) -> TwoCaptchaSubmitParams:
         """Build the submit payload for 2captcha."""
         params: TwoCaptchaSubmitParams = {
@@ -143,16 +141,17 @@ class TwoCaptchaSolver(CaptchaSolver):
         params: TwoCaptchaSubmitParams,
         site_key: str,
         captcha_type: CaptchaType,
-        extra: dict[str, JSONValue],
+        extra: CaptchaExtraParameters | None = None,
     ) -> None:
         """Add type-specific parameters to the submit payload."""
         if captcha_type == CaptchaType.RECAPTCHA_V3:
             params["version"] = "v3"
-            action = extra.get("action", "verify")
-            params["action"] = str(action) if action is not None else "verify"
+            if extra:
+                params["action"] = extra.get("action", "verify")
+                params["min_score"] = str(extra.get("min_score", 0.3))
         elif captcha_type == CaptchaType.HCAPTCHA:
-            data_s = extra.get("data_s", "")
-            params["data_s"] = str(data_s) if data_s is not None else ""
+            if extra:
+                params["data"] = extra.get("data_s", "")
         elif captcha_type == CaptchaType.TURNSTILE:
             params["sitekey"] = site_key
 

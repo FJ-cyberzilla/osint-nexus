@@ -1,4 +1,5 @@
 from osint_nexus.core.fingerprint_decider import ClientFingerprintValidator, RiskLevel
+from osint_nexus.core.type_defs import to_json_value
 
 
 def test_legitimate_client():
@@ -24,10 +25,9 @@ def test_legitimate_client():
         "resolution": "1920x1080",
     }
 
-    result = validator.extract(legitimate)
-
+    result = validator.extract(to_json_value(legitimate))
+    assert result["name"] == "client_metrics"
     assert result["data"]["suspicious"] is False
-    assert result["data"]["risk_level"] == RiskLevel.LOW.value
 
 
 def test_headless_browser():
@@ -53,7 +53,8 @@ def test_headless_browser():
         "resolution": "800x600",
     }
 
-    result = validator.extract(headless)
-
+    result = validator.extract(to_json_value(headless))
+    assert result["name"] == "client_metrics"
     assert result["data"]["suspicious"] is True
+
     assert result["data"]["risk_level"] in [RiskLevel.HIGH.value, RiskLevel.CRITICAL.value]

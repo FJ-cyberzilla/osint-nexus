@@ -1,13 +1,12 @@
-from typing import cast
-
+from collections.abc import Mapping
 from beartype import beartype
 
 from osint_nexus.core.db.fingerprint_repository import FingerprintRepository
 from osint_nexus.core.detectors.base import FingerprintStrategy
-from osint_nexus.core.type_defs import JSONObject, JSONValue
+from osint_nexus.core.type_defs import JSONValue
 
 
-class TlsFingerprintStrategy(FingerprintStrategy[JSONValue, JSONObject]):
+class TlsFingerprintStrategy(FingerprintStrategy[Mapping[str, JSONValue], Mapping[str, JSONValue]]):
     """Strategy for TLS (JA3) fingerprinting."""
 
     name: str = "tls_ja3"
@@ -16,10 +15,9 @@ class TlsFingerprintStrategy(FingerprintStrategy[JSONValue, JSONObject]):
         self.repo = repo or FingerprintRepository()
 
     @beartype
-    def extract(self, data: JSONValue) -> JSONObject:
+    def extract(self, data: Mapping[str, JSONValue]) -> Mapping[str, JSONValue]:
         # Expecting data to be a dictionary containing the ja3 hash string
-        data_obj = cast(JSONObject, data)
-        ja3_hash = cast(str, data_obj.get("ja3_hash", "unknown"))
+        ja3_hash = str(data.get("ja3_hash", "unknown"))
 
         device_info = self.repo.get_signature("ja3", ja3_hash) or "unknown"
 

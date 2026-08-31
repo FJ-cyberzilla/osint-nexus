@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
@@ -100,7 +99,7 @@ class Config(BaseSettings):
         return getattr(self, key, default)
 
     @classmethod
-    def from_env(cls, **overrides: Any) -> Config:
+    def from_env(cls, **overrides: JSONObject) -> Config:
         return cls(**overrides)
 
     @classmethod

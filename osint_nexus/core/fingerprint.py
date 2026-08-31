@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import cast
 
@@ -28,7 +29,7 @@ from osint_nexus.core.detectors.timezone import TimezoneFingerprintStrategy
 from osint_nexus.core.detectors.tls import TlsFingerprintStrategy
 from osint_nexus.core.exceptions import NexusError
 from osint_nexus.core.fingerprint_decider import ClientFingerprintValidator as ComprehensiveValidator
-from osint_nexus.core.type_defs import JSONValue
+from osint_nexus.core.type_defs import JSONValue, to_json_value
 
 logger = logging.getLogger("osint_nexus.fingerprint")
 
@@ -93,7 +94,7 @@ class FingerprintAgent:
         self.registry.register(TimezoneFingerprintStrategy())
         self.registry.register(ComprehensiveValidator())
 
-    def collect_all_fingerprints(self, data: JSONValue) -> dict[str, JSONValue]:
+    def collect_all_fingerprints(self, data: Mapping[str, JSONValue]) -> dict[str, JSONValue]:
         """Aggregate results from all registered strategies."""
         results: dict[str, JSONValue] = {}
         confidence_scores: list[float] = []
@@ -110,7 +111,8 @@ class FingerprintAgent:
             try:
                 # Specific override for TLS strategy
                 if strategy.name == "tls_ja3" and self.ja3_hash:
-                    res = strategy.extract({"ja3_hash": self.ja3_hash})
+                    # TlsFingerprintStrategy.extract() needs Mapping, so we wrap ja3_hash
+                    res = strategy.extract({"ja3_hash": to_json_value(self.ja3_hash)})
                 else:
                     res = strategy.extract(strategy_data)
 

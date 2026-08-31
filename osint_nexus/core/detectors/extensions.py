@@ -1,26 +1,27 @@
-from typing import cast
-
+from collections.abc import Mapping
 from beartype import beartype
 
 from osint_nexus.core.detectors.base import FingerprintStrategy
-from osint_nexus.core.type_defs import JSONObject, JSONValue
+from osint_nexus.core.type_defs import JSONValue
 
 
-class ExtensionFingerprintStrategy(FingerprintStrategy[JSONValue, JSONObject]):
+class ExtensionFingerprintStrategy(FingerprintStrategy[Mapping[str, JSONValue], Mapping[str, JSONValue]]):
     """Strategy for Browser Extension fingerprinting."""
 
     name: str = "extension_load"
 
     @beartype
-    def extract(self, data: JSONValue) -> JSONObject:
+    def extract(self, data: Mapping[str, JSONValue]) -> Mapping[str, JSONValue]:
         # Expecting data: {"detected_extensions": list[str]}
-        data_obj = cast(JSONObject, data)
-        extensions: list[str] = cast(list[str], data_obj.get("detected_extensions", []))
+        extensions_raw = data.get("detected_extensions")
+        extensions = extensions_raw if isinstance(extensions_raw, list) else []
 
         # Heuristic: analyze extension load order or set
-        has_adblocker = any("adblock" in e.lower() or "ublock" in e.lower() for e in extensions)
+        has_adblocker = any(
+            isinstance(e, str) and ("adblock" in e.lower() or "ublock" in e.lower()) for e in extensions
+        )
 
-        fingerprint: JSONObject = {
+        fingerprint: Mapping[str, JSONValue] = {
             "extension_count": len(extensions),
             "has_adblocker": has_adblocker,
         }

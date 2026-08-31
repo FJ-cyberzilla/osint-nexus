@@ -3,7 +3,7 @@ from typing import TypedDict, cast
 from beartype import beartype
 
 from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
-from osint_nexus.core.type_defs import MetadataDict
+from osint_nexus.core.type_defs import JSONDict, JSONObject, MetadataDict, to_json_value
 
 
 class FingerprintResult(TypedDict):
@@ -41,9 +41,9 @@ class FullFingerprintEngine:
             # T_Data bound is dict[str, JSONValue]
             raw_data = telemetry_data.get(strategy.name, {})
             if not isinstance(raw_data, dict):
-                strategy_data: MetadataDict = {}
+                strategy_data: JSONObject = JSONDict(data={})
             else:
-                strategy_data = cast(MetadataDict, raw_data)
+                strategy_data = cast(JSONObject, raw_data)
 
             # Cast result to match expected FingerprintResult
             result = cast(FingerprintResult, strategy.extract(strategy_data))
@@ -60,7 +60,12 @@ class FullFingerprintEngine:
 
         final_confidence = total_weighted_confidence / total_weight if total_weight > 0 else 0.0
 
-        return {
-            "aggregated_data": aggregated_data,
-            "final_confidence": final_confidence,
-        }
+        return cast(
+            MetadataDict,
+            to_json_value(
+                {
+                    "aggregated_data": aggregated_data,
+                    "final_confidence": final_confidence,
+                }
+            ),
+        )

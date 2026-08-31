@@ -1,28 +1,34 @@
-from typing import cast
-
+from collections.abc import Mapping
 from beartype import beartype
 
 from osint_nexus.core.detectors.base import FingerprintStrategy
-from osint_nexus.core.type_defs import JSONObject, JSONValue
+from osint_nexus.core.type_defs import JSONValue
 
 
-class TcpFingerprintStrategy(FingerprintStrategy[JSONValue, JSONObject]):
+class TcpFingerprintStrategy(FingerprintStrategy[Mapping[str, JSONValue], Mapping[str, JSONValue]]):
     """Strategy for TCP/IP stack fingerprinting (TTL/Window/Options)."""
 
     name: str = "tcp_stack"
 
     @beartype
-    def extract(self, data: JSONValue) -> JSONObject:
+    def extract(self, data: Mapping[str, JSONValue]) -> Mapping[str, JSONValue]:
         # Heuristic implementation, CC should be low (1 per block)
-        data_obj = cast(JSONObject, data)
-        ttl = cast(int, data_obj.get("ttl", 0))
-        options = cast(list[str], data_obj.get("tcp_options", []))
+        ttl_value = data.get("ttl", 0)
+        ttl = int(ttl_value) if isinstance(ttl_value, (int, float)) else 0
+
+        # Safely extract tcp_options, ensuring it's a list of strings
+        options_value = data.get("tcp_options")
+        options: list[str] = []
+        if isinstance(options_value, Mapping):  # Assuming it might be a Mapping if structure changed
+            pass
+        elif hasattr(options_value, "__iter__") and not isinstance(options_value, (str, bytes)):
+            options = [str(v) for v in options_value if isinstance(v, (str, int, float, bool))]
 
         inferred_os, confidence = self._detect_os(ttl, options)
 
         return {
             "name": self.name,
-            "data": {"inferred_os": inferred_os},
+            "data": {"inferred_os": inferred_os if inferred_os else "unknown"},
             "confidence": confidence,
         }
 

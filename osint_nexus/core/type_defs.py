@@ -2,19 +2,42 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypedDict
+from typing import TypedDict, overload, Iterator
+from collections.abc import Mapping, Sequence
 
 
 # JSON types that allow recursive structures
 # Replaced recursive TypeAlias with a safer approach to avoid Pydantic RecursionError
 @dataclass
-class JSONDict:
+class JSONDict(Mapping[str, JSONValue]):
     data: dict[str, JSONValue]
+
+    def __getitem__(self, key: str) -> JSONValue:
+        return self.data[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.data)
+
+    def __len__(self) -> int:
+        return len(self.data)
 
 
 @dataclass
-class JSONListContainer:
+class JSONListContainer(Sequence[JSONValue]):
     data: list[JSONValue]
+
+    @overload
+    def __getitem__(self, index: int) -> JSONValue: ...
+    @overload
+    def __getitem__(self, index: slice) -> Sequence[JSONValue]: ...
+
+    def __getitem__(self, index: int | slice) -> JSONValue | Sequence[JSONValue]:
+        if isinstance(index, slice):
+            return JSONListContainer(data=self.data[index])
+        return self.data[index]
+
+    def __len__(self) -> int:
+        return len(self.data)
 
 
 type JSONValue = str | int | float | bool | None | JSONDict | JSONListContainer
@@ -83,3 +106,14 @@ def ensure_type[T](value: JSONValue, expected_type: type[T] | tuple[type[T], ...
     if isinstance(value, expected_type):
         return value
     return None
+
+
+def to_json_value(value: object) -> JSONValue:
+    """Convert an object to a JSONValue."""
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, dict):
+        return JSONDict(data={str(k): to_json_value(v) for k, v in value.items()})
+    if isinstance(value, list):
+        return JSONListContainer(data=[to_json_value(v) for v in value])
+    return str(value)

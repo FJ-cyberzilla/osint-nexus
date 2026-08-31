@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
+from typing import Self
 
 from rich.panel import Panel
 
@@ -48,22 +49,28 @@ class OSINTAgent:
     Facade providing a unified interface for the OSINT Nexus scanner.
     """
 
-    def __init__(self, username: str, ja3_hash: str | None = None) -> None:
+    def __init__(
+        self,
+        username: str,
+        ja3_hash: str | None = None,
+        config: Config | None = None,
+    ) -> None:
         """
         Initialize the OSINT Agent for a specific target username.
 
         Args:
             username: The username to scan.
             ja3_hash: Optional JA3 hash extracted from infrastructure headers.
+            config: Optional custom configuration instance.
         """
         self.username = username
-        self.config = Config()
+        self.config = config or Config()
         self.evasion_weights = EvasionWeights()
         self.fingerprint_agent = FingerprintAgent(self.config, ja3_hash=ja3_hash)
 
-        # Initialize subsystems
+        # Subsystem setup
         self.health = HealthTracker()
-        self.validator = ResultValidator(username)
+        self.validator = ResultValidator(self.username)
         self.db = DatabaseManager(self.config)
         self.mimicry = HumanMimicryEngine(self.config)
         self.extractor = PivotExtractor()
@@ -100,17 +107,34 @@ class OSINTAgent:
             validator=self.validator,
         )
 
+    async def __aenter__(self) -> Self:
+        """Initialize database and async resources on context enter."""
+        await self.db.ensure_initialized()
+        return self
+
+    async def __aexit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+        """Tear down network connections and browser pools on context exit."""
+        await self.close()
+
+    async def close(self) -> None:
+        """Clean up underlying network pools and browser resources."""
+        if hasattr(self.network, "close"):
+            await self.network.close()
+        if hasattr(self.browser_pool, "close"):
+            await self.browser_pool.close()
+        if hasattr(self.db, "close"):
+            await self.db.close()
+
     @property
     def orchestrator(self) -> ScanOrchestrator:
         """Access the orchestrator subsystem."""
         return self.subsystems.orchestrator
 
-    async def run_scan(self, username: str, timeout: float = 15.0) -> AsyncGenerator[IntelligenceObject]:
+    async def run_scan(self, timeout: float = 15.0) -> AsyncGenerator[IntelligenceObject]:
         """
-        Runs the full scan process for a given username.
+        Runs the full scan process for the initialized username.
 
         Args:
-            username: The username to scan.
             timeout: The maximum time allowed for each provider scan in seconds.
 
         Yields:
@@ -118,7 +142,7 @@ class OSINTAgent:
         """
         await self.db.ensure_initialized()
         providers = self.subsystems.registry.get_providers()
-        async for intel in self.subsystems.orchestrator.run_scan(username, providers, timeout=timeout):
+        async for intel in self.subsystems.orchestrator.run_scan(self.username, providers, timeout=timeout):
             yield intel
 
     async def get_final_report(self) -> Panel:

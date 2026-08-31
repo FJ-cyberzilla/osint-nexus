@@ -1,6 +1,3 @@
-import re
-from urllib.parse import urlparse
-
 from osint_nexus.core.dork import DorkEngine
 
 
@@ -33,13 +30,8 @@ def test_get_all_dorks() -> None:
     assert len(dorks) > 0
     for dork in dorks:
         assert "testuser" in dork
-        # Validate github host using parsed URL-like tokens, avoiding raw substring checks.
-        url_tokens = re.findall(r"https?://[^\s\"'>)]+", dork)
-        assert any(
-            (host == "github.com" or host.endswith(".github.com"))
-            for host in (urlparse(token).hostname for token in url_tokens)
-            if host
-        )
+        # Validate github site operator
+        assert "site:github.com" in dork
 
 
 def test_get_dork_query_variant() -> None:

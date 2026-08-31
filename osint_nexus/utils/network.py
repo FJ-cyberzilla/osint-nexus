@@ -1,12 +1,13 @@
 import logging
 from types import TracebackType
-from typing import Any, Self
+from typing import Self
 
 from osint_nexus.core.browser import BrowserPoolManager
 from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.core.exceptions import NetworkError
 from osint_nexus.core.mimicry import HumanMimicryEngine
+from osint_nexus.core.type_defs import JSONValue
 from osint_nexus.utils.fetchers import BrowserFetcher, HttpFetcher
 from osint_nexus.utils.limiter import AdaptiveRateLimiter, RateLimiter
 from osint_nexus.utils.network_monitor import NetworkMonitor
@@ -48,7 +49,7 @@ class NetworkManager:
         headers: dict[str, str] | None = None,
         use_browser: bool = False,
         site_name: str | None = None,
-        **browser_options: Any,
+        **browser_options: JSONValue,
     ) -> tuple[bool, str]:
         async def _attempt() -> tuple[bool, str]:
             await self.rate_limiter.wait(site_name)

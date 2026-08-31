@@ -1,17 +1,13 @@
-"""TUI Application entry point for OSINT Nexus."""
+from typing import Self
 
+from beartype import beartype
 from rich.console import Console
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import ProgressBar
 
 from osint_nexus.cli.components.panels import HelpPanel, SettingsPanel
-from osint_nexus.cli.theme import (
-    HEADER_HEIGHT,
-    LOG_PANEL_HEIGHT,
-    METRICS_GRAPH_WIDTH,
-    PROGRESS_BAR_HEIGHT,
-)
+from osint_nexus.cli.theme import HEADER_HEIGHT, LOG_PANEL_HEIGHT, METRICS_GRAPH_WIDTH, PROGRESS_BAR_HEIGHT
 from osint_nexus.cli.widgets import (
     Banner,
     Header,
@@ -26,16 +22,41 @@ from osint_nexus.cli.widgets import (
 )
 from osint_nexus.core.agent import OSINTAgent
 from osint_nexus.core.intelligence import IntelligenceObject
-from osint_nexus.core.type_defs import JSONDict, JSONListContainer, JSONValue, MetadataDict, ensure_type
-from osint_nexus.core.ui_models import ActivityLevel, FingerprintData, TelemetryData
 
-console = Console()
+console: Console = Console()
+
+
+@beartype
+class ScanConfig:
+    """Zero-comma parameter container for OSINTApp initialization."""
+
+    def __init__(self: Self) -> None:
+        self.agent: OSINTAgent
+        self.username: str = ""
+        self.total: int = 0
+        self.timeout: float = 0.0
+
+    def set_agent(self: Self, agent: OSINTAgent) -> Self:
+        self.agent = agent
+        return self
+
+    def set_username(self: Self, username: str) -> Self:
+        self.username = username
+        return self
+
+    def set_total(self: Self, total: int) -> Self:
+        self.total = total
+        return self
+
+    def set_timeout(self: Self, timeout: float) -> Self:
+        self.timeout = timeout
+        return self
 
 
 class OSINTApp(App[None]):
     """Main Textual application for OSINT Nexus."""
 
-    CSS = f"""
+    CSS: str = f"""
     #main-container {{
         layout: vertical;
         padding: 1;
@@ -73,23 +94,21 @@ class OSINTApp(App[None]):
     }}
     """
 
-    BINDINGS = [("ctrl+q", "quit", "Quit")]
+    BINDINGS: list[tuple[str, str, str]] = [("ctrl+q", "quit", "Quit")]
 
-    def __init__(self, agent: OSINTAgent, username: str, total: int, timeout: float) -> None:
+    def __init__(self: Self, config: ScanConfig) -> None:
         super().__init__()
-        self.agent = agent
-        self.username = username
-        self.total = total
-        self.timeout = timeout
-        self._successes = 0
-        self._failures = 0
-        self._scan_finished = False
+        self.agent: OSINTAgent = config.agent
+        self.username: str = config.username
+        self.total: int = config.total
+        self.timeout: float = config.timeout
+        self._scan_finished: bool = False
 
-    def compose(self) -> ComposeResult:
+    def compose(self: Self) -> ComposeResult:
         yield Container(
             Banner(id="banner"),
-            Header(self.username, id="header"),
-            ReconProgress(self.total, id="progress"),
+            Header(id="header"),
+            ReconProgress(id="progress"),
             Horizontal(
                 IntelligenceDashboard(id="dashboard"),
                 Vertical(
@@ -105,25 +124,25 @@ class OSINTApp(App[None]):
             id="main-container",
         )
 
-    def on_mount(self) -> None:
+    def on_mount(self: Self) -> None:
         """Start the scan worker."""
         self.run_worker(self.scan_worker(), exclusive=True)
 
-    async def scan_worker(self) -> None:
+    async def scan_worker(self: Self) -> None:
         """Scanner worker."""
         async for intel in self.agent.run_scan(username=self.username, timeout=self.timeout):
             self.post_message(ScanUpdate(intel))
         self._scan_finished = True
 
-    async def action_quit(self) -> None:
+    async def action_quit(self: Self) -> None:
         """Restrict quit to after scan."""
         if not self._scan_finished:
             return
         await super().action_quit()
 
-    def on_scan_update(self, message: ScanUpdate) -> None:
+    def on_scan_update(self: Self, message: ScanUpdate) -> None:
         """Handle scan updates by delegating to specialized updater methods."""
-        intel = message.intel
+        intel: IntelligenceObject = message.intel
 
         self._update_dashboard(intel)
         self._update_progress_bar()
@@ -131,129 +150,39 @@ class OSINTApp(App[None]):
         self._update_metrics(intel)
         self._update_advanced_intel(intel)
 
-    def _update_dashboard(self, intel: IntelligenceObject) -> None:
+    def _update_dashboard(self: Self, intel: IntelligenceObject) -> None:
         """Update the intelligence dashboard."""
-        self.query_one("#dashboard", IntelligenceDashboard).update_data(intel)
+        self.query_one("#dashboard", IntelligenceDashboard).update(intel)
 
-    def _update_progress_bar(self) -> None:
+    def _update_progress_bar(self: Self) -> None:
         """Advance the progress bar."""
         self.query_one("#progress", ReconProgress).query_one(ProgressBar).advance(1)
 
-    def _update_logs(self, intel: IntelligenceObject) -> None:
+    def _update_logs(self: Self, intel: IntelligenceObject) -> None:
         """Write to the log panel."""
-        self.query_one("#logs", LogPanel).write_log(intel.platform, intel.found)
+        self.query_one("#logs", LogPanel).update(intel)
 
-    def _update_metrics(self, intel: IntelligenceObject) -> None:
+    def _update_metrics(self: Self, intel: IntelligenceObject) -> None:
         """Update the success/failure metrics graph."""
-        if "error" in intel.metadata:
-            self._failures += 1
-        else:
-            self._successes += 1
-        self.query_one("#metrics", MetricsGraph).update_metrics(self._successes, self._failures)
+        self.query_one("#metrics", MetricsGraph).update(intel)
 
-    def _update_advanced_intel(self, intel: IntelligenceObject) -> None:
+    def _update_advanced_intel(self: Self, intel: IntelligenceObject) -> None:
         """Update telemetry, relationships, and heatmap panels."""
         if not intel.found:
             return
 
-        metadata: MetadataDict = dict(intel.metadata)
-        self._update_telemetry_panel(metadata)
-        self._update_relationship_panel(metadata)
-        self._update_activity_panel(metadata)
+        self.query_one("#telemetry", TelemetryPanel).update(intel)
+        self._update_relationship_panel(intel)
+        self._update_activity_panel(intel)
 
-    def _update_telemetry_panel(self, metadata: MetadataDict) -> None:
+    def _update_telemetry_panel(self: Self, intel: IntelligenceObject) -> None:
         """Helper to update telemetry panel."""
-        telemetry_val = metadata.get("telemetry")
-        fingerprint_val = metadata.get("fingerprint_results")
+        self.query_one("#telemetry", TelemetryPanel).update(intel)
 
-        telemetry_data: TelemetryData | None = None
-
-        # Helper to safely extract dictionary from JSONValue
-        def as_dict(val: JSONValue) -> dict[str, JSONValue] | None:
-            if isinstance(val, JSONDict):
-                return val.data
-            if isinstance(val, dict):
-                return val
-            return None
-
-        telemetry_raw = as_dict(telemetry_val)
-        if telemetry_raw:
-            try:
-                # TelemetryData requires str values for specific fields,
-                # we must validate or map the dictionary values.
-                telemetry_data = TelemetryData(
-                    dns_leak=str(telemetry_raw.get("dns_leak", "N/A")),
-                    connection_type=str(telemetry_raw.get("connection_type", "N/A")),
-                    hardware_fingerprint=str(telemetry_raw.get("hardware_fingerprint", "N/A")),
-                )
-            except ValueError:
-                console.log("Invalid telemetry data format.")
-
-        fingerprint_raw = as_dict(fingerprint_val)
-        if fingerprint_raw:
-            try:
-                # Use ensure_type to ensure we have the correct types before passing to Pydantic
-                suspicious_val = fingerprint_raw.get("suspicious", False)
-                risk_score_val = fingerprint_raw.get("risk_score", 0.0)
-                risk_level_val = fingerprint_raw.get("risk_level", "Low")
-                action_val = fingerprint_raw.get("recommended_action", "None")
-                summary_val = fingerprint_raw.get("summary", "No summary")
-
-                fingerprint = FingerprintData(
-                    suspicious=bool(ensure_type(suspicious_val, bool)),
-                    risk_score=float(ensure_type(risk_score_val, (float, int)) or 0.0),
-                    risk_level=str(ensure_type(risk_level_val, str) or "Low"),
-                    recommended_action=str(ensure_type(action_val, str) or "None"),
-                    summary=str(ensure_type(summary_val, str) or "No summary"),
-                )
-                if telemetry_data:
-                    telemetry_data.fingerprint_results = fingerprint
-                else:
-                    telemetry_data = TelemetryData(
-                        dns_leak="N/A",
-                        connection_type="N/A",
-                        hardware_fingerprint="N/A",
-                        fingerprint_results=fingerprint,
-                    )
-            except ValueError:
-                console.log("Invalid fingerprint data format.")
-
-        if telemetry_data:
-            self.query_one("#telemetry", TelemetryPanel).update_telemetry(telemetry_data)
-
-    def _update_relationship_panel(self, metadata: MetadataDict) -> None:
+    def _update_relationship_panel(self: Self, intel: IntelligenceObject) -> None:
         """Helper to update relationship panel."""
-        relationships_val = metadata.get("relationships")
-        relationships: list[str] = []
+        self.query_one("#relationships", RelationshipPanel).update(intel)
 
-        if isinstance(relationships_val, list):
-            relationships = [str(r) for r in relationships_val]
-        elif isinstance(relationships_val, JSONListContainer):
-            relationships = [str(r) for r in relationships_val.data]
-
-        self.query_one("#relationships", RelationshipPanel).update_relationships(relationships)
-
-    def _update_activity_panel(self, metadata: MetadataDict) -> None:
+    def _update_activity_panel(self: Self, intel: IntelligenceObject) -> None:
         """Helper to update activity panel."""
-        activity_val = metadata.get("activity")
-
-        # Helper to safely extract dictionary
-        def as_dict(val: JSONValue) -> dict[str, JSONValue] | None:
-            if isinstance(val, JSONDict):
-                return val.data
-            if isinstance(val, dict):
-                return val
-            return None
-
-        activity_raw = as_dict(activity_val)
-        if activity_raw:
-            try:
-                level_val = activity_raw.get("level", "Inactive")
-                trend_val = activity_raw.get("trend", "Neutral")
-                activity = ActivityLevel(
-                    level=str(ensure_type(level_val, str) or "Inactive"),
-                    trend=str(ensure_type(trend_val, str) or "Neutral"),
-                )
-                self.query_one("#heatmap", HeatmapPanel).update_heatmap(activity)
-            except ValueError:
-                console.log("Invalid activity level data format.")
+        self.query_one("#heatmap", HeatmapPanel).update(intel)

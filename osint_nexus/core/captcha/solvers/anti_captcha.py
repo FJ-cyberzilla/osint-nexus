@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import Any, TypedDict
+from typing import TypedDict
 
 import aiohttp
 
@@ -10,12 +10,10 @@ from osint_nexus.core.captcha.base import (
     CaptchaConfig,
     CaptchaServiceError,
     CaptchaSolver,
-    CaptchaSolveResult,
     CaptchaTimeoutError,
-    CaptchaType,
 )
+from osint_nexus.core.captcha.models import CaptchaExtraParameters, CaptchaSolveResult, CaptchaType
 from osint_nexus.core.config import get_config
-from osint_nexus.core.type_defs import JSONValue
 from osint_nexus.utils.security import SecurityUtility
 
 
@@ -90,10 +88,10 @@ class AntiCaptchaSolver(CaptchaSolver):
         site_key: str,
         url: str,
         captcha_type: CaptchaType,
-        **kwargs: JSONValue,
+        extra: CaptchaExtraParameters | None = None,
     ) -> CaptchaSolveResult:
         session = self._ensure_session()
-        task_data = self._build_task_data(site_key, url, captcha_type, kwargs)
+        task_data = self._build_task_data(site_key, url, captcha_type, extra)
 
         # Create task
         payload = {
@@ -118,7 +116,7 @@ class AntiCaptchaSolver(CaptchaSolver):
         site_key: str,
         url: str,
         captcha_type: CaptchaType,
-        extra: dict[str, Any],
+        extra: CaptchaExtraParameters | None = None,
     ) -> dict[str, str | float]:
         """Build the task data for Anti‑Captcha."""
         type_map = {
@@ -136,11 +134,11 @@ class AntiCaptchaSolver(CaptchaSolver):
             task["websiteKey"] = site_key
         elif captcha_type == CaptchaType.RECAPTCHA_V3:
             task["websiteKey"] = site_key
-            task["pageAction"] = str(extra.get("action", "verify"))
-            task["minScore"] = float(extra.get("min_score", 0.3))
+            task["pageAction"] = str(extra.get("action", "verify") if extra else "verify")
+            task["minScore"] = float(extra.get("min_score", 0.3) if extra else 0.3)
         elif captcha_type == CaptchaType.HCAPTCHA:
             task["websiteKey"] = site_key
-            task["data"] = str(extra.get("data_s", ""))
+            task["data"] = str(extra.get("data_s", "") if extra else "")
         elif captcha_type == CaptchaType.TURNSTILE:
             task["websiteKey"] = site_key
         return task

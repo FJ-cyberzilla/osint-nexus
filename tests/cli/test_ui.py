@@ -12,8 +12,6 @@ class TestOSINTApp:
         assert app.username == "testuser"
         assert app.total == 10
         assert app.timeout == 30.0
-        assert app._successes == 0
-        assert app._failures == 0
 
     def test_on_scan_update(self):
         mock_agent = MagicMock()
@@ -29,12 +27,10 @@ class TestOSINTApp:
         mock_progress = MagicMock()
         mock_progress_bar = MagicMock()
         mock_log_panel = MagicMock()
-        mock_rich_log = MagicMock()
         mock_metrics_graph = MagicMock()
 
         # Configure nested query_one
         mock_progress.query_one.return_value = mock_progress_bar
-        mock_log_panel.query_one.return_value = mock_rich_log
 
         # Patch query_one
         with patch.object(app, "query_one") as mock_query:
@@ -56,7 +52,7 @@ class TestOSINTApp:
             app.on_scan_update(ScanUpdate(mock_intel))
 
             # Assertions
-            mock_dashboard.update_data.assert_called_once_with(mock_intel)
+            mock_dashboard.update.assert_called_once_with(mock_intel)
             mock_progress_bar.advance.assert_called_once_with(1)
-            mock_log_panel.write_log.assert_called_once_with(mock_intel.platform, mock_intel.found)
-            mock_metrics_graph.update_metrics.assert_called_once_with(1, 0)
+            mock_log_panel.update.assert_called_once_with(mock_intel)
+            mock_metrics_graph.update.assert_called_once_with(mock_intel)

@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import logging
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from osint_nexus.utils.network_types import ResponseProtocol, SessionProtocol
-    from osint_nexus.core.fingerbank.clients.devices import DevicesClient
-    from osint_nexus.core.fingerbank.clients.oui import OuiClient
-    from osint_nexus.core.fingerbank.clients.static import StaticDataClient
-    from osint_nexus.core.fingerbank.clients.users import UsersClient
+    from osint_nexus.utils.network_types import SessionProtocol
 
 from osint_nexus.core.fingerbank.exceptions import (
     FingerbankBackendError,

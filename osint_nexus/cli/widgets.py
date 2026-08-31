@@ -1,9 +1,10 @@
 """UI widgets for the OSINT Nexus TUI."""
 
+import contextlib
 from collections.abc import Mapping
 from enum import Enum
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 from rich.panel import Panel
 from textual.app import ComposeResult
@@ -18,7 +19,8 @@ from osint_nexus.cli.theme import (
     METRICS_BAR_WIDTH,
 )
 from osint_nexus.core.intelligence import IntelligenceObject
-from osint_nexus.core.ui_models import ActivityLevel, TelemetryData
+from osint_nexus.core.type_defs import JSONDict, JSONListContainer, JSONValue, ensure_type
+from osint_nexus.core.ui_models import ActivityLevel, FingerprintData, TelemetryData
 
 # Widget Constants
 DEFAULT_PROGRESS_TOTAL: Final[int] = 0
@@ -94,6 +96,10 @@ class ReconProgress(Static):
         progress_bar.styles.color = COLOR_PROGRESS_SUCCESS
         yield progress_bar
 
+    def on_scan_update(self, _: ScanUpdate) -> None:
+        """Handle scan updates."""
+        self.query_one(ProgressBar).advance(1)
+
 
 class IntelligenceDashboard(Static):
     """Renders the Intelligence Dashboard (Fingerprint, Footprint, etc.)."""
@@ -115,35 +121,62 @@ class IntelligenceDashboard(Static):
             self.table.add_row(key, value)
         yield self.table
 
+    def update_data(self, intel: IntelligenceObject) -> None:
+        """Updates the dashboard table with new intelligence data."""
+        intel_data = self._extract_intel_data(intel)
+        self.data.update(intel_data)
+        self.table.clear()
+        for key, value in intel_data.items():
+            self.table.add_row(key, value)
+        self.refresh()
+
     def _extract_intel_data(self, intel: IntelligenceObject) -> dict[str, str]:
         """Extracts and formats relevant information from intelligence."""
         metadata = intel.metadata
-
-        # New: Aggregate device fingerprint results using Enum registry
         device_results = metadata.get("device_inference", {})
 
-        fingerprint_summary = []
-        if isinstance(device_results, Mapping):
-            for strategy in FingerprintStrategy:
-                result = device_results.get(strategy.key)
-                if isinstance(result, Mapping) and "data" in result:
-                    # Ensure we have data before displaying
-                    val = result["data"].get(strategy.data_key)
-                    if val:
-                        fingerprint_summary.append(f"{strategy.label}: {val}")
-
         return {
-            "Fingerprint": ", ".join(fingerprint_summary) if fingerprint_summary else "No Data",
+            "Fingerprint": self._build_fingerprint_summary(device_results),
             "Footprint": str(metadata.get("footprint", "Active")),
-            "Canvas": (
-                "Visuals Present"
-                if (intel.visuals and (intel.visuals.profile_picture or intel.visuals.banner_image))
-                else "Text/Data Only"
-            ),
+            "Canvas": self._get_canvas_status(intel),
             "Useragent": "See Fingerprint",
         }
 
-    def update_data(self, intel: IntelligenceObject) -> None:
+    def _build_fingerprint_summary(self, device_results: Any) -> str:
+        """Builds a summary string from device inference results."""
+        if not isinstance(device_results, Mapping):
+            return "No Data"
+
+        fingerprint_summary = self._get_all_results(device_results)
+
+        return ", ".join(fingerprint_summary) if fingerprint_summary else "No Data"
+
+    def _get_all_results(self, device_results: Mapping[Any, Any]) -> list[str]:
+        """Collects all strategy results."""
+        return [
+            result
+            for strategy in FingerprintStrategy
+            if (result := self._get_strategy_result(device_results, strategy)) is not None
+        ]
+
+    def _get_strategy_result(
+        self, device_results: Mapping[Any, Any], strategy: FingerprintStrategy
+    ) -> str | None:
+        """Extracts a formatted string for a specific fingerprint strategy."""
+        result = device_results.get(strategy.key)
+        if isinstance(result, Mapping) and "data" in result:
+            val = result["data"].get(strategy.data_key)
+            if val:
+                return f"{strategy.label}: {val}"
+        return None
+
+    def _get_canvas_status(self, intel: IntelligenceObject) -> str:
+        """Returns the canvas status based on presence of visuals."""
+        if intel.visuals and (intel.visuals.profile_picture or intel.visuals.banner_image):
+            return "Visuals Present"
+        return "Text/Data Only"
+
+    def update(self, intel: IntelligenceObject) -> None:
         """Update intelligence data."""
         if not intel.found:
             return
@@ -153,6 +186,11 @@ class IntelligenceDashboard(Static):
         self.table.clear()
         for key, value in self.data.items():
             self.table.add_row(key, value)
+        self.refresh()
+
+    def on_scan_update(self, message: ScanUpdate) -> None:
+        """Handle scan updates."""
+        self.update(message.intel)
 
 
 class TelemetryPanel(Static):
@@ -163,21 +201,87 @@ class TelemetryPanel(Static):
         table.add_columns("Metric", "Value")
         yield table
 
-    def update_telemetry(self, telemetry: TelemetryData) -> None:
-        """Updates telemetry table with structured data."""
+    def update(self, intel: IntelligenceObject) -> None:
+        """Updates telemetry table by extracting data from IntelligenceObject."""
+        metadata = intel.metadata
+        telemetry_val = metadata.get("telemetry")
+        fingerprint_val = metadata.get("fingerprint_results")
+
+        telemetry_data = self._parse_telemetry(telemetry_val)
+        fingerprint = self._parse_fingerprint(fingerprint_val)
+
+        if fingerprint:
+            if telemetry_data:
+                telemetry_data.fingerprint_results = fingerprint
+            else:
+                telemetry_data = TelemetryData(
+                    dns_leak="N/A",
+                    connection_type="N/A",
+                    hardware_fingerprint="N/A",
+                    fingerprint_results=fingerprint,
+                )
+
+        if telemetry_data:
+            self._update_table(telemetry_data)
+
+    def _as_dict(self, val: JSONValue) -> dict[str, JSONValue] | None:
+        if isinstance(val, JSONDict):
+            return val.data
+        if isinstance(val, dict):
+            return val
+        return None
+
+    def _parse_telemetry(self, telemetry_val: JSONValue) -> TelemetryData | None:
+        telemetry_raw = self._as_dict(telemetry_val)
+        if not telemetry_raw:
+            return None
+        with contextlib.suppress(ValueError):
+            return TelemetryData(
+                dns_leak=str(telemetry_raw.get("dns_leak", "N/A")),
+                connection_type=str(telemetry_raw.get("connection_type", "N/A")),
+                hardware_fingerprint=str(telemetry_raw.get("hardware_fingerprint", "N/A")),
+            )
+        return None
+
+    def _parse_fingerprint(self, fingerprint_val: JSONValue) -> FingerprintData | None:
+        fingerprint_raw = self._as_dict(fingerprint_val)
+        if not fingerprint_raw:
+            return None
+        with contextlib.suppress(ValueError):
+            suspicious_val = fingerprint_raw.get("suspicious", False)
+            risk_score_val = fingerprint_raw.get("risk_score", 0.0)
+            risk_level_val = fingerprint_raw.get("risk_level", "Low")
+            action_val = fingerprint_raw.get("recommended_action", "None")
+            summary_val = fingerprint_raw.get("summary", "No summary")
+
+            return FingerprintData(
+                suspicious=bool(ensure_type(suspicious_val, bool)),
+                risk_score=float(ensure_type(risk_score_val, (float, int)) or 0.0),
+                risk_level=str(ensure_type(risk_level_val, str) or "Low"),
+                recommended_action=str(ensure_type(action_val, str) or "None"),
+                summary=str(ensure_type(summary_val, str) or "No summary"),
+            )
+        return None
+
+    def _update_table(self, telemetry_data: TelemetryData) -> None:
         table = self.query_one(DataTable)
         table.clear()
-        table.add_row("DNS Leak", telemetry.dns_leak)
-        table.add_row("Connection", telemetry.connection_type)
-        table.add_row("HW Fingerprint", telemetry.hardware_fingerprint)
+        table.add_row("DNS Leak", telemetry_data.dns_leak)
+        table.add_row("Connection", telemetry_data.connection_type)
+        table.add_row("HW Fingerprint", telemetry_data.hardware_fingerprint)
 
-        if telemetry.fingerprint_results:
+        if telemetry_data.fingerprint_results:
             table.add_row("[bold magenta]--- Fingerprint ---[/]", "")
-            table.add_row("Suspicious", str(telemetry.fingerprint_results.suspicious))
-            table.add_row("Risk Score", f"{telemetry.fingerprint_results.risk_score:.2f}")
-            table.add_row("Risk Level", telemetry.fingerprint_results.risk_level)
-            table.add_row("Recommended Action", telemetry.fingerprint_results.recommended_action)
-            table.add_row("Summary", telemetry.fingerprint_results.summary)
+            table.add_row("Suspicious", str(telemetry_data.fingerprint_results.suspicious))
+            table.add_row("Risk Score", f"{telemetry_data.fingerprint_results.risk_score:.2f}")
+            table.add_row("Risk Level", telemetry_data.fingerprint_results.risk_level)
+            table.add_row("Recommended Action", telemetry_data.fingerprint_results.recommended_action)
+            table.add_row("Summary", telemetry_data.fingerprint_results.summary)
+        self.refresh()
+
+    def on_scan_update(self, message: ScanUpdate) -> None:
+        """Handle scan updates."""
+        self.update(message.intel)
 
 
 class RelationshipPanel(Static):
@@ -186,12 +290,25 @@ class RelationshipPanel(Static):
     def compose(self) -> ComposeResult:
         yield Tree("Relationships")
 
-    def update_relationships(self, relationships: list[str]) -> None:
-        """Updates relationship tree."""
+    def update(self, intel: IntelligenceObject) -> None:
+        """Updates relationship tree by extracting from metadata."""
+        relationships_val = intel.metadata.get("relationships")
+        relationships: list[str] = []
+
+        if isinstance(relationships_val, list):
+            relationships = [str(r) for r in relationships_val]
+        elif isinstance(relationships_val, JSONListContainer):
+            relationships = [str(r) for r in relationships_val.data]
+
         tree = self.query_one(Tree)
         tree.root.remove_children()
         for rel in relationships:
             tree.root.add(rel)
+        self.refresh()
+
+    def on_scan_update(self, message: ScanUpdate) -> None:
+        """Handle scan updates."""
+        self.update(message.intel)
 
 
 class HeatmapPanel(Static):
@@ -200,11 +317,38 @@ class HeatmapPanel(Static):
     def compose(self) -> ComposeResult:
         yield Static("Activity: [None]", id="heatmap-label")
 
-    def update_heatmap(self, activity: ActivityLevel) -> None:
-        """Updates heatmap status using structured model."""
-        self.query_one("#heatmap-label", Static).update(
-            f"Activity: [bold cyan]{activity.level}[/] (Trend: {activity.trend})"
-        )
+    def update(self, intel: IntelligenceObject) -> None:
+        """Updates heatmap status by extracting activity from metadata."""
+        activity_val = intel.metadata.get("activity")
+
+        # Helper to safely extract dictionary
+        def as_dict(val: JSONValue) -> dict[str, JSONValue] | None:
+            if isinstance(val, JSONDict):
+                return val.data
+            if isinstance(val, dict):
+                return val
+            return None
+
+        activity_raw = as_dict(activity_val)
+        if activity_raw:
+            try:
+                level_val = activity_raw.get("level", "Inactive")
+                trend_val = activity_raw.get("trend", "Neutral")
+                activity = ActivityLevel(
+                    level=str(ensure_type(level_val, str) or "Inactive"),
+                    trend=str(ensure_type(trend_val, str) or "Neutral"),
+                )
+                self.query_one("#heatmap-label", Static).update(
+                    f"Activity: [bold cyan]{activity.level}[/] (Trend: {activity.trend})"
+                )
+            except ValueError:
+                # Log invalid format, maybe to a global logger
+                pass
+        self.refresh()
+
+    def on_scan_update(self, message: ScanUpdate) -> None:
+        """Handle scan updates."""
+        self.update(message.intel)
 
 
 class LogPanel(Static):
@@ -213,11 +357,15 @@ class LogPanel(Static):
     def compose(self) -> ComposeResult:
         yield RichLog(highlight=True, markup=True)
 
-    def write_log(self, platform: str, found: bool) -> None:
+    def update(self, intel: IntelligenceObject) -> None:
         """Log with themed colors."""
-        color = COLOR_FOUND if found else COLOR_NOT_FOUND
-        status = "Found" if found else "Not Found"
-        self.query_one(RichLog).write(f"Analyzed {platform}: [{color}]{status}[/]")
+        color = COLOR_FOUND if intel.found else COLOR_NOT_FOUND
+        status = "Found" if intel.found else "Not Found"
+        self.query_one(RichLog).write(f"Analyzed {intel.platform}: [{color}]{status}[/]")
+
+    def on_scan_update(self, message: ScanUpdate) -> None:
+        """Handle scan updates."""
+        self.update(message.intel)
 
 
 class MetricsGraph(Static):
@@ -229,14 +377,30 @@ class MetricsGraph(Static):
         self.failures: int = 0
 
     def update_metrics(self, successes: int, failures: int) -> None:
-        """Update the metrics display."""
+        """Update metrics externally."""
         self.successes = successes
         self.failures = failures
-        total = successes + failures
+        self._refresh_graph()
+
+    def update(self, intel: IntelligenceObject) -> None:
+        """Update the metrics display based on the latest intelligence."""
+        if "error" in intel.metadata:
+            self.failures += 1
+        else:
+            self.successes += 1
+        self._refresh_graph()
+
+    def _refresh_graph(self) -> None:
+        """Refresh the graph display."""
+        total = self.successes + self.failures
         if total == 0:
             graph = "No data yet."
         else:
             s_bar = "█" * (self.successes * METRICS_BAR_WIDTH // total)
             f_bar = "░" * (self.failures * METRICS_BAR_WIDTH // total)
             graph = f"{s_bar}{f_bar}"
-        self.update(f"[cyan]{graph}[/]\n{self.successes} success | {self.failures} failure")
+        super().update(f"[cyan]{graph}[/]\n{self.successes} success | {self.failures} failure")
+
+    def on_scan_update(self, message: ScanUpdate) -> None:
+        """Handle scan updates."""
+        self.update(message.intel)
