@@ -1,9 +1,9 @@
+from collections.abc import Mapping
 from typing import Protocol, TypeVar, runtime_checkable
 
 from beartype import beartype
 
-from collections.abc import Mapping
-from osint_nexus.core.type_defs import JSONValue, JSONObject
+from osint_nexus.core.type_defs import JSONObject, JSONValue
 
 T_Data = TypeVar("T_Data", contravariant=True, bound=JSONValue | Mapping[str, JSONValue])
 T_Result = TypeVar("T_Result", covariant=True, bound=Mapping[str, JSONValue])

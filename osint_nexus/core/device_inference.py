@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from typing import Iterator, TypedDict, cast
+from typing import TypedDict, cast
 
 from beartype import beartype
 from pydantic import BaseModel, Field
@@ -11,7 +11,14 @@ from pydantic import BaseModel, Field
 from osint_nexus.core.db.fingerprint_repository import FingerprintRepository
 from osint_nexus.core.detectors.base import FingerprintStrategy
 from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
-from osint_nexus.core.type_defs import JSONValue, TelemetryDict, TelemetryValue, to_json_value, JSONListContainer
+from osint_nexus.core.type_defs import (
+    JSONDict,
+    JSONListContainer,
+    JSONValue,
+    TelemetryDict,
+    TelemetryValue,
+    to_json_value,
+)
 from osint_nexus.utils.data_loader import load_data
 
 # Re-alias for local use or update code
@@ -97,10 +104,22 @@ class TlsFingerprintStrategy(FingerprintStrategy[str, FingerprintResult]):
         )
 
 
-class TcpData(TypedDict):
-    ttl: int
-    window_size: int
-    tcp_options: JSONListContainer
+class TcpData(Mapping[str, JSONValue]):
+    def __init__(self, ttl: int, window_size: int, tcp_options: JSONListContainer) -> None:
+        self.data: dict[str, JSONValue] = {
+            "ttl": ttl,
+            "window_size": window_size,
+            "tcp_options": tcp_options,
+        }
+
+    def __getitem__(self, key: str) -> JSONValue:
+        return self.data[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.data)
+
+    def __len__(self) -> int:
+        return len(self.data)
 
 
 class TcpFingerprintStrategy(FingerprintStrategy[TcpData, FingerprintResult]):
@@ -112,8 +131,9 @@ class TcpFingerprintStrategy(FingerprintStrategy[TcpData, FingerprintResult]):
     def extract(self, data: TcpData) -> FingerprintResult:
         # Expecting data: {"ttl": int, "window_size": int, "tcp_options": list[JSONValue]}
         ttl = data.get("ttl", 0)
-        options_container = data.get("tcp_options", JSONListContainer(data=[]))
-        options = options_container.data
+        options_container = data.get("tcp_options", JSONListContainer(root=[]))
+
+        options = options_container.root
 
         fingerprint, confidence = self._detect_os(ttl, options)
 
@@ -181,10 +201,18 @@ class DeviceInferenceNetworkEngine:
         5555: {"os": ["Android (ADB)"], "role": "Mobile Debug Node"},
     }
 
-    OUI_DATABASE: dict[str, str] = load_data("oui.json")
+    OUI_DATABASE: JSONValue = load_data("oui.json")
 
     def __init__(self) -> None:
         pass
+
+    def _get_oui(self, oui_segment: str) -> str:
+        """Safely extract OUI from JSONValue database."""
+        if isinstance(self.OUI_DATABASE, JSONDict):
+            val = self.OUI_DATABASE.get(oui_segment)
+            if isinstance(val, str):
+                return val
+        return "Generic/Unregistered Manufacturer"
 
     def _get_os_from_mappings(self, mappings: list[PortMapping]) -> list[str]:
         """Extract OS from mappings."""
@@ -237,7 +265,7 @@ class DeviceInferenceNetworkEngine:
 
         # Isolate the Organizationally Unique Identifier (First 3 bytes)
         oui_segment = f"{clean_mac[0:2]}:{clean_mac[2:4]}:{clean_mac[4:6]}"
-        return self.OUI_DATABASE.get(oui_segment, "Generic/Unregistered Manufacturer")
+        return self._get_oui(oui_segment)
 
 
 class DeviceInferenceEngine:

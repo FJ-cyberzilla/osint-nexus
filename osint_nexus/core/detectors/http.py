@@ -1,5 +1,5 @@
-from typing import TypedDict, cast
 from collections.abc import Mapping
+from typing import TypedDict
 
 from beartype import beartype
 

@@ -1,30 +1,32 @@
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypedDict, overload, Iterator
-from collections.abc import Mapping, Sequence
+from typing import TypedDict, overload
 
+from pydantic import RootModel
 
 # JSON types that allow recursive structures
 # Replaced recursive TypeAlias with a safer approach to avoid Pydantic RecursionError
-@dataclass
-class JSONDict(Mapping[str, JSONValue]):
-    data: dict[str, JSONValue]
+type JSONValue = str | int | float | bool | None | JSONDict | JSONListContainer
+
+
+class JSONDict(RootModel[dict[str, JSONValue]]):
+    root: dict[str, JSONValue]
 
     def __getitem__(self, key: str) -> JSONValue:
-        return self.data[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.data)
+        return self.root[key]
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.root)
+
+    def get(self, key: str, default: JSONValue = None) -> JSONValue:
+        return self.root.get(key, default)
 
 
-@dataclass
-class JSONListContainer(Sequence[JSONValue]):
-    data: list[JSONValue]
+class JSONListContainer(RootModel[list[JSONValue]]):
+    root: list[JSONValue]
 
     @overload
     def __getitem__(self, index: int) -> JSONValue: ...
@@ -33,14 +35,13 @@ class JSONListContainer(Sequence[JSONValue]):
 
     def __getitem__(self, index: int | slice) -> JSONValue | Sequence[JSONValue]:
         if isinstance(index, slice):
-            return JSONListContainer(data=self.data[index])
-        return self.data[index]
+            return JSONListContainer(root=self.root[index])
+        return self.root[index]
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.root)
 
 
-type JSONValue = str | int | float | bool | None | JSONDict | JSONListContainer
 type JSONObject = dict[str, JSONValue]
 type JSONList = list[JSONValue]
 
@@ -113,7 +114,7 @@ def to_json_value(value: object) -> JSONValue:
     if isinstance(value, (str, int, float, bool)) or value is None:
         return value
     if isinstance(value, dict):
-        return JSONDict(data={str(k): to_json_value(v) for k, v in value.items()})
+        return JSONDict(root={str(k): to_json_value(v) for k, v in value.items()})
     if isinstance(value, list):
-        return JSONListContainer(data=[to_json_value(v) for v in value])
+        return JSONListContainer(root=[to_json_value(v) for v in value])
     return str(value)

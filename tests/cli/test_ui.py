@@ -1,13 +1,14 @@
 from unittest.mock import MagicMock, patch
 
-from osint_nexus.cli.ui import OSINTApp
+from osint_nexus.cli.ui import OSINTApp, ScanConfig
 from osint_nexus.cli.widgets import ScanUpdate
 
 
 class TestOSINTApp:
     def test_init(self):
         mock_agent = MagicMock()
-        app = OSINTApp(mock_agent, "testuser", 10, 30.0)
+        config = ScanConfig(agent=mock_agent, username="testuser", total=10, timeout=30.0)
+        app = OSINTApp(config)
         assert app.agent == mock_agent
         assert app.username == "testuser"
         assert app.total == 10
@@ -15,7 +16,8 @@ class TestOSINTApp:
 
     def test_on_scan_update(self):
         mock_agent = MagicMock()
-        app = OSINTApp(mock_agent, "testuser", 10, 30.0)
+        config = ScanConfig(agent=mock_agent, username="testuser", total=10, timeout=30.0)
+        app = OSINTApp(config)
 
         # Mock dependencies
         mock_intel = MagicMock()

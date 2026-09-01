@@ -41,7 +41,7 @@ class FullFingerprintEngine:
             # T_Data bound is dict[str, JSONValue]
             raw_data = telemetry_data.get(strategy.name, {})
             if not isinstance(raw_data, dict):
-                strategy_data: JSONObject = JSONDict(data={})
+                strategy_data: JSONObject = JSONDict(root={})
             else:
                 strategy_data = cast(JSONObject, raw_data)
 

@@ -4,8 +4,8 @@ Handles the execution lifecycle of provider-specific OSINT checks.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 
 from osint_nexus.core.extractor import PivotExtractor
 from osint_nexus.core.fingerprint import FingerprintAgent
@@ -70,7 +70,9 @@ class ProviderRunner:
         # Include fingerprinting results in metadata
         if self._fingerprint_agent:
             fingerprint_data: Mapping[str, JSONValue] = {"raw_content": result.content}
-            metadata["fingerprint_results"] = self._fingerprint_agent.collect_all_fingerprints(fingerprint_data)
+            metadata["fingerprint_results"] = self._fingerprint_agent.collect_all_fingerprints(
+                fingerprint_data
+            )
 
         # Merge pivots into metadata safely
         metadata.update(

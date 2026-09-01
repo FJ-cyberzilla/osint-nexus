@@ -7,9 +7,9 @@ from osint_nexus.core.config import Config
 from osint_nexus.core.evasion_agent import EvasionAgent
 from osint_nexus.utils.network_types import (
     HAS_CURL_CFFI,
+    ImpersonateProfile,
     ResponseProtocol,
     SessionProtocol,
-    ImpersonateProfile,
 )
 
 with contextlib.suppress(ImportError):

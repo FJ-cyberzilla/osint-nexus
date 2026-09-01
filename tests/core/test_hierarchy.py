@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from osint_nexus.hierarchy import CircuitState, HierarchyManager
+from osint_nexus.core.hierarchy import CircuitState, HierarchyManager
 
 
 class DummyHealthCheckable:

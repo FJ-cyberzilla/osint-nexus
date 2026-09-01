@@ -226,7 +226,7 @@ class TelemetryPanel(Static):
 
     def _as_dict(self, val: JSONValue) -> dict[str, JSONValue] | None:
         if isinstance(val, JSONDict):
-            return val.data
+            return val.root
         if isinstance(val, dict):
             return val
         return None
@@ -298,7 +298,7 @@ class RelationshipPanel(Static):
         if isinstance(relationships_val, list):
             relationships = [str(r) for r in relationships_val]
         elif isinstance(relationships_val, JSONListContainer):
-            relationships = [str(r) for r in relationships_val.data]
+            relationships = [str(r) for r in relationships_val.root]
 
         tree = self.query_one(Tree)
         tree.root.remove_children()
@@ -324,7 +324,7 @@ class HeatmapPanel(Static):
         # Helper to safely extract dictionary
         def as_dict(val: JSONValue) -> dict[str, JSONValue] | None:
             if isinstance(val, JSONDict):
-                return val.data
+                return val.root
             if isinstance(val, dict):
                 return val
             return None

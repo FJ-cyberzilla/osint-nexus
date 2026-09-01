@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+
 from beartype import beartype
 
 from osint_nexus.core.db.fingerprint_repository import FingerprintRepository

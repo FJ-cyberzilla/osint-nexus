@@ -1,5 +1,6 @@
 """Detection decision engine for client fingerprint analysis."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TypedDict, cast
@@ -221,6 +222,7 @@ class FingerprintDecider:
                 confidence=0.8,
                 evidence=audio_hash,
             )
+        return None
 
     def _check_os_mismatch(self, metrics: ClientMetrics) -> DetectionResult | None:
         os_from_ua = metrics.get("os_from_ua", "")
@@ -231,7 +233,7 @@ class FingerprintDecider:
                 description=f"OS mismatch: UA says {os_from_ua}, metrics say {os_from_metrics}",
                 risk_level=RiskLevel.CRITICAL,
                 confidence=0.95,
-                evidence=JSONDict(data={"user_agent": os_from_ua, "metrics": os_from_metrics}),
+                evidence=JSONDict(root=cast(dict[str, JSONValue], {"user_agent": os_from_ua, "metrics": os_from_metrics})),
             )
         return None
 

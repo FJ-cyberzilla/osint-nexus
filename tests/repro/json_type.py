@@ -1,12 +1,12 @@
-from collections.abc import Mapping, Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from typing import TypeVar, Generic, overload
+from typing import TypeVar, overload
 
 T = TypeVar("T")
 
 
 @dataclass
-class JSONDict(Mapping[str, T], Generic[T]):
+class JSONDict(Mapping[str, T]):
     data: dict[str, T]
 
     def __getitem__(self, key: str) -> T:
@@ -20,7 +20,7 @@ class JSONDict(Mapping[str, T], Generic[T]):
 
 
 @dataclass
-class JSONListContainer(Sequence[T], Generic[T]):
+class JSONListContainer(Sequence[T]):
     data: list[T]
 
     @overload
@@ -48,5 +48,5 @@ def test_sequence(data: Sequence[int]) -> None:
 d = JSONDict(data={"a": 1})
 test_mapping(d)
 
-l = JSONListContainer(data=[1, 2])
-test_sequence(l)
+l_data = JSONListContainer(data=[1, 2])
+test_sequence(l_data)

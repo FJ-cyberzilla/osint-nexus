@@ -31,7 +31,7 @@ async def run_scan(config: ScanConfig) -> None:
         console.print("[bold red]Fatal:[/] No providers registered in the system.")
         return
 
-    config.set_total(total=total)
+    config.total = total
 
     # Clean zero-comma single-argument call to OSINTApp
     app: OSINTApp = OSINTApp(config=config)

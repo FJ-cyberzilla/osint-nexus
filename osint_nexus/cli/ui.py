@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Self
 
 from beartype import beartype
@@ -27,30 +28,14 @@ console: Console = Console()
 
 
 @beartype
+@dataclass
 class ScanConfig:
     """Zero-comma parameter container for OSINTApp initialization."""
 
-    def __init__(self: Self) -> None:
-        self.agent: OSINTAgent
-        self.username: str = ""
-        self.total: int = 0
-        self.timeout: float = 0.0
-
-    def set_agent(self: Self, agent: OSINTAgent) -> Self:
-        self.agent = agent
-        return self
-
-    def set_username(self: Self, username: str) -> Self:
-        self.username = username
-        return self
-
-    def set_total(self: Self, total: int) -> Self:
-        self.total = total
-        return self
-
-    def set_timeout(self: Self, timeout: float) -> Self:
-        self.timeout = timeout
-        return self
+    agent: OSINTAgent
+    username: str
+    total: int
+    timeout: float
 
 
 class OSINTApp(App[None]):
