@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 from typing import TYPE_CHECKING, Any
@@ -51,14 +52,19 @@ class FingerbankClient:
         )
         # Facade components
         from osint_nexus.core.fingerbank.clients.devices import DevicesClient
-        from osint_nexus.core.fingerbank.clients.oui import OuiClient
         from osint_nexus.core.fingerbank.clients.static import StaticDataClient
         from osint_nexus.core.fingerbank.clients.users import UsersClient
 
         self.devices = DevicesClient(self)
-        self.oui = OuiClient(self)
+        oui_client_class = self._resolve_oui_client_class()
+        self.oui = oui_client_class(self)
         self.static = StaticDataClient(self)
         self.users = UsersClient(self)
+
+    @staticmethod
+    def _resolve_oui_client_class() -> type:
+        module = importlib.import_module("osint_nexus.core.fingerbank.clients.oui")
+        return module.OuiClient
 
     def _handle_response(self, status_code: int, text: str) -> tuple[int, str]:
         if status_code == 401:
