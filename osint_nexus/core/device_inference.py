@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import re
-from typing import TypedDict, cast
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Iterator, TypedDict, cast
 
 from beartype import beartype
 from pydantic import BaseModel, Field
@@ -9,7 +11,7 @@ from pydantic import BaseModel, Field
 from osint_nexus.core.db.fingerprint_repository import FingerprintRepository
 from osint_nexus.core.detectors.base import FingerprintStrategy
 from osint_nexus.core.detectors.registry import FingerprintStrategyRegistry
-from osint_nexus.core.type_defs import JSONValue, TelemetryDict, to_json_value
+from osint_nexus.core.type_defs import JSONValue, TelemetryDict, TelemetryValue, to_json_value, JSONListContainer
 from osint_nexus.utils.data_loader import load_data
 
 # Re-alias for local use or update code
@@ -24,26 +26,29 @@ class PortMapping(TypedDict):
     role: str
 
 
-class FingerprintResult(dict[str, JSONValue]):
+@beartype
+@dataclass(frozen=True)
+class FingerprintResult(Mapping[str, JSONValue]):
     """Result structure from a fingerprinting strategy."""
 
-    def __init__(self, name: str, data: dict[str, JSONValue], confidence: float) -> None:
-        super().__init__(name=name, data=data, confidence=confidence)
-        self["name"] = name
-        self["data"] = data
-        self["confidence"] = confidence
+    name: str
+    data: dict[str, JSONValue]
+    confidence: float
 
-    @property
-    def name(self) -> str:
-        return cast(str, self["name"])
+    def __getitem__(self, key: str) -> JSONValue:
+        if key == "name":
+            return self.name
+        if key == "data":
+            return cast(JSONValue, self.data)
+        if key == "confidence":
+            return cast(JSONValue, self.confidence)
+        raise KeyError(key)
 
-    @property
-    def data(self) -> dict[str, JSONValue]:
-        return cast(dict[str, JSONValue], self["data"])
+    def __iter__(self) -> Iterator[str]:
+        return iter(["name", "data", "confidence"])
 
-    @property
-    def confidence(self) -> float:
-        return cast(float, self["confidence"])
+    def __len__(self) -> int:
+        return 3
 
 
 class HttpFingerprintStrategy(FingerprintStrategy[dict[str, JSONValue], FingerprintResult]):
@@ -95,7 +100,7 @@ class TlsFingerprintStrategy(FingerprintStrategy[str, FingerprintResult]):
 class TcpData(TypedDict):
     ttl: int
     window_size: int
-    tcp_options: list[JSONValue]
+    tcp_options: JSONListContainer
 
 
 class TcpFingerprintStrategy(FingerprintStrategy[TcpData, FingerprintResult]):
@@ -105,9 +110,10 @@ class TcpFingerprintStrategy(FingerprintStrategy[TcpData, FingerprintResult]):
 
     @beartype
     def extract(self, data: TcpData) -> FingerprintResult:
-        # Expecting data: {"ttl": int, "window_size": int, "tcp_options": list[str]}
+        # Expecting data: {"ttl": int, "window_size": int, "tcp_options": list[JSONValue]}
         ttl = data.get("ttl", 0)
-        options = data.get("tcp_options", [])
+        options_container = data.get("tcp_options", JSONListContainer(data=[]))
+        options = options_container.data
 
         fingerprint, confidence = self._detect_os(ttl, options)
 
@@ -155,7 +161,7 @@ class DeviceProfile(TypedDict):
     hardware_tier: str | None
     anomaly_detected: bool
     throttle_status: str | None
-    raw_telemetry: dict[str, str | float | int | bool]
+    raw_telemetry: Mapping[str, TelemetryValue]
 
 
 class DeviceInferenceNetworkEngine:
@@ -241,16 +247,16 @@ class DeviceInferenceEngine:
         self.registry = registry or FingerprintStrategyRegistry()
 
     @beartype
-    def infer(self, raw_data: JSONValue) -> dict[str, dict[str, JSONValue]]:
+    def infer(self, raw_data: JSONValue) -> Mapping[str, Mapping[str, JSONValue]]:
         """Aggregate results from all registered strategies."""
-        results: dict[str, dict[str, JSONValue]] = {}
+        results: dict[str, Mapping[str, JSONValue]] = {}
         for strategy in self.registry.get_all():
             # Cast to the common base strategy type for inference.
             typed_strategy = cast(FingerprintStrategy[JSONValue, FingerprintResult], strategy)
             result = typed_strategy.extract(raw_data)
             results[strategy.name] = {
-                "data": result["data"],
-                "confidence": result.get("confidence", 0.0),
+                "data": result.data,
+                "confidence": cast(JSONValue, result.confidence),
             }
         return results
 
