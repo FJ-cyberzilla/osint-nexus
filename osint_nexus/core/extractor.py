@@ -63,6 +63,7 @@ class IOCRegexRegistry:
         elif ioc_type == IOCType.EMAIL:
             return self.email
         assert_never(ioc_type)
+        raise AssertionError(f"Unhandled IOC type: {ioc_type!r}")
 
 
 _PATTERNS = IOCRegexRegistry()
