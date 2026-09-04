@@ -29,8 +29,12 @@ func TestBrowserProbes(t *testing.T) {
 		if data.Type != "webgl" {
 			t.Errorf("expected type webgl, got %s", data.Type)
 		}
-		if _, ok := data.Payload["vendor"]; !ok {
-			t.Error("expected vendor in payload")
+		payload, ok := data.Payload.(WebGLPayload)
+		if !ok {
+			t.Fatal("expected WebGLPayload")
+		}
+		if payload.Vendor == "" {
+			t.Error("expected non-empty vendor in payload")
 		}
 	})
 
@@ -43,8 +47,12 @@ func TestBrowserProbes(t *testing.T) {
 		if data.Type != "webrtc" {
 			t.Errorf("expected type webrtc, got %s", data.Type)
 		}
-		if _, ok := data.Payload["ice_candidates"]; !ok {
-			t.Error("expected ice_candidates in payload")
+		payload, ok := data.Payload.(WebRTCPayload)
+		if !ok {
+			t.Fatal("expected WebRTCPayload")
+		}
+		if payload.IceCandidates == "" {
+			t.Error("expected non-empty ice_candidates in payload")
 		}
 	})
 }

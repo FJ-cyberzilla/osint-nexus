@@ -13,6 +13,7 @@ import (
 	"github.com/osint-nexus/internal/engine"
 	"github.com/osint-nexus/internal/engine/strategies"
 	"github.com/osint-nexus/internal/provider"
+	"github.com/osint-nexus/internal/types"
 )
 
 func run() error {
@@ -59,7 +60,7 @@ func run() error {
 	fpOrchestrator.Register(strategies.NewTimezoneFingerprintStrategy())
 	fpOrchestrator.Register(strategies.NewTLSStrategy(repo))
 
-	providers := []engine.Provider{
+	providers := []types.Provider{
 		provider.NewRegistryProvider(),
 		provider.NewTwitterProvider(),
 		provider.NewInstagramProvider(),
@@ -67,15 +68,15 @@ func run() error {
 
 	fmt.Printf("Scanning for: %s\n", username)
 
-	results, errs := orchestrator.RunScan(ctx, username, providers, 5*time.Second)
+	session := orchestrator.RunScan(ctx, username, providers, 5*time.Second)
 
 	for {
 		select {
-		case res, ok := <-results:
+		case res, ok := <-session.ResultChan:
 			if !ok {
-				results = nil
+				session.ResultChan = nil
 			} else {
-				if len(res.Accounts) > 0 {
+				if res != nil {
 					for _, acc := range res.Accounts {
 						if acc.Username != nil && acc.Platform != nil {
 							fmt.Printf("Found account: %s on %s\n", *acc.Username, *acc.Platform)
@@ -86,13 +87,13 @@ func run() error {
 					}
 				}
 			}
-		case err, ok := <-errs:
+		case err, ok := <-session.ErrChan:
 			if ok {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			}
-			errs = nil
+			session.ErrChan = nil
 		}
-		if results == nil && errs == nil {
+		if session.ResultChan == nil && session.ErrChan == nil {
 			break
 		}
 	}

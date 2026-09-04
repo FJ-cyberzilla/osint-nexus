@@ -2,6 +2,7 @@ package browser_pool
 
 import (
 	"context"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -9,6 +10,10 @@ import (
 )
 
 func TestPool(t *testing.T) {
+	if _, err := exec.LookPath("google-chrome"); err != nil {
+		t.Skip("google-chrome not found, skipping TestPool")
+	}
+
 	pool := NewPool(2)
 	defer pool.Close()
 
