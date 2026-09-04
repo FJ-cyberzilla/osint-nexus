@@ -10,7 +10,6 @@ Welcome to the OSINT Nexus user guide. This document provides detailed instructi
 OSINT Nexus is a professional-grade OSINT tool built for adaptive, high-performance username reconnaissance. It is designed to be modular, stealthy, and highly resilient.
 
 ## 2. Prerequisites
-- **Python**: 3.13 or newer.
 - **Environment Management**: `uv` (strongly recommended).
 - **OS**: Optimized for Unix-based systems (specifically Android/Termux, Linux, macOS).
 

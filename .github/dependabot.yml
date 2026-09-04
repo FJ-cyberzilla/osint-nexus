@@ -1,50 +1,6 @@
 version: 2
 updates:
-  # ==========================================
-  # Python Dependencies (pip / pyproject.toml)
-  # ==========================================
-  - package-ecosystem: "pip"
+  - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "python"
-    commit-message:
-      prefix: "build(deps)"
-      include: "scope"
-    # Group minor and patch updates into a single PR to prevent PR spam
-    groups:
-      python-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-
-  # ==========================================
-  # GitHub Actions Workflows
-  # ==========================================
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 3
-    labels:
-      - "dependencies"
-      - "github-actions"
-    commit-message:
-      prefix: "ci(deps)"
-      include: "scope"
-    groups:
-      actions-all:
-        patterns:
-          - "*"
-          
+      interval: "daily"

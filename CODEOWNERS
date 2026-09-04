@@ -1,2 +1,4 @@
 # Code Owners
 * @FJ-cyberzilla
+internal/engine/ @FJ-cyberzilla
+internal/provider/ @FJ-cyberzilla
