@@ -17,15 +17,11 @@ func TestExportIdentityProfile(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if len(bundle.Objects) != 1 {
-		t.Fatalf("Expected 1 object, got %d", len(bundle.Objects))
+	if len(bundle.Identities) != 1 {
+		t.Fatalf("Expected 1 identity, got %d", len(bundle.Identities))
 	}
 
-	identity, ok := bundle.Objects[0].(STIXIdentity)
-	if !ok {
-		t.Fatal("Expected STIXIdentity object")
-	}
-
+	identity := bundle.Identities[0]
 	if identity.Name != "testuser" {
 		t.Errorf("Expected name 'testuser', got '%s'", identity.Name)
 	}
@@ -43,15 +39,11 @@ func TestExportIOC(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if len(bundle.Objects) != 1 {
-		t.Fatalf("Expected 1 object, got %d", len(bundle.Objects))
+	if len(bundle.Indicators) != 1 {
+		t.Fatalf("Expected 1 indicator, got %d", len(bundle.Indicators))
 	}
 
-	indicator, ok := bundle.Objects[0].(STIXIndicator)
-	if !ok {
-		t.Fatal("Expected STIXIndicator object")
-	}
-
+	indicator := bundle.Indicators[0]
 	if indicator.Name != "ipv4" {
 		t.Errorf("Expected name 'ipv4', got '%s'", indicator.Name)
 	}
