@@ -16,7 +16,7 @@ func TestModel_View(t *testing.T) {
 	m := NewModel()
 	view := m.View()
 
-	if !strings.Contains(view, "OSINT-Nexus Dashboard") {
-		t.Errorf("View does not contain title")
+	if !strings.Contains(view, "OSINT-Nexus") || !strings.Contains(view, "Command Center") {
+		t.Errorf("View does not contain branding or title")
 	}
 }

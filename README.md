@@ -50,5 +50,15 @@ go build ./...
 - **Standards**: Strictly typed, zero-panic, explicit error propagation, `context.Context` for all network calls.
 - **Testing**: Run all tests: `go test ./...`
 
+## Command Center TUI
+
+OSINT-Nexus features an industrial-grade, real-time command center dashboard. It provides comprehensive visibility into reconnaissance scans, including:
+- **System Metrics Panels**: Device type, fingerprints, telemetry, and heatmap data.
+- **Intelligence Mapping**: Relations and shadow user visualization.
+- **Real-Time Feedback**: Progress tracking with integrated spinner animations and live action reporting.
+- **Categorized Alerting**: Granular system alerts (Yellow) and advisory notifications (Light Blue) for rate limits/network issues.
+
+See `docs/TUI_COMMAND_CENTER.md` for full implementation details.
+
 ---
 *Developed by FJ™ Cybertronic Systems.*

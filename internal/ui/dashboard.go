@@ -9,45 +9,94 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// UI Theme & Styles
 var (
-	titleStyle = lipgloss.NewStyle().
+	colorTitle   = lipgloss.Color("205")
+	colorFound   = lipgloss.Color("46")  // Green
+	colorMissing = lipgloss.Color("218") // Light Pink
+	colorUnknown = lipgloss.Color("226") // Yellow (Critical)
+	colorInfo    = lipgloss.Color("39")  // Light Blue (Advisory)
+	colorBrand   = lipgloss.Color("215") // Light Orange (Brand)
+	colorBlue    = lipgloss.Color("33")  // Blue
+
+	styleTitle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("205")).
+			Foreground(colorTitle).
 			Padding(0, 1)
 
-	moduleStyle = lipgloss.NewStyle().
-			PaddingLeft(2)
+	styleFound   = lipgloss.NewStyle().Foreground(colorFound)
+	styleMissing = lipgloss.NewStyle().Foreground(colorMissing)
+	styleUnknown = lipgloss.NewStyle().Foreground(colorUnknown)
+	styleInfo    = lipgloss.NewStyle().Foreground(colorInfo)
+	styleBox     = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colorTitle).
+			Padding(1, 2).
+			Margin(1, 0)
+	styleBrand = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colorBrand).
+			Foreground(colorBrand).
+			Padding(0, 1).
+			Align(lipgloss.Center)
+	styleBlue = lipgloss.NewStyle().Foreground(colorBlue).Bold(true)
 )
+
+// UI Messages
+type StatusMsg string
+type ProgressMsg float64
+type TelemetryMsg string
+type FingerprintMsg string
+type DeviceTypeMsg string
+type RelationMsg string
+type ShadowUserMsg string
+type HeatmapMsg string
+type ErrorMsg string
+type AdvisoryMsg string
+
+// ResultItem represents a single scan result.
+type ResultItem struct {
+	Platform string
+	Found    bool
+	Error    string
+}
 
 // Model represents the TUI state.
 type Model struct {
-	progress progress.Model
-	spinner  spinner.Model
-	status   string
-	modules  map[string]float64 // moduleName -> progress (0.0 - 1.0)
-	paths    [][]string         // discovered paths
+	progress    progress.Model
+	spinner     spinner.Model
+	status      string
+	results     []ResultItem
+	telemetry   string
+	fingerprint string
+	deviceType  string
+	relations   []string
+	shadowUsers []string
+	heatmap     string
+	errors      []string
+	advisories  []string
 }
 
-// NewModel creates the initial TUI state.
 func NewModel() Model {
 	p := progress.New(progress.WithDefaultGradient())
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	return Model{
-		progress: p,
-		spinner:  s,
-		status:   "Starting OSINT-Nexus...",
-		modules:  make(map[string]float64),
-		paths:    make([][]string, 0),
+		progress:    p,
+		spinner:     s,
+		status:      "Starting OSINT-Nexus...",
+		results:     make([]ResultItem, 0),
+		relations:   make([]string, 0),
+		shadowUsers: make([]string, 0),
+		errors:      make([]string, 0),
+		advisories:  make([]string, 0),
 	}
 }
 
-// Init initializes the TUI.
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick)
 }
 
-// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -58,25 +107,116 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+	case StatusMsg:
+		m.status = string(msg)
+		return m, nil
+	case ProgressMsg:
+		m.progress.SetPercent(float64(msg))
+		return m, nil
+	case ResultItem:
+		m.results = append(m.results, msg)
+		return m, nil
+	case TelemetryMsg:
+		m.telemetry = string(msg)
+		return m, nil
+	case FingerprintMsg:
+		m.fingerprint = string(msg)
+		return m, nil
+	case DeviceTypeMsg:
+		m.deviceType = string(msg)
+		return m, nil
+	case RelationMsg:
+		m.relations = append(m.relations, string(msg))
+		return m, nil
+	case ShadowUserMsg:
+		m.shadowUsers = append(m.shadowUsers, string(msg))
+		return m, nil
+	case HeatmapMsg:
+		m.heatmap = string(msg)
+		return m, nil
+	case ErrorMsg:
+		m.errors = append(m.errors, string(msg))
+		return m, nil
+	case AdvisoryMsg:
+		m.advisories = append(m.advisories, string(msg))
+		return m, nil
 	}
 	return m, nil
 }
 
-// View renders the TUI.
 func (m Model) View() string {
 	var body []string
-	body = append(body, titleStyle.Render("OSINT-Nexus Dashboard"))
-	body = append(body, fmt.Sprintf("%s %s", m.spinner.View(), m.status))
 
-	for name, p := range m.modules {
-		body = append(body, moduleStyle.Render(fmt.Sprintf("%s: %s", name, m.progress.ViewAs(p))))
+	// Header Panel
+	header := fmt.Sprintf("%s powered by FJ™ Cybertronic Systems", styleBlue.Render("OSINT-Nexus"))
+	body = append(body, styleBrand.Render(header))
+	
+	body = append(body, styleTitle.Render("Command Center"))
+	
+	// Metrics Panel
+	metrics := []string{
+		fmt.Sprintf("Device Type: %s", m.deviceType),
+		fmt.Sprintf("Fingerprint: %s", m.fingerprint),
+		fmt.Sprintf("Telemetry:   %s", m.telemetry),
+		fmt.Sprintf("Heatmap:     %s", m.heatmap),
+	}
+	body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, metrics...)))
+	
+	// Spinner + Progress
+	progressView := lipgloss.JoinHorizontal(lipgloss.Center, m.spinner.View(), " ", m.progress.View())
+	body = append(body, progressView)
+	body = append(body, fmt.Sprintf("Status: %s", m.status))
+
+	// Relations & Shadows Panel
+	if len(m.relations) > 0 || len(m.shadowUsers) > 0 {
+		var infoBody []string
+		if len(m.relations) > 0 {
+			infoBody = append(infoBody, "Relations:")
+			for _, r := range m.relations { infoBody = append(infoBody, "  * " + r) }
+		}
+		if len(m.shadowUsers) > 0 {
+			infoBody = append(infoBody, "Shadow Users:")
+			for _, s := range m.shadowUsers { infoBody = append(infoBody, "  * " + s) }
+		}
+		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))
 	}
 
-	if len(m.paths) > 0 {
-		body = append(body, titleStyle.Render("Discovered Paths:"))
-		for _, path := range m.paths {
-			body = append(body, fmt.Sprintf("  %v", path))
+	if len(m.results) > 0 {
+		var resultsBody []string
+		for _, res := range m.results {
+			if res.Found {
+				resultsBody = append(resultsBody, styleFound.Render(fmt.Sprintf("  ✓ %s", res.Platform)))
+			} else if res.Error != "" {
+				resultsBody = append(resultsBody, styleUnknown.Render(fmt.Sprintf("  ? %s (Uncertain: %s)", res.Platform, res.Error)))
+			} else {
+				resultsBody = append(resultsBody, styleMissing.Render(fmt.Sprintf("  ✗ %s (Not Found)", res.Platform)))
+			}
 		}
+		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, resultsBody...)))
+	}
+	
+	// Advisory Panel (Conditional)
+	if len(m.advisories) > 0 {
+		advStyle := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colorInfo).
+			Foreground(colorInfo).
+			Padding(1, 2).
+			Margin(1, 0)
+			
+		body = append(body, advStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"i ADVISORY i"}, m.advisories...)...)))
+	}
+
+	// Error Panel (Conditional)
+	if len(m.errors) > 0 {
+		errStyle := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colorUnknown).
+			Foreground(colorUnknown).
+			Padding(1, 2).
+			Margin(1, 0)
+			
+		body = append(body, errStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"!! SYSTEM ALERTS !!"}, m.errors...)...)))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, body...) + "\n"
