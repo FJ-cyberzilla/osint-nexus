@@ -35,6 +35,11 @@ func (d *TLSDetector) Probe(ctx context.Context, address string) (*TLSResult, er
 		Timeout: d.timeout,
 	}
 
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, fmt.Errorf("detector: invalid address %q: %w", address, err)
+	}
+
 	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
 		return nil, fmt.Errorf("detector: tcp dial failed: %w", err)
@@ -43,7 +48,7 @@ func (d *TLSDetector) Probe(ctx context.Context, address string) (*TLSResult, er
 
 	// Configure TLS client
 	tlsConn := tls.Client(conn, &tls.Config{
-		InsecureSkipVerify: true,
+		ServerName: host,
 	})
 
 	err = tlsConn.Handshake()
