@@ -43,9 +43,12 @@ type chromedpProbe struct {
 func (p *chromedpProbe) run(ctx context.Context, targetURL string, actions ...chromedp.Action) (context.Context, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 
-	// Add --no-sandbox to fix CI/CD environment restrictions
+	// Add flags to fix CI/CD environment restrictions
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("headless", "new"),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
 	)
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
