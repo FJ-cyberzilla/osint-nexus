@@ -7,7 +7,7 @@ import (
 
 // ShadowTracker monitors ephemeral entity states.
 type ShadowTracker struct {
-	mu     sync.RWMutex
+	mu      sync.RWMutex
 	shadows map[string]string // entityID -> ephemeralState
 }
 

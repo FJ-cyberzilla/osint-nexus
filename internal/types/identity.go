@@ -47,10 +47,10 @@ type Correlations struct {
 }
 
 type IdentityProfile struct {
-	Username        string             `json:"username"`
-	Accounts        []Account          `json:"accounts"`
-	Relationships   RelationshipGraph  `json:"relationships"`
-	Timeline        *Timeline          `json:"timeline,omitempty"`
-	Correlations    *Correlations      `json:"correlations,omitempty"`
-	ConfidenceScore float64            `json:"confidence_score"`
+	Username        string            `json:"username"`
+	Accounts        []Account         `json:"accounts"`
+	Relationships   RelationshipGraph `json:"relationships"`
+	Timeline        *Timeline         `json:"timeline,omitempty"`
+	Correlations    *Correlations     `json:"correlations,omitempty"`
+	ConfidenceScore float64           `json:"confidence_score"`
 }

@@ -28,7 +28,7 @@ func (p *TwitterProvider) Name() string {
 // CheckUsername performs a Twitter lookup for the given username.
 func (p *TwitterProvider) CheckUsername(ctx context.Context, username string) (*types.IdentityProfile, error) {
 	url := fmt.Sprintf("https://twitter.com/%s", username)
-	
+
 	resp, err := PerformRequest(ctx, p.client, url)
 	if err != nil {
 		return nil, fmt.Errorf("provider: twitter request failed: %w", err)

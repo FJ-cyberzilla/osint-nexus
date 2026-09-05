@@ -63,7 +63,7 @@ func (fo *FingerprintOrchestrator) Run(ctx context.Context, data types.Fingerpri
 	for res := range resultChan {
 		results = append(results, res)
 	}
-	
+
 	if len(errChan) > 0 {
 		return results, fmt.Errorf("engine: one or more strategies failed")
 	}

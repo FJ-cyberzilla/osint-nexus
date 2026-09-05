@@ -7,9 +7,11 @@ import (
 )
 
 type TestTLSPayload struct{ Hash string }
+
 func (p TestTLSPayload) PayloadType() string { return "tls" }
 
 type TestHTTPPayload struct{ Server string }
+
 func (p TestHTTPPayload) PayloadType() string { return "http" }
 
 func TestFingerprintAggregator_Aggregate(t *testing.T) {

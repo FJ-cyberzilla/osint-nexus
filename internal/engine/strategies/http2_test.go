@@ -10,6 +10,8 @@ import (
 func TestHttp2FingerprintStrategy_Extract(t *testing.T) {
 	strategy := NewHttp2FingerprintStrategy()
 
+	maxStreams := 200
+
 	tests := []struct {
 		name           string
 		data           types.FingerprintData
@@ -22,8 +24,8 @@ func TestHttp2FingerprintStrategy_Extract(t *testing.T) {
 				Type: "http2_3_detection",
 				Payload: HTTP2Payload{
 					ALPN: "h2",
-					SettingsFrame: map[string]any{
-						"3": 200,
+					SettingsFrame: HTTP2Settings{
+						MaxConcurrentStreams: &maxStreams,
 					},
 				},
 			},

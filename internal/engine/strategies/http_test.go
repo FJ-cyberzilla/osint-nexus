@@ -32,7 +32,7 @@ func TestHttpFingerprintStrategy_Extract(t *testing.T) {
 	if !ok {
 		t.Fatalf("Extract() got invalid payload type %T, want HTTPOutputPayload", got.Data.Payload)
 	}
-	
+
 	if payload.Platform != "Windows" {
 		t.Errorf("Extract() platform = %v, want Windows", payload.Platform)
 	}
@@ -45,7 +45,7 @@ func TestHttpFingerprintStrategy_Extract(t *testing.T) {
 	if payload.Language != "en-US,en;q=0.9" {
 		t.Errorf("Extract() language = %v, want en-US,en;q=0.9", payload.Language)
 	}
-	
+
 	if len(payload.FullHeaders) != 3 {
 		t.Errorf("Extract() full_headers length = %d, want 3", len(payload.FullHeaders))
 	}

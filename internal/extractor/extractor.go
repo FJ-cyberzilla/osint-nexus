@@ -65,7 +65,7 @@ func (p *PivotExtractor) Extract(ctx context.Context, rawHTML string, sourceURL 
 
 func (p *PivotExtractor) extractEmails(rawHTML string, doc *goquery.Document) []string {
 	emailSet := make(map[string]struct{})
-	
+
 	// Regex extraction
 	matches := p.emailRegex.FindAllString(rawHTML, -1)
 	for _, m := range matches {
@@ -113,7 +113,7 @@ func (p *PivotExtractor) extractLinksAndHandles(doc *goquery.Document, sourceURL
 		if err != nil {
 			return
 		}
-		
+
 		hrefDomain := strings.ToLower(parsed.Host)
 		if sourceDomain != "" && (hrefDomain == sourceDomain || strings.HasSuffix(hrefDomain, "."+sourceDomain)) {
 			return

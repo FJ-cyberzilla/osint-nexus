@@ -42,12 +42,12 @@ func (m *MockDetector) Analyze(ctx context.Context, profiles []*types.IdentityPr
 
 func TestRunScan(t *testing.T) {
 	type testCase struct {
-		name           string
-		providers      []types.Provider
-		detector       Detector
-		timeout        time.Duration
-		expectResults  int
-		expectErrors   int
+		name          string
+		providers     []types.Provider
+		detector      Detector
+		timeout       time.Duration
+		expectResults int
+		expectErrors  int
 	}
 
 	tests := []testCase{

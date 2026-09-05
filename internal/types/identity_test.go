@@ -8,10 +8,10 @@ import (
 
 func TestIdentityProfile_JSON(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
-	
+
 	username := "test_user"
 	platform := "github"
-	
+
 	profile := IdentityProfile{
 		Username: "test_user",
 		Accounts: []Account{
@@ -42,11 +42,11 @@ func TestIdentityProfile_JSON(t *testing.T) {
 	if decoded.Username != profile.Username {
 		t.Errorf("Expected username %s, got %s", profile.Username, decoded.Username)
 	}
-	
+
 	if len(decoded.Accounts) != 1 {
 		t.Errorf("Expected 1 account, got %d", len(decoded.Accounts))
 	}
-	
+
 	if decoded.Timeline == nil || len(decoded.Timeline.Events) != 1 {
 		t.Errorf("Timeline marshaling failed")
 	}

@@ -70,12 +70,12 @@ func TestCdnFingerprintStrategy_Extract(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Extract() error = %v", err)
 			}
-			
+
 			payload, ok := got.Data.Payload.(CDNOutputPayload)
 			if !ok {
 				t.Fatalf("Extract() got invalid payload type %T, want CDNOutputPayload", got.Data.Payload)
 			}
-			
+
 			if payload.CdnDetected != tt.wantCdn {
 				t.Errorf("Extract() cdn_detected = %v, want %v", payload.CdnDetected, tt.wantCdn)
 			}

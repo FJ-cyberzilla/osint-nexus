@@ -72,7 +72,7 @@ func (p *Pool) createInstance(ctx context.Context) (*BrowserInstance, error) {
 	}
 
 	return &BrowserInstance{
-		Ctx:    browserCtx,
+		Ctx: browserCtx,
 		Cancel: func() {
 			browserCancel()
 			cancel()

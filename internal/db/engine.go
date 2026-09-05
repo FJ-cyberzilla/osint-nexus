@@ -22,7 +22,7 @@ func NewSQLiteEngine(dbPath string) (*SQLiteEngine, error) {
 		return nil, fmt.Errorf("db: open sqlite: %w", err)
 	}
 
-	// Configure connection pool for SQLite. 
+	// Configure connection pool for SQLite.
 	// SQLite supports only one writer at a time, so 1 max open connection is safe.
 	db.SetMaxOpenConns(1)
 

@@ -11,7 +11,7 @@ func TestShadowTracker(t *testing.T) {
 
 	// Test: Track and GetState
 	tracker.Track(ctx, "entity1", "active")
-	
+
 	state, exists := tracker.GetState(ctx, "entity1")
 	if !exists {
 		t.Error("Expected entity1 to exist")

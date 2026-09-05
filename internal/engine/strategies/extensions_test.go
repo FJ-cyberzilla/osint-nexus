@@ -62,12 +62,12 @@ func TestExtensionFingerprintStrategy_Extract(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Extract() error = %v", err)
 			}
-			
+
 			payload, ok := got.Data.Payload.(ExtensionOutputPayload)
 			if !ok {
 				t.Fatalf("Extract() got invalid payload type %T, want ExtensionOutputPayload", got.Data.Payload)
 			}
-			
+
 			if payload.ExtensionCount != tt.wantCount {
 				t.Errorf("Extract() count = %v, want %v", payload.ExtensionCount, tt.wantCount)
 			}

@@ -19,7 +19,9 @@ func BenchmarkRunScan(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		session := orchestrator.RunScan(ctx, "testuser", providers, 100*time.Millisecond)
-		for range session.ResultChan {}
-		for range session.ErrChan {}
+		for range session.ResultChan {
+		}
+		for range session.ErrChan {
+		}
 	}
 }

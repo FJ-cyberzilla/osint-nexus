@@ -6,10 +6,20 @@ import (
 	"github.com/osint-nexus/internal/types"
 )
 
+// HTTP2Settings defines the structured configuration for HTTP/2.
+type HTTP2Settings struct {
+	HeaderTableSize      *int  `json:"header_table_size"`
+	EnablePush           *bool `json:"enable_push"`
+	MaxConcurrentStreams *int  `json:"max_concurrent_streams"`
+	InitialWindowSize    *int  `json:"initial_window_size"`
+	MaxFrameSize         *int  `json:"max_frame_size"`
+	MaxHeaderListSize    *int  `json:"max_header_list_size"`
+}
+
 // HTTP2Payload implements types.FingerprintPayload for HTTP2/3 fingerprinting input.
 type HTTP2Payload struct {
-	ALPN          string         `json:"alpn"`
-	SettingsFrame map[string]any `json:"settings_frame"`
+	ALPN          string        `json:"alpn"`
+	SettingsFrame HTTP2Settings `json:"settings_frame"`
 }
 
 // PayloadType returns the payload type identifier.
@@ -42,14 +52,12 @@ func (s *Http2FingerprintStrategy) Name() string {
 func (s *Http2FingerprintStrategy) Extract(ctx context.Context, data types.FingerprintData) (types.FingerprintResult, error) {
 	payload, ok := data.Payload.(HTTP2Payload)
 	if !ok {
-		return types.FingerprintResult{}, nil // Or return an error, but let's stick to existing logic
+		return types.FingerprintResult{}, nil
 	}
 
 	maxConcurrentStreams := 100
-	if val, ok := payload.SettingsFrame["3"]; ok {
-		if v, ok := val.(int); ok {
-			maxConcurrentStreams = v
-		}
+	if payload.SettingsFrame.MaxConcurrentStreams != nil {
+		maxConcurrentStreams = *payload.SettingsFrame.MaxConcurrentStreams
 	}
 
 	confidence := 0.2
@@ -63,7 +71,7 @@ func (s *Http2FingerprintStrategy) Extract(ctx context.Context, data types.Finge
 			Type: "http2_3_detection",
 			Payload: HTTP2OutputPayload{
 				Protocol:             payload.ALPN,
-				SettingsCount:        len(payload.SettingsFrame),
+				SettingsCount:        6, // Constant value for defined struct fields
 				MaxConcurrentStreams: maxConcurrentStreams,
 			},
 		},

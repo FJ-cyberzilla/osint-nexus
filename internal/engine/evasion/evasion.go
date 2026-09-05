@@ -1,7 +1,7 @@
 package evasion
 
 import (
-	"math/rand/v2"
+	"math/rand"
 
 	"github.com/chromedp/chromedp"
 )
@@ -19,8 +19,8 @@ func GetAllocatorOptions(opts SpoofingOptions) []chromedp.ExecAllocatorOption {
 			chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		}
 	}
-	
-	userAgent := opts.UserAgents[rand.IntN(len(opts.UserAgents))]
+
+	userAgent := opts.UserAgents[rand.Intn(len(opts.UserAgents))]
 	return []chromedp.ExecAllocatorOption{
 		chromedp.Flag("user-agent", userAgent),
 		chromedp.Flag("headless", true),

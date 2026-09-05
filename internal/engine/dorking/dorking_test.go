@@ -6,7 +6,7 @@ import (
 
 func TestSimpleDorker(t *testing.T) {
 	d := NewSimpleDorker("base")
-	
+
 	query, err := d.Generate("example.com", "login")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

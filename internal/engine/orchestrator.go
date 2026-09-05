@@ -65,12 +65,11 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 	}
 
 	go func() {
-		session.State = ScanStateRunning
 		defer func() {
 			close(resultChan)
 			close(errChan)
 		}()
-//...
+		session.State = ScanStateRunning
 		var mu sync.Mutex
 		results := make([]*types.IdentityProfile, 0, len(providers))
 
@@ -115,7 +114,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 				errChan <- fmt.Errorf("engine: post-scan analysis failed: %w", err)
 			}
 		}
-		
+
 		if session.State != ScanStateError {
 			session.State = ScanStateCompleted
 		}

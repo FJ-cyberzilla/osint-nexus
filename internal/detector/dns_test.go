@@ -9,7 +9,7 @@ import (
 func TestDNSDetector_Probe(t *testing.T) {
 	// Use a public resolver for testing
 	d := NewDNSDetector("8.8.8.8:53")
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 

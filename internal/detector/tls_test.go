@@ -15,13 +15,10 @@ func TestTLSDetector_Probe(t *testing.T) {
 	}
 	defer ln.Close()
 
-	// This is tricky without a real TLS server, but we can test the connection logic
-	// A real test would require a TLS listener. Given constraints,
-	// let's test a known HTTPS endpoint if possible, or skip/mock if hard.
-	// Let's try connecting to a known TLS site (google.com)
-	
+	// Test the detector against a known TLS endpoint to verify capability.
+
 	d := NewTLSDetector(time.Second * 5)
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -34,7 +31,7 @@ func TestTLSDetector_Probe(t *testing.T) {
 	if res.Version == 0 {
 		t.Errorf("Expected valid TLS version, got 0")
 	}
-	
+
 	if res.JA3 == "" || res.JA3 == "not_implemented" {
 		t.Errorf("Expected valid JA3 fingerprint, got %s", res.JA3)
 	}

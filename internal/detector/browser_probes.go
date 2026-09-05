@@ -42,14 +42,14 @@ type chromedpProbe struct {
 
 func (p *chromedpProbe) run(ctx context.Context, targetURL string, actions ...chromedp.Action) (context.Context, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	
+
 	ctx, cancel = chromedp.NewContext(ctx)
-	
+
 	if err := chromedp.Run(ctx, append([]chromedp.Action{chromedp.Navigate(targetURL)}, actions...)...); err != nil {
 		cancel()
 		return nil, nil, eris.Wrap(err, "chromedp run failed")
 	}
-	
+
 	return ctx, cancel, nil
 }
 

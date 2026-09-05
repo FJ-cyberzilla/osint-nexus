@@ -6,6 +6,7 @@ import (
 )
 
 type TestPayload struct{ Key string }
+
 func (p TestPayload) PayloadType() string { return "test" }
 
 func TestErrors(t *testing.T) {

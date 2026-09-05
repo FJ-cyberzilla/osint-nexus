@@ -16,10 +16,10 @@ func SanitizeUsername(username string) (string, bool) {
 	if sanitized == "" {
 		return "", false
 	}
-	
+
 	if !sanitizedUsernameRegex.MatchString(sanitized) {
 		return "", false
 	}
-	
+
 	return sanitized, true
 }

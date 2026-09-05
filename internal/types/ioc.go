@@ -3,11 +3,11 @@ package types
 type IOCType string
 
 const (
-	IOCTypeIPv4    IOCType = "ipv4"
-	IOCTypeDomain  IOCType = "domain"
-	IOCTypeSHA256  IOCType = "sha256"
-	IOCTypeMD5     IOCType = "md5"
-	IOCTypeEmail   IOCType = "email"
+	IOCTypeIPv4   IOCType = "ipv4"
+	IOCTypeDomain IOCType = "domain"
+	IOCTypeSHA256 IOCType = "sha256"
+	IOCTypeMD5    IOCType = "md5"
+	IOCTypeEmail  IOCType = "email"
 )
 
 type ExtractedIOC struct {
@@ -27,8 +27,8 @@ type PlatformIdentity struct {
 }
 
 type LinkHarvestResult struct {
-	ExternalLinks  []string       `json:"external_links"`
-	SocialHandles  []SocialHandle `json:"social_handles"`
+	ExternalLinks []string       `json:"external_links"`
+	SocialHandles []SocialHandle `json:"social_handles"`
 }
 
 type ExtractedPivots struct {

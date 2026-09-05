@@ -3,8 +3,8 @@ package detector
 import (
 	"context"
 	"errors"
-	"testing"
 	"github.com/osint-nexus/internal/types"
+	"testing"
 )
 
 // MockProbe allows simulating probe behavior.

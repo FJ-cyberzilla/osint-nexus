@@ -15,7 +15,7 @@ func TestNewModel(t *testing.T) {
 func TestModel_View(t *testing.T) {
 	m := NewModel()
 	view := m.View()
-	
+
 	if !strings.Contains(view, "OSINT-Nexus Dashboard") {
 		t.Errorf("View does not contain title")
 	}

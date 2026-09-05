@@ -22,7 +22,7 @@ func (s *OcrSolver) Solve(ctx context.Context, challengeType ChallengeType, chal
 	if s.apiKey == "" {
 		return "", fmt.Errorf("captcha: OcrSolver: missing API key")
 	}
-	
+
 	// Simulate the OCR processing logic
 	if len(challengeData) == 0 {
 		return "", fmt.Errorf("captcha: OcrSolver: challenge data is empty")

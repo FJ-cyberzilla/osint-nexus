@@ -31,9 +31,10 @@ type STIXIndicator struct {
 
 // STIXBundle represents a STIX 2.1 Bundle.
 type STIXBundle struct {
-	Type    string `json:"type"`
-	ID      string `json:"id"`
-	Objects []any  `json:"objects"`
+	Type       string          `json:"type"`
+	ID         string          `json:"id"`
+	Identities []STIXIdentity  `json:"identities,omitempty"`
+	Indicators []STIXIndicator `json:"indicators,omitempty"`
 }
 
 // STIXExporter handles export of scan data to STIX 2.1 format.
@@ -55,9 +56,9 @@ func (e *STIXExporter) ExportIdentityProfile(profile *types.IdentityProfile) (*S
 	}
 
 	bundle := &STIXBundle{
-		Type:    "bundle",
-		ID:      fmt.Sprintf("bundle--%s", uuid.New().String()),
-		Objects: []any{identity},
+		Type:       "bundle",
+		ID:         fmt.Sprintf("bundle--%s", uuid.New().String()),
+		Identities: []STIXIdentity{identity},
 	}
 
 	return bundle, nil
@@ -75,9 +76,9 @@ func (e *STIXExporter) ExportIOC(ioc *types.ExtractedIOC) (*STIXBundle, error) {
 	}
 
 	bundle := &STIXBundle{
-		Type:    "bundle",
-		ID:      fmt.Sprintf("bundle--%s", uuid.New().String()),
-		Objects: []any{indicator},
+		Type:       "bundle",
+		ID:         fmt.Sprintf("bundle--%s", uuid.New().String()),
+		Indicators: []STIXIndicator{indicator},
 	}
 
 	return bundle, nil

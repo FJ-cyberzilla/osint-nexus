@@ -29,7 +29,7 @@ func (p *RegistryProvider) Name() string {
 func (p *RegistryProvider) CheckUsername(ctx context.Context, username string) (*types.IdentityProfile, error) {
 	// Example registry: https://keybase.io/<username>
 	url := fmt.Sprintf("https://keybase.io/%s", username)
-	
+
 	resp, err := PerformRequest(ctx, p.client, url)
 	if err != nil {
 		return nil, fmt.Errorf("provider: registry request failed: %w", err)

@@ -38,7 +38,7 @@ func TestFingerprintRepository_LoadData_Fallback(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewFingerprintRepository failed with non-existent file: %v", err)
 	}
-	
+
 	// Check fallback data
 	sig := repo.GetSignature("ja3", "72a589da586844d7f0818ce684948eea")
 	if sig != "Chrome 120 on Windows 10" {

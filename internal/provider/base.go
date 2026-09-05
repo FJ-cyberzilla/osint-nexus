@@ -27,9 +27,9 @@ func PerformRequest(ctx context.Context, client *http.Client, url string) (*http
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Add user agent to avoid being blocked immediately
 	req.Header.Set("User-Agent", "OSINT-Nexus/1.0")
-	
+
 	return client.Do(req)
 }

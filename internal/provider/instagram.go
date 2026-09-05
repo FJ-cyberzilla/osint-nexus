@@ -28,7 +28,7 @@ func (p *InstagramProvider) Name() string {
 // CheckUsername performs an Instagram lookup for the given username.
 func (p *InstagramProvider) CheckUsername(ctx context.Context, username string) (*types.IdentityProfile, error) {
 	url := fmt.Sprintf("https://www.instagram.com/%s/", username)
-	
+
 	resp, err := PerformRequest(ctx, p.client, url)
 	if err != nil {
 		return nil, fmt.Errorf("provider: instagram request failed: %w", err)
