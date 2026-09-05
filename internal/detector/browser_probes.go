@@ -43,7 +43,15 @@ type chromedpProbe struct {
 func (p *chromedpProbe) run(ctx context.Context, targetURL string, actions ...chromedp.Action) (context.Context, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 
-	ctx, cancel = chromedp.NewContext(ctx)
+	// Add --no-sandbox to fix CI/CD environment restrictions
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("no-sandbox", true),
+	)
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
+	defer allocCancel()
+
+	ctx, cancel = chromedp.NewContext(allocCtx)
 
 	if err := chromedp.Run(ctx, append([]chromedp.Action{chromedp.Navigate(targetURL)}, actions...)...); err != nil {
 		cancel()
