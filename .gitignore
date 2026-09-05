@@ -33,6 +33,7 @@ data/*.db-shm
 data/*.db-wal
 *.sqlite
 *.sqlite3
+nexus.db
 
 # Credentials & Config
 .env
