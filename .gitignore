@@ -40,3 +40,9 @@ nexus.db
 .gemini/
 gha-creds-*.json
 GEMINI.md
+
+# Runtime & Binaries
+nexus
+main
+*.db*
+

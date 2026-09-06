@@ -2,9 +2,10 @@ package engine
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
+
+	"github.com/rotisserie/eris"
 
 	"github.com/osint-nexus/internal/provider"
 	"github.com/osint-nexus/internal/types"
@@ -24,7 +25,7 @@ type Orchestrator struct {
 // NewOrchestrator initializes an Orchestrator.
 func NewOrchestrator(maxConcurrency int, detector Detector) (*Orchestrator, error) {
 	if maxConcurrency <= 0 {
-		return nil, fmt.Errorf("engine: maxConcurrency must be positive")
+		return nil, eris.New("engine: maxConcurrency must be positive")
 	}
 	return &Orchestrator{
 		maxConcurrency: maxConcurrency,
@@ -44,11 +45,11 @@ const (
 
 // ScanSession manages the lifecycle of a single scan.
 type ScanSession struct {
-	mu         sync.Mutex
-	State      ScanState
-	ResultChan <-chan *types.IdentityProfile
-	ErrChan    <-chan error
-	ProgressChan <-chan float64
+	mu           sync.Mutex
+	State        ScanState                    `json:"state" yaml:"state"`
+	ResultChan   <-chan *types.IdentityProfile `json:"-" yaml:"-"`
+	ErrChan      <-chan error                 `json:"-" yaml:"-"`
+	ProgressChan <-chan float64               `json:"-" yaml:"-"`
 }
 
 // setState safely updates the scan state.
@@ -71,9 +72,9 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 		providers = provider.GetProviders()
 	}
 
-	resultChan := make(chan *types.IdentityProfile)
+	resultChan := make(chan *types.IdentityProfile, len(providers))
 	errChan := make(chan error, len(providers))
-	progressChan := make(chan float64)
+	progressChan := make(chan float64, len(providers))
 
 	session := &ScanSession{
 		State:        ScanStateInitiated,
@@ -95,7 +96,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 		// Semaphore to limit concurrency
 		sem := make(chan struct{}, o.maxConcurrency)
 		var wg sync.WaitGroup
-		
+
 		completed := 0
 		var progressMu sync.Mutex
 
@@ -112,7 +113,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 				defer cancel()
 
 				res, err := p.CheckUsername(scanCtx, username)
-				
+
 				// Update progress
 				progressMu.Lock()
 				completed++
@@ -121,7 +122,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 
 				if err != nil {
 					session.setState(ScanStateError)
-					errChan <- fmt.Errorf("engine: provider %s failed: %w", p.Name(), err)
+					errChan <- eris.Wrapf(err, "engine: provider %s failed", p.Name())
 					return
 				}
 
@@ -140,7 +141,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 			_, err := o.detector.Analyze(ctx, results)
 			if err != nil {
 				session.setState(ScanStateError)
-				errChan <- fmt.Errorf("engine: post-scan analysis failed: %w", err)
+				errChan <- eris.Wrap(err, "engine: post-scan analysis failed")
 			}
 		}
 

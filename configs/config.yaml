@@ -1,0 +1,30 @@
+# OSINT-Nexus Production Engine Configuration
+app:
+  name: "OSINT-Nexus"
+  environment: "production"
+  log_level: "info"
+
+engine:
+  concurrency: 50
+  timeout_seconds: 15
+  max_retries: 3
+  user_agent: "OSINT-Nexus/1.0 (+https://github.com/FJ-cyberzilla/osint-nexus)"
+
+database:
+  driver: "sqlite3"
+  path: "./data/nexus.db"
+  auto_migrate: true
+
+evasion:
+  dns_leak_prevention: true
+  use_proxies: false
+  proxy_list: []
+  browser_pool_size: 5
+
+providers:
+  github:
+    enabled: true
+    rate_limit_per_min: 60
+  twitter:
+    enabled: true
+    rate_limit_per_min: 30

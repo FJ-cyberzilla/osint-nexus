@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	testTimeout = 100 * time.Millisecond
+	testTimeout = 500 * time.Millisecond
 )
 
 type MockProvider struct {

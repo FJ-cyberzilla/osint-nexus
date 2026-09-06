@@ -15,8 +15,8 @@ const (
 
 // WebGLPayload implements types.FingerprintPayload for WebGL fingerprinting.
 type WebGLPayload struct {
-	Vendor   string `json:"vendor"`
-	Renderer string `json:"renderer"`
+	Vendor   string `json:"vendor" yaml:"vendor"`
+	Renderer string `json:"renderer" yaml:"renderer"`
 }
 
 // PayloadType returns the payload type identifier.
@@ -24,7 +24,7 @@ func (p WebGLPayload) PayloadType() string { return "webgl" }
 
 // WebRTCPayload implements types.FingerprintPayload for WebRTC fingerprinting.
 type WebRTCPayload struct {
-	IceCandidates string `json:"ice_candidates"`
+	IceCandidates string `json:"ice_candidates" yaml:"ice_candidates"`
 }
 
 // PayloadType returns the payload type identifier.

@@ -65,6 +65,7 @@ type ResultItem struct {
 type Model struct {
 	progress    progress.Model
 	spinner     spinner.Model
+	targetUser  string
 	status      string
 	results     []ResultItem
 	telemetry   string
@@ -77,13 +78,14 @@ type Model struct {
 	advisories  []string
 }
 
-func NewModel() Model {
+func NewModel(username string) Model {
 	p := progress.New(progress.WithDefaultGradient())
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	return Model{
 		progress:    p,
 		spinner:     s,
+		targetUser:  username,
 		status:      "Starting OSINT-Nexus...",
 		results:     make([]ResultItem, 0),
 		relations:   make([]string, 0),
