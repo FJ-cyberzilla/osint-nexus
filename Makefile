@@ -11,6 +11,31 @@ BUILD_DIR   := bin
 LOG_DIR     := logs
 
 # ------------------------------------------------------------------------------
+# Build Restriction Policy
+# ------------------------------------------------------------------------------
+# Strictly prohibited: Ad-hoc installation of tools/dependencies via Makefile.
+# All tasks must use only the pre-defined targets. See docs/BUILD_RESTRICTIONS.md.
+
+# ------------------------------------------------------------------------------
+# Environment Detection
+# ------------------------------------------------------------------------------
+# Detect Apple platforms first to block them
+ifneq ($(shell uname | grep -i darwin),)
+  $(error "OSINT-Nexus does not support macOS or iOS. Please use Linux, WSL2, or a native terminal environment.")
+endif
+
+# Detect other environments
+ifneq ($(wildcard /data/data/com.termux),)
+  ENV_TYPE := TERMUX
+else ifneq ($(shell uname -a | grep -i microsoft),)
+  ENV_TYPE := WSL2
+else ifneq ($(OS),Windows_NT)
+  ENV_TYPE := LINUX
+else
+  ENV_TYPE := POWERSHELL
+endif
+
+# ------------------------------------------------------------------------------
 # Aesthetic Styling & Truecolor (24-bit RGB Gradients)
 # ------------------------------------------------------------------------------
 BOLD        := \033[1m
@@ -19,10 +44,10 @@ RESET       := \033[0m
 # Truecolor RGB Gradient for Banner
 G1          := \033[38;2;147;51;234m
 G2          := \033[38;2;126;34;206m
-G3          := \033[38;2;99;102;241m
-G4          := \033[38;2;59;130;246m
-G5          := \033[38;2;14;165;233m
-G6          := \033[38;2;6;182;212m
+G3          := \033[38;2;50;50;200m
+G4          := \033[38;2;50;150;250m
+G5          := \033[38;2;100;200;250m
+G6          := \033[38;2;150;220;250m
 
 # Status Palette
 C_PURPLE    := \033[38;2;168;85;247m
@@ -31,6 +56,25 @@ C_GREEN     := \033[38;2;74;222;128m
 C_RED       := \033[38;2;248;113;113m
 C_YELLOW    := \033[38;2;250;204;21m
 C_GRAY      := \033[38;2;100;116;139m
+VINTAGE_GREEN := \033[38;2;130;180;130m
+VINTAGE_YELLOW := \033[38;2;210;180;100m
+VINTAGE_GRADIENT_ORANGE := \033[38;2;230;140;70m
+
+# Environment Specific Colors
+C_TERMUX := \033[38;2;255;165;0m
+C_WSL2   := \033[38;2;0;100;0m
+C_LINUX  := \033[38;2;0;0;255m
+C_POWERSHELL := \033[38;2;255;255;0m
+
+ifeq ($(ENV_TYPE),TERMUX)
+  ENV_COLOR := $(C_TERMUX)
+else ifeq ($(ENV_TYPE),WSL2)
+  ENV_COLOR := $(C_WSL2)
+else ifeq ($(ENV_TYPE),LINUX)
+  ENV_COLOR := $(C_LINUX)
+else
+  ENV_COLOR := $(C_POWERSHELL)
+endif
 
 # Status Symbols
 CHECK       := $(C_GREEN)✔$(RESET)
@@ -39,8 +83,8 @@ WARN        := $(C_YELLOW)⚡$(RESET)
 GEAR        := $(C_PURPLE)⚙$(RESET)
 
 # Helper Macro for Timed Execution
-TIMER_START = @START_TIME=$$(date +%s%N)
-TIMER_END   = @ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
+TIMER_START = START_TIME=$$(date +%s%N)
+TIMER_END   = ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
               printf "  $(C_GRAY)└─ Completed in $${ELAPSED}ms$(RESET)\n\n"
 
 .PHONY: all banner build lint test complexity run diagnosis about version clean help
@@ -49,56 +93,70 @@ TIMER_END   = @ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
 all: banner build test ## Execute primary build and validation suite
 
 banner:
-	@printf "$(G1)$(BOLD)   ___  ____ ___ _  ████████╗   _  ███████╗██╗  ██╗██╗   ██╗███████╗$(RESET)\n"
-	@printf "$(G2)$(BOLD)  / _ \/ __// _ \ |    ██╔══╝  / | ██╔════╝╚██╗██╔╝██║   ██║██╔════╝$(RESET)\n"
-	@printf "$(G3)$(BOLD) / // /\ \ / // / |    ██║     | | █████╗   ╚███╔╝ ██║   ██║███████╗$(RESET)\n"
-	@printf "$(G4)$(BOLD)/____/___//____/  |_   ██║     |_| ██╔══╝   ██╔██╗ ██║   ██║╚════██║$(RESET)\n"
-	@printf "$(G5)$(BOLD)                       ██║         ███████╗██╔╝ ██╗╚██████╔╝███████║$(RESET)\n"
-	@printf "$(G6)$(BOLD)                       ╚═╝         ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝$(RESET)\n"
-	@printf "$(C_CYAN)$(BOLD)  :: $(APP_NAME) Framework :: v$(VERSION) :: Author: $(AUTHOR) ::$(RESET)\n\n"
+	@printf "$(G1)$(BOLD)██████╗ ███████╗██╗███╗   ██╗████████╗   ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗$(RESET)\n"
+	@printf "$(G2)$(BOLD)██╔═══██╗██╔════╝██║████╗  ██║╚══██╔══╝   ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝$(RESET)\n"
+	@printf "$(G3)$(BOLD)██║   ██║███████╗██║██╔██╗ ██║   ██║█████╗██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗$(RESET)\n"
+	@printf "$(G4)$(BOLD)██║   ██║╚════██║██║██║╚██╗██║   ██║╚════╝██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║$(RESET)\n"
+	@printf "$(G5)$(BOLD)╚██████╔╝███████║██║██║ ╚████║   ██║      ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║$(RESET)\n"
+	@printf "$(G6)$(BOLD) ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝   ╚═╝      ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝$(RESET)\n"
+	@printf "$(VINTAGE_GREEN)$(BOLD)  :: $(APP_NAME) Framework :: v$(VERSION) :: Author: $(AUTHOR) ::          │$(RESET)\n"
+	@printf "$(ENV_COLOR)$(BOLD)  :: Environment: $(ENV_TYPE) ::$(RESET)\n\n"
 
 build: banner ## Build engine binaries with embedded build metadata
-	$(TIMER_START)
-	@printf "$(C_PURPLE)$(GEAR) [BUILD]$(RESET) Compiling core engine target...\n"
-	@mkdir -p $(BUILD_DIR)
-	@GO_FILES=$$(find . -name "*.go" | wc -l | tr -d ' '); \
-	 printf "  $(C_GRAY)├─ Processing $${GO_FILES} source files...$(RESET)\n"
-	@go build -ldflags "-X main.Version=$(VERSION) -X main.Author=$(AUTHOR)" -o $(BUILD_DIR)/nexus ./cmd/nexus/ \
-		&& printf "  $(C_GRAY)├─ Target binary:$(RESET) $(C_CYAN)$(BUILD_DIR)/nexus$(RESET)\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Build Succeeded$(RESET)]\n" \
-		|| (printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Build Failed$(RESET)]\n" && exit 1)
-	$(TIMER_END)
+	@START_TIME=$$(date +%s%N); \
+	printf "$(C_PURPLE)$(GEAR) [BUILD]$(RESET) Compiling core engine target...\n"; \
+	mkdir -p $(BUILD_DIR); \
+	GO_FILES=$$(find . -name "*.go" | wc -l | tr -d ' '); \
+	printf "  $(C_GRAY)├─ Processing $${GO_FILES} source files...$(RESET)\n"; \
+	if go build -ldflags "-X main.Version=$(VERSION) -X main.Author=$(AUTHOR)" -o $(BUILD_DIR)/nexus ./cmd/nexus/; then \
+		printf "  $(C_GRAY)├─ Target binary:$(RESET) $(C_CYAN)$(BUILD_DIR)/nexus$(RESET)\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Build Succeeded$(RESET)]\n"; \
+	else \
+		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Build Failed$(RESET)]\n"; exit 1; \
+	fi; \
+	ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
+	printf "  $(C_GRAY)└─ Completed in $${ELAPSED}ms$(RESET)\n\n"
 
 lint: banner ## Run static code analysis and quality checks
-	$(TIMER_START)
-	@printf "$(C_PURPLE)$(GEAR) [LINT]$(RESET) Executing static analysis suite...\n"
-	@if [ -d /data/data/com.termux ]; then \
-		printf "  $(C_YELLOW)$(WARN) Termux environment detected. Skipping golangci-lint.$(RESET)\n"; \
-	else \
+	@$(TIMER_START); \
+	printf "$(C_PURPLE)$(GEAR) [LINT]$(RESET) Executing static analysis suite...\n"; \
+	if [ "$(ENV_TYPE)" != "TERMUX" ]; then \
 		LINT_FILES=$$(find . -name "*.go" -not -path "./vendor/*" | wc -l | tr -d ' '); \
 		printf "  $(C_GRAY)├─ Scanning $${LINT_FILES} source files...$(RESET)\n"; \
-		golangci-lint run ./... \
-			&& printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Lint Clean$(RESET)]\n" \
-			|| printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Lint Issues Detected$(RESET)]\n"; \
-	fi
+		if golangci-lint run ./...; then \
+			printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Lint Clean$(RESET)]\n"; \
+		else \
+			printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Lint Issues Detected$(RESET)]\n"; \
+		fi; \
+	else \
+		printf "  $(C_YELLOW)$(WARN) Termux environment detected. Skipping golangci-lint to prevent crash.$(RESET)\n"; \
+	fi; \
 	$(TIMER_END)
 
 test: banner ## Run unit test suite with coverage reporting
-	$(TIMER_START)
-	@printf "$(C_PURPLE)$(GEAR) [TEST]$(RESET) Running package tests...\n"
-	@TEST_COUNT=$$(go test -list . ./... 2>/dev/null | grep -E '^Test' | wc -l | tr -d ' '); \
-	 printf "  $(C_GRAY)├─ Executing $${TEST_COUNT} unit tests...$(RESET)\n"
-	@go test -v ./... \
-		&& printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)All Tests Passed$(RESET)]\n" \
-		|| printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"
+	@$(TIMER_START); \
+	printf "$(C_PURPLE)$(GEAR) [TEST]$(RESET) Running package tests...\n"; \
+	TEST_COUNT=$$(go test -list . ./... 2>/dev/null | grep -E '^Test' | wc -l | tr -d ' '); \
+	printf "  $(C_GRAY)├─ Executing $${TEST_COUNT} unit tests...$(RESET)\n"; \
+	if go test -v -timeout 30s ./...; then \
+		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)All Tests Passed$(RESET)]\n"; \
+	else \
+		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"; \
+	fi; \
 	$(TIMER_END)
 
 complexity: banner ## Analyze code complexity metrics using gocyclo
-	$(TIMER_START)
-	@printf "$(C_PURPLE)$(GEAR) [METRICS]$(RESET) Calculating cyclomatic complexity...\n"
-	@printf "  $(C_GRAY)├─ Threshold Limit:$(RESET) $(C_YELLOW)> 15$(RESET)\n"
-	@gocyclo -over 15 . \
-		&& printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Complexity Low$(RESET)]\n" \
-		|| printf "  $(C_GRAY)└─ Status:$(RESET) [$(WARN) $(C_YELLOW)High Complexity Functions Found$(RESET)]\n"
+	@$(TIMER_START); \
+	printf "$(C_PURPLE)$(GEAR) [METRICS]$(RESET) Calculating cyclomatic complexity...\n"; \
+	if [ "$(ENV_TYPE)" != "TERMUX" ]; then \
+		printf "  $(C_GRAY)├─ Threshold Limit:$(RESET) $(C_YELLOW)> 15$(RESET)\n"; \
+		if gocyclo -over 15 .; then \
+			printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Complexity Low$(RESET)]\n"; \
+		else \
+			printf "  $(C_GRAY)└─ Status:$(RESET) [$(WARN) $(C_YELLOW)High Complexity Functions Found$(RESET)]\n"; \
+		fi; \
+	else \
+		printf "  $(C_YELLOW)$(WARN) Termux environment detected. Skipping gocyclo to prevent crash.$(RESET)\n"; \
+	fi; \
 	$(TIMER_END)
 
 run: ## Run engine dynamically (Usage: make run <args>)
@@ -110,11 +168,13 @@ run: ## Run engine dynamically (Usage: make run <args>)
 	@:
 
 diagnosis: banner ## Execute runtime diagnostics and environment checks
-	$(TIMER_START)
-	@printf "$(C_PURPLE)$(GEAR) [DIAGNOSIS]$(RESET) Querying system state via CLI tool...\n"
-	@go run $(CLI_TOOL) status \
-		&& printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Diagnostics Completed$(RESET)]\n" \
-		|| printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Diagnostics Error$(RESET)]\n"
+	@$(TIMER_START); \
+	printf "$(C_PURPLE)$(GEAR) [DIAGNOSIS]$(RESET) Querying system state via CLI tool...\n"; \
+	if go run $(CLI_TOOL) status; then \
+		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Diagnostics Completed$(RESET)]\n"; \
+	else \
+		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Diagnostics Error$(RESET)]\n"; \
+	fi; \
 	$(TIMER_END)
 
 about: banner ## Display module metadata and framework details
@@ -142,5 +202,19 @@ help: banner ## Display this interactive help interface
 	@printf "$(C_CYAN)$(BOLD)Available Command Targets:$(RESET)\n\n"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  $(C_PURPLE)%-16s$(RESET) $(C_GRAY)│$(RESET) %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; { \
+			desc = $$2; \
+			gsub("Execute primary build and validation suite", "Run all", desc); \
+			gsub("Build engine binaries with embedded build metadata", "Build engine", desc); \
+			gsub("Run static code analysis and quality checks", "Run lint", desc); \
+			gsub("Run unit test suite with coverage reporting", "Run tests", desc); \
+			gsub("Analyze code complexity metrics using gocyclo", "Check complexity", desc); \
+			gsub("Run engine dynamically \\(Usage: make run <args>\\)", "Run engine", desc); \
+			gsub("Execute runtime diagnostics and environment checks", "Run diagnostics", desc); \
+			gsub("Display module metadata and framework details", "Show info", desc); \
+			gsub("Display clean semver string", "Show version", desc); \
+			gsub("Purge binary artifacts, logs, build output, and module caches", "Clean project", desc); \
+			gsub("Display this interactive help interface", "Show help", desc); \
+			printf "  $(VINTAGE_YELLOW)%-16s$(RESET) $(C_GRAY)│$(RESET) $(VINTAGE_GRADIENT_ORANGE)%s$(RESET)\n", $$1, desc \
+		}'
 	@printf "\n"

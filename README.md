@@ -24,18 +24,10 @@ The project follows a strict Go directory structure:
     - `types/`: Core domain structs and interfaces.
     - `telemetry/`: Socket metrics & network telemetry.
 
-## Installation & Setup
+## Build Restrictions
 
-OSINT Nexus requires Go 1.23+.
+To ensure security and stability, **OSINT-Nexus strictly prohibits the installation of any additional tools** during the build or development lifecycle that are not already explicitly required. Please refer to [docs/BUILD_RESTRICTIONS.md](docs/BUILD_RESTRICTIONS.md) for the full policy.
 
-```bash
-# Clone the repository
-git clone https://github.com/FJ-cyberzilla/osint-nexus.git
-cd osint-nexus
-
-# Build the project
-go build ./...
-```
 
 ## Usage
 
