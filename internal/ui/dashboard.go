@@ -68,6 +68,12 @@ type FingerbankStatusMsg struct {
 	Enabled bool
 	Usage   int
 }
+type DNSLeakMsg []DNSLeakResult
+type DNSLeakResult struct {
+	URL       string
+	IsLeaking bool
+	Error     string
+}
 type ErrorMsg string
 type AdvisoryMsg string
 
@@ -93,6 +99,7 @@ type Model struct {
 	heatmap     string
 	fingerbank  *FingerbankFindingsMsg
 	fbStatus    *FingerbankStatusMsg
+	dnsLeaks    []DNSLeakResult
 	errors      []string
 	advisories  []string
 }
@@ -161,6 +168,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case FingerbankStatusMsg:
 		m.fbStatus = &msg
 		return m, nil
+	case DNSLeakMsg:
+		m.dnsLeaks = msg
+		return m, nil
 	case ErrorMsg:
 		m.errors = append(m.errors, string(msg))
 		return m, nil
@@ -228,6 +238,21 @@ func (m Model) View() string {
 			fbBody = append(fbBody, "  [!] Vulnerabilities Detected")
 		}
 		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, fbBody...)))
+	}
+
+	// DNS Leak Results
+	if len(m.dnsLeaks) > 0 {
+		dnsBody := []string{"DNS Leak Results:"}
+		for _, res := range m.dnsLeaks {
+			if res.Error != "" {
+				dnsBody = append(dnsBody, styleUnknown.Render(fmt.Sprintf("  ! %s (Error: %s)", res.URL, res.Error)))
+			} else if res.IsLeaking {
+				dnsBody = append(dnsBody, styleUnknown.Render(fmt.Sprintf("  ! %s (LEAKING!)", res.URL)))
+			} else {
+				dnsBody = append(dnsBody, styleFound.Render(fmt.Sprintf("  ✓ %s (Secure)", res.URL)))
+			}
+		}
+		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, dnsBody...)))
 	}
 
 	if len(m.results) > 0 {

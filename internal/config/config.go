@@ -105,6 +105,7 @@ var (
 // LoadConfig initializes Viper, sets defaults, parses config.yaml,
 // and maps environment variables prefixed with OSINT_.
 func LoadConfig(configPath string) (*Config, error) {
+	var loadErr error
 	once.Do(func() {
 		v := viper.New()
 
@@ -131,26 +132,30 @@ func LoadConfig(configPath string) (*Config, error) {
 
 		var cfg Config
 		if err := v.Unmarshal(&cfg); err != nil {
-			// Fallback directly to struct populated with default constants
-			cfg = buildFallbackConfig()
-		} else {
-			cfg.Engine.TimeoutSeconds = cfg.Engine.TimeoutSeconds * time.Second
+			loadErr = fmt.Errorf("config: unmarshal: %w", err)
+			return
 		}
 
+		cfg.Engine.TimeoutSeconds = cfg.Engine.TimeoutSeconds * time.Second
 		instance = &cfg
 	})
+
+	if loadErr != nil {
+		return nil, loadErr
+	}
+	if instance == nil {
+		return nil, fmt.Errorf("config: instance not initialized")
+	}
 
 	return instance, nil
 }
 
 // Get returns the initialized configuration singleton.
-func Get() *Config {
-	if instance == nil {
-		if _, err := LoadConfig(""); err != nil {
-			panic(fmt.Errorf("config not initialized: %w", err))
-		}
+func Get() (*Config, error) {
+	if instance != nil {
+		return instance, nil
 	}
-	return instance
+	return LoadConfig("")
 }
 
 func setConstantDefaults(v *viper.Viper) {

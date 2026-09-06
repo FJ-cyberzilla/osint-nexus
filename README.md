@@ -50,6 +50,16 @@ go build ./...
 - **Standards**: Strictly typed, zero-panic, explicit error propagation, `context.Context` for all network calls.
 - **Testing**: Run all tests: `go test ./...`
 
+### Initialization Pattern
+Components requiring configuration should be initialized using the explicit error-handling pattern:
+```go
+cfg, err := config.Get()
+if err != nil {
+    return nil, eris.Wrap(err, "failed to initialize")
+}
+```
+`config.Get()` now returns `(*Config, error)`. Never ignore the error.
+
 ## Command Center TUI
 
 OSINT-Nexus features an industrial-grade, real-time command center dashboard. It provides comprehensive visibility into reconnaissance scans, including:

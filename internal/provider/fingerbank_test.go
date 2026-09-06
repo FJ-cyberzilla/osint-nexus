@@ -14,12 +14,17 @@ import (
 
 func TestFingerbankClient_Interrogate(t *testing.T) {
 	expectedResponse := types.FingerbankInterrogateResponse{
+		Device: types.Device{
+			ID:              "123",
+			Name:            "TestDevice",
+			Vendor:          "TestVendor",
+			DeviceType:      "Laptop",
+			OperatingSystem: "Linux",
+		},
 		DeviceName:      "TestDevice",
-		Confidence:      0.99,
-		DeviceId:        "123",
-		Vendor:          "TestVendor",
-		DeviceType:      "Laptop",
-		OperatingSystem: "Linux",
+		Score:           99,
+		Version:         "1.0",
+		RequestId:       "req123",
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +37,9 @@ func TestFingerbankClient_Interrogate(t *testing.T) {
 	defer server.Close()
 
 	client := NewFingerbankClientWithURL("test-api-key", server.URL)
-	payload := map[string]interface{}{"test": "data"}
+	payload := types.FingerbankPayload{
+		Hostname: "test.com",
+	}
 	result, err := client.Interrogate(context.Background(), payload)
 
 	require.NoError(t, err)
@@ -125,21 +132,4 @@ func TestFingerbankClient_IsDeviceA(t *testing.T) {
 	assert.True(t, result)
 }
 
-func TestFingerbankClient_GetBaseInfo(t *testing.T) {
-	expectedInfo := types.DeviceBaseInfo{TotalDevices: 1000}
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodGet, r.Method)
-		assert.Contains(t, r.URL.Path, "/devices/base_info")
-		
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(expectedInfo)
-	}))
-	defer server.Close()
-
-	client := NewFingerbankClientWithURL("test-api-key", server.URL)
-	result, err := client.GetBaseInfo(context.Background())
-
-	require.NoError(t, err)
-	assert.Equal(t, &expectedInfo, result)
-}

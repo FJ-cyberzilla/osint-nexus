@@ -24,8 +24,11 @@ type FingerbankClient struct {
 }
 
 // NewFingerbankClient initializes a new FingerbankClient using config.
-func NewFingerbankClient() *FingerbankClient {
-	cfg := config.Get()
+func NewFingerbankClient() (*FingerbankClient, error) {
+	cfg, err := config.Get()
+	if err != nil {
+		return nil, eris.Wrap(err, "fingerbank: failed to get config")
+	}
 	// In production, the API key should be loaded from a secure env var or secret manager.
 	// For now, we look for it in OSINT_FINGERBANK_API_KEY env var.
 	apiKey := os.Getenv("OSINT_FINGERBANK_API_KEY")
@@ -37,7 +40,7 @@ func NewFingerbankClient() *FingerbankClient {
 		apiKey:  apiKey,
 		baseURL: FingerbankDefaultBaseURL,
 		enabled: enabled,
-	}
+	}, nil
 }
 
 // NewFingerbankClientWithURL initializes a new FingerbankClient with custom base URL.

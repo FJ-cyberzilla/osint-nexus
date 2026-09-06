@@ -27,12 +27,15 @@ type NexusApp struct {
 
 // NewNexusApp initializes a fully configured NexusApp.
 func NewNexusApp() (*NexusApp, error) {
-	// Initialize DB
-	dbPath := config.Get().Database.Path
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
-		return nil, fmt.Errorf("app: failed to create db directory: %w", err)
-	}
-
+        // Initialize DB
+        cfg, err := config.Get()
+        if err != nil {
+                return nil, fmt.Errorf("app: failed to get config: %w", err)
+        }
+        dbPath := cfg.Database.Path
+        if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
+                return nil, fmt.Errorf("app: failed to create db directory: %w", err)
+        }
 	engineDB, err := db.NewSQLiteEngine(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("app: failed to initialize db engine: %w", err)
