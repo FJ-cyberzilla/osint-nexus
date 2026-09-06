@@ -2,6 +2,7 @@ package detector
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -41,6 +42,11 @@ type chromedpProbe struct {
 }
 
 func (p *chromedpProbe) run(ctx context.Context, targetURL string, actions ...chromedp.Action) (context.Context, context.CancelFunc, error) {
+	// Guard against running in Termux which causes crashes
+	if os.Getenv("TERMUX_VERSION") != "" {
+		return nil, nil, eris.New("browser-based fingerprinting is not supported in Termux environment")
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 
 	// Add flags to fix CI/CD environment restrictions
@@ -49,6 +55,7 @@ func (p *chromedpProbe) run(ctx context.Context, targetURL string, actions ...ch
 		chromedp.Flag("headless", "new"),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("disable-features", "dbus"), // use lowercase dbus
 	)
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)

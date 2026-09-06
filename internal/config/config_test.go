@@ -11,7 +11,7 @@ func TestLoadConfig_DefaultsAndEnv(t *testing.T) {
 	os.Setenv("OSINT_ENGINE_CONCURRENCY", "100")
 	defer os.Unsetenv("OSINT_ENGINE_CONCURRENCY")
 
-	cfg, err := LoadConfig("")
+	cfg, err := LoadConfig("../../configs/config.yaml")
 	if err != nil {
 		t.Fatalf("expected no error loading config, got %v", err)
 	}

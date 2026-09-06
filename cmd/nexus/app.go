@@ -94,7 +94,7 @@ func (a *NexusApp) Close() {
 
 // RunScan executes the scan orchestrator for the given username.
 func (a *NexusApp) RunScan(ctx context.Context, username string) (*engine.ScanSession, error) {
-	return a.orchestrator.RunScan(ctx, username, a.providers, time.Duration(config.DefaultTimeout)*time.Second), nil
+        return a.orchestrator.RunScan(ctx, username, a.providers, time.Duration(config.DefaultTimeoutSeconds)*time.Second), nil
 }
 
 // SaveResult persists scan results to the repository.

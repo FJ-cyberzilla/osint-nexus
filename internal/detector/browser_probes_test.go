@@ -2,12 +2,18 @@ package detector
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
 )
 
 func TestBrowserProbes(t *testing.T) {
+	// Skip in Termux environment to prevent crashes as reported by users
+	if os.Getenv("TERMUX_VERSION") != "" {
+		t.Skip("skipping browser tests in Termux environment")
+	}
+
 	// Skip if no browser is available in the environment
 	_, err := exec.LookPath("google-chrome")
 	chromeErr := err

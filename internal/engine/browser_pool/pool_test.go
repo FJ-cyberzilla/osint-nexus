@@ -2,6 +2,7 @@ package browser_pool
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -10,6 +11,11 @@ import (
 )
 
 func TestPool(t *testing.T) {
+	// Skip in Termux environment to prevent crashes
+	if os.Getenv("TERMUX_VERSION") != "" {
+		t.Skip("skipping browser pool tests in Termux environment")
+	}
+
 	if _, err := exec.LookPath("google-chrome"); err != nil {
 		t.Skip("google-chrome not found, skipping TestPool")
 	}
