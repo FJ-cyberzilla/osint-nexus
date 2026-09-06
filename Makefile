@@ -124,19 +124,19 @@ version: ## Display clean semver string
 	@printf "$(VERSION)\n"
 
 clean: banner ## Purge binary artifacts, logs, build output, and module caches
-	$(TIMER_START)
-	@printf "$(C_PURPLE)$(GEAR) [CLEAN]$(RESET) Purging generated artifacts...\n"
-	@if [ -d "$(BUILD_DIR)" ]; then rm -rf $(BUILD_DIR); printf "  $(C_GRAY)├─ Removed target directory:$(RESET) $(C_CYAN)$(BUILD_DIR)/$(RESET)\n"; fi; \
-	 if [ -d "$(LOG_DIR)" ]; then rm -rf $(LOG_DIR)/*; printf "  $(C_GRAY)├─ Flushed log directory:$(RESET) $(C_CYAN)$(LOG_DIR)/$(RESET)\n"; fi; \
-	 rm -f data/nexus.db data/nexus.db-shm data/nexus.db-wal; \
-	 printf "  $(C_GRAY)├─ Flushed database artifacts from data/$(RESET)\n"; \
-	 TMP_COUNT=$$(find . -name "*.tmp" -type f | wc -l | tr -d ' '); \
-	 find . -name "*.tmp" -type f -delete; \
-	 printf "  $(C_GRAY)├─ Deleted $${TMP_COUNT} temporary files$(RESET)\n"; \
-	 go clean -cache -modcache -testcache; \
-	 printf "  $(C_GRAY)├─ Purged Go build and module caches$(RESET)\n"; \
-	 printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)System Cleaned$(RESET)]\n"
-	$(TIMER_END)
+	@START_TIME=$$(date +%s%N); \
+	printf "$(C_PURPLE)$(GEAR) [CLEAN]$(RESET) Purging generated artifacts...\n"; \
+	if [ -d "$(BUILD_DIR)" ]; then rm -rf $(BUILD_DIR); printf "  $(C_GRAY)├─ Removed target directory:$(RESET) $(C_CYAN)$(BUILD_DIR)/$(RESET)\n"; fi; \
+	if [ -d "$(LOG_DIR)" ]; then rm -rf $(LOG_DIR)/*; printf "  $(C_GRAY)├─ Flushed log directory:$(RESET) $(C_CYAN)$(LOG_DIR)/$(RESET)\n"; fi; \
+	rm -f data/nexus.db data/nexus.db-shm data/nexus.db-wal; \
+	printf "  $(C_GRAY)├─ Flushed database artifacts from data/$(RESET)\n"; \
+	TMP_COUNT=$$(find . -name "*.tmp" -type f | wc -l | tr -d ' '); \
+	find . -name "*.tmp" -type f -delete; \
+	printf "  $(C_GRAY)├─ Deleted $${TMP_COUNT} temporary files$(RESET)\n"; \
+	go clean -cache -modcache -testcache; \
+	printf "  $(C_GRAY)├─ Purged Go build and module caches$(RESET)\n"; \
+	ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
+	printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)System Cleaned ($${ELAPSED}ms)$(RESET)]\n"
 
 help: banner ## Display this interactive help interface
 	@printf "$(C_CYAN)$(BOLD)Available Command Targets:$(RESET)\n\n"
