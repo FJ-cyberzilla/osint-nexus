@@ -94,6 +94,7 @@ type ProviderConfig struct {
 	Twitter   ProviderSetting `mapstructure:"twitter"`
 	Instagram ProviderSetting `mapstructure:"instagram"`
 	Aparat    ProviderSetting `mapstructure:"aparat"`
+	Fingerbank ProviderSetting `mapstructure:"fingerbank"`
 }
 
 var (
@@ -177,6 +178,8 @@ func setConstantDefaults(v *viper.Viper) {
 	v.SetDefault("providers.github.rate_limit_per_min", DefaultGitHubRateLimit)
 	v.SetDefault("providers.twitter.enabled", true)
 	v.SetDefault("providers.twitter.rate_limit_per_min", DefaultTwitterRateLimit)
+	v.SetDefault("providers.fingerbank.enabled", false)
+	v.SetDefault("providers.fingerbank.rate_limit_per_min", 60)
 }
 
 func buildFallbackConfig() Config {

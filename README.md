@@ -53,12 +53,19 @@ go build ./...
 ## Command Center TUI
 
 OSINT-Nexus features an industrial-grade, real-time command center dashboard. It provides comprehensive visibility into reconnaissance scans, including:
-- **System Metrics Panels**: Device type, fingerprints, telemetry, and heatmap data.
+- **System Metrics Panels**: Device type, TLS Fingerprint (API or System Default), telemetry, heatmap, and Fingerbank API status/usage data.
+- **Fingerbank Findings**: Advanced device identification, confidence scoring, and vulnerability alerting.
 - **Intelligence Mapping**: Relations and shadow user visualization.
 - **Real-Time Feedback**: Progress tracking with integrated spinner animations and live action reporting.
-- **Categorized Alerting**: Granular system alerts (Yellow) and advisory notifications (Light Blue) for rate limits/network issues.
+- **Categorized Alerting**: Granular **Yellow** system alerts for failures (API/Network/Fallback) and Light Blue advisory notifications.
 
 See `docs/TUI_COMMAND_CENTER.md` for full implementation details.
+
+## Fingerbank Integration
+OSINT-Nexus leverages Fingerbank v2 for advanced device profiling. This integration supports multimodal payloads (JA3, client hints, TCP signatures) with automatic fallback to local detection if the API is disabled or unreliable (low confidence).
+
+- **Documentation**: `docs/FINGERBANK_API.md`
+- **Security**: API keys are securely managed via environment variables (`OSINT_FINGERBANK_API_KEY`).
 
 ---
 *Developed by FJ™ Cybertronic Systems.*

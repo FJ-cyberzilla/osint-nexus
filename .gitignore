@@ -28,12 +28,11 @@ osint_results.db
 error_distribution.txt
 
 # Databases
-data/*.db
-data/*.db-shm
-data/*.db-wal
+data/nexus.db
+data/nexus.db-shm
+data/nexus.db-wal
 *.sqlite
 *.sqlite3
-nexus.db
 
 # Credentials & Config
 .env
@@ -44,5 +43,4 @@ GEMINI.md
 # Runtime & Binaries
 nexus
 main
-*.db*
 

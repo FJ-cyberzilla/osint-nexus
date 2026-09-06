@@ -51,6 +51,23 @@ type DeviceTypeMsg string
 type RelationMsg string
 type ShadowUserMsg string
 type HeatmapMsg string
+type FingerbankFindingsMsg struct {
+	DeviceName      string
+	Score           int
+	Vendor          string
+	DeviceType      string
+	OperatingSystem string
+	Vulnerabilities Vulnerabilities
+}
+type Vulnerabilities struct {
+	CveDevices map[string]interface{}
+	CveOs      map[string]interface{}
+	Message    string
+}
+type FingerbankStatusMsg struct {
+	Enabled bool
+	Usage   int
+}
 type ErrorMsg string
 type AdvisoryMsg string
 
@@ -74,6 +91,8 @@ type Model struct {
 	relations   []string
 	shadowUsers []string
 	heatmap     string
+	fingerbank  *FingerbankFindingsMsg
+	fbStatus    *FingerbankStatusMsg
 	errors      []string
 	advisories  []string
 }
@@ -136,6 +155,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case HeatmapMsg:
 		m.heatmap = string(msg)
 		return m, nil
+	case FingerbankFindingsMsg:
+		m.fingerbank = &msg
+		return m, nil
+	case FingerbankStatusMsg:
+		m.fbStatus = &msg
+		return m, nil
 	case ErrorMsg:
 		m.errors = append(m.errors, string(msg))
 		return m, nil
@@ -162,6 +187,13 @@ func (m Model) View() string {
 		fmt.Sprintf("Telemetry:   %s", m.telemetry),
 		fmt.Sprintf("Heatmap:     %s", m.heatmap),
 	}
+	if m.fbStatus != nil {
+		status := "Disabled"
+		if m.fbStatus.Enabled {
+			status = fmt.Sprintf("Enabled (Usage: %d)", m.fbStatus.Usage)
+		}
+		metrics = append(metrics, fmt.Sprintf("Fingerbank:  %s", status))
+	}
 	body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, metrics...)))
 	
 	// Spinner + Progress
@@ -181,6 +213,21 @@ func (m Model) View() string {
 			for _, s := range m.shadowUsers { infoBody = append(infoBody, "  * " + s) }
 		}
 		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))
+	}
+
+	// Fingerbank Findings Panel
+	if m.fingerbank != nil {
+		fbBody := []string{
+			"Fingerbank Findings:",
+			fmt.Sprintf("  Device: %s (Score: %d)", m.fingerbank.DeviceName, m.fingerbank.Score),
+			fmt.Sprintf("  Vendor: %s", m.fingerbank.Vendor),
+			fmt.Sprintf("  Type: %s", m.fingerbank.DeviceType),
+			fmt.Sprintf("  OS: %s", m.fingerbank.OperatingSystem),
+		}
+		if len(m.fingerbank.Vulnerabilities.CveDevices) > 0 || len(m.fingerbank.Vulnerabilities.CveOs) > 0 {
+			fbBody = append(fbBody, "  [!] Vulnerabilities Detected")
+		}
+		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, fbBody...)))
 	}
 
 	if len(m.results) > 0 {
