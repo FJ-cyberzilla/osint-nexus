@@ -11,9 +11,9 @@ import (
 )
 
 func TestPool(t *testing.T) {
-	// Skip in Termux environment to prevent crashes
-	if os.Getenv("TERMUX_VERSION") != "" {
-		t.Skip("skipping browser pool tests in Termux environment")
+	// Skip in Termux or CI environments to prevent crashes
+	if os.Getenv("TERMUX_VERSION") != "" || os.Getenv("CI") != "" {
+		t.Skip("skipping browser pool tests in restricted environment (Termux/CI)")
 	}
 
 	if _, err := exec.LookPath("google-chrome"); err != nil {

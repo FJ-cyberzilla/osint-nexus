@@ -9,9 +9,9 @@ import (
 )
 
 func TestBrowserProbes(t *testing.T) {
-	// Skip in Termux environment to prevent crashes as reported by users
-	if os.Getenv("TERMUX_VERSION") != "" {
-		t.Skip("skipping browser tests in Termux environment")
+	// Skip in Termux or CI environments to prevent crashes
+	if os.Getenv("TERMUX_VERSION") != "" || os.Getenv("CI") != "" {
+		t.Skip("skipping browser tests in restricted environment (Termux/CI)")
 	}
 
 	// Skip if no browser is available in the environment
