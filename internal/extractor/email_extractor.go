@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/osint-nexus/internal/types"
+	"golang.org/x/net/html"
 )
 
 // EmailExtractor handles email address harvesting via regex.
 type EmailExtractor struct {
 	emailRegex *regexp.Regexp
+	emails     map[string]struct{}
 }
 
 // NewEmailExtractor initializes and returns a configured EmailExtractor.
@@ -20,7 +23,10 @@ func NewEmailExtractor() (*EmailExtractor, error) {
 	if err != nil {
 		return nil, fmt.Errorf("email_extractor: compile regex: %w", err)
 	}
-	return &EmailExtractor{emailRegex: pattern}, nil
+	return &EmailExtractor{
+		emailRegex: pattern,
+		emails:     make(map[string]struct{}),
+	}, nil
 }
 
 // Extract implements the Extractor interface for email harvesting.
@@ -38,4 +44,35 @@ func (e *EmailExtractor) Extract(ctx context.Context, rawHTML string) (*types.Ex
 	}
 
 	return &types.ExtractedPivots{Emails: emails}, nil
+}
+
+func (e *EmailExtractor) HandleToken(token html.Token) {
+	// Look for emails in href attributes
+	for _, attr := range token.Attr {
+		if attr.Key == "href" {
+			// Extract email if href starts with mailto:
+			if strings.HasPrefix(attr.Val, "mailto:") {
+				email := strings.TrimPrefix(attr.Val, "mailto:")
+				// Basic validation
+				if e.emailRegex.MatchString(email) {
+					e.emails[email] = struct{}{}
+				}
+			}
+		}
+	}
+}
+
+func (e *EmailExtractor) HandleText(text string) {
+	matches := e.emailRegex.FindAllString(text, -1)
+	for _, m := range matches {
+		e.emails[m] = struct{}{}
+	}
+}
+
+func (e *EmailExtractor) GetPivots() *types.ExtractedPivots {
+	emails := make([]string, 0, len(e.emails))
+	for email := range e.emails {
+		emails = append(emails, email)
+	}
+	return &types.ExtractedPivots{Emails: emails}
 }

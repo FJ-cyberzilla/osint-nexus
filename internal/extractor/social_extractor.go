@@ -12,12 +12,17 @@ import (
 // SocialExtractor harvests links and identifies social media handles
 // using a streaming tokenizer and provided configuration.
 type SocialExtractor struct {
-	config *types.Config
+	config        *types.Config
+	linkSet       map[string]struct{}
+	socialHandles []types.SocialHandle
 }
 
 // NewSocialExtractor initializes a new SocialExtractor with the provided config.
 func NewSocialExtractor(cfg *types.Config) *SocialExtractor {
-	return &SocialExtractor{config: cfg}
+	return &SocialExtractor{
+		config:  cfg,
+		linkSet: make(map[string]struct{}),
+	}
 }
 
 // Extract implements the Extractor interface for link/social handle harvesting.
@@ -69,6 +74,48 @@ func (s *SocialExtractor) Extract(ctx context.Context, rawHTML string) (*types.E
 	}
 
 	return &types.ExtractedPivots{ExternalLinks: links, SocialHandles: socialHandles}, nil
+}
+
+func (s *SocialExtractor) HandleToken(token html.Token) {
+	if token.Data == "a" {
+		for _, attr := range token.Attr {
+			if attr.Key == "href" {
+				href := attr.Val
+				if !strings.HasPrefix(href, "http://") && !strings.HasPrefix(href, "https://") {
+					continue
+				}
+
+				parsed, err := url.Parse(href)
+				if err != nil {
+					continue
+				}
+
+				s.linkSet[href] = struct{}{}
+
+				platform, username := s.identifySocial(strings.ToLower(parsed.Host), parsed.Path)
+				if platform != "" {
+					s.socialHandles = append(s.socialHandles, types.SocialHandle{
+						Platform: platform,
+						Username: username,
+						URL:      href,
+					})
+				}
+			}
+		}
+	}
+}
+
+func (s *SocialExtractor) HandleText(text string) {}
+
+func (s *SocialExtractor) GetPivots() *types.ExtractedPivots {
+	links := make([]string, 0, len(s.linkSet))
+	for link := range s.linkSet {
+		links = append(links, link)
+	}
+	return &types.ExtractedPivots{
+		ExternalLinks: links,
+		SocialHandles: s.socialHandles,
+	}
 }
 
 func (s *SocialExtractor) identifySocial(domain, path string) (string, string) {

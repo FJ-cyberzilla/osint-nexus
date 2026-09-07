@@ -6,11 +6,13 @@ import (
 	"regexp"
 
 	"github.com/osint-nexus/internal/types"
+	"golang.org/x/net/html"
 )
 
 // PGPExtractor harvests PGP public keys from HTML content using regex.
 type PGPExtractor struct {
 	pgpRegex *regexp.Regexp
+	pgpKeys  []string
 }
 
 // NewPGPExtractor initializes and returns a fully configured PGPExtractor.
@@ -32,4 +34,17 @@ func (p *PGPExtractor) Extract(ctx context.Context, rawHTML string) (*types.Extr
 	return &types.ExtractedPivots{
 		PGPKeys: keys,
 	}, nil
+}
+
+func (p *PGPExtractor) HandleToken(token html.Token) {}
+
+func (p *PGPExtractor) HandleText(text string) {
+	keys := p.pgpRegex.FindAllString(text, -1)
+	p.pgpKeys = append(p.pgpKeys, keys...)
+}
+
+func (p *PGPExtractor) GetPivots() *types.ExtractedPivots {
+	return &types.ExtractedPivots{
+		PGPKeys: p.pgpKeys,
+	}
 }

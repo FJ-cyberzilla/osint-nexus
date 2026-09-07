@@ -9,7 +9,9 @@ import (
 )
 
 // MetaExtractor handles meta tag and bio harvesting using a streaming tokenizer.
-type MetaExtractor struct{}
+type MetaExtractor struct {
+	bio string
+}
 
 // NewMetaExtractor initializes a new MetaExtractor.
 func NewMetaExtractor() *MetaExtractor {
@@ -48,4 +50,30 @@ func (m *MetaExtractor) Extract(ctx context.Context, rawHTML string) (*types.Ext
 	}
 
 	return &types.ExtractedPivots{Bio: &bio}, nil
+}
+
+func (m *MetaExtractor) HandleToken(token html.Token) {
+	if m.bio != "" {
+		return
+	}
+	if token.Data == "meta" {
+		var name, content string
+		for _, attr := range token.Attr {
+			if attr.Key == "name" || attr.Key == "property" {
+				name = attr.Val
+			} else if attr.Key == "content" {
+				content = attr.Val
+			}
+		}
+
+		if (name == "description" || name == "og:description" || name == "twitter:description") && content != "" {
+			m.bio = content
+		}
+	}
+}
+
+func (m *MetaExtractor) HandleText(text string) {}
+
+func (m *MetaExtractor) GetPivots() *types.ExtractedPivots {
+	return &types.ExtractedPivots{Bio: &m.bio}
 }
