@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	"github.com/rotisserie/eris"
 )
 
 // TLSResult holds the outcome of a TLS probe.
@@ -37,14 +39,23 @@ func (d *TLSDetector) Probe(ctx context.Context, address string) (*TLSResult, er
 
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, fmt.Errorf("detector: invalid address %q: %w", address, err)
+		return nil, eris.Wrapf(err, "detector: invalid address %q", address)
 	}
 
 	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
-		return nil, fmt.Errorf("detector: tcp dial failed: %w", err)
+		return nil, eris.Wrap(err, "detector: tcp dial failed")
 	}
-	defer conn.Close()
+	// We defer the closing of the connection.
+	// Since tlsConn embeds conn, closing tlsConn closes conn.
+	// However, if Handshake fails, we still need to close conn.
+	// A simple approach is to use a flag or a closure to ensure it's closed.
+	var closed bool
+	defer func() {
+		if !closed {
+			conn.Close()
+		}
+	}()
 
 	// Configure TLS client
 	tlsConn := tls.Client(conn, &tls.Config{
@@ -53,8 +64,10 @@ func (d *TLSDetector) Probe(ctx context.Context, address string) (*TLSResult, er
 
 	err = tlsConn.Handshake()
 	if err != nil {
-		return nil, fmt.Errorf("detector: tls handshake failed: %w", err)
+		return nil, eris.Wrap(err, "detector: tls handshake failed")
 	}
+	closed = true // Handshake took ownership of the connection
+
 	defer tlsConn.Close()
 
 	state := tlsConn.ConnectionState()

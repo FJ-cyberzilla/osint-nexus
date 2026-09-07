@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/rotisserie/eris"
+
 	"github.com/osint-nexus/internal/config"
 	"github.com/osint-nexus/internal/engine"
 	"github.com/osint-nexus/internal/ui"
@@ -21,7 +23,7 @@ func run() error {
 		var err error
 		username, err = promptForUsername()
 		if err != nil {
-			return err
+			return eris.Wrap(err, "run: prompt for username")
 		}
 	} else {
 		username = os.Args[1]
@@ -29,18 +31,18 @@ func run() error {
 
 	app, err := NewNexusApp()
 	if err != nil {
-		return fmt.Errorf("failed to initialize app: %w", err)
+		return eris.Wrap(err, "run: initialize app")
 	}
 	defer app.Close()
 
 	if len(os.Args) < 2 {
-		return runDashboard(app, username)
+		return eris.Wrap(runDashboard(app, username), "run: dashboard")
 	}
 
 	fmt.Printf("Scanning for: %s\n", username)
 	session, err := app.RunScan(context.Background(), username)
 	if err != nil {
-		return fmt.Errorf("failed to run scan: %w", err)
+		return eris.Wrap(err, "run: scan")
 	}
 
 	processSessionResults(app, session)
@@ -52,11 +54,11 @@ func promptForUsername() (string, error) {
 	fmt.Print("Enter username: ")
 	username, err := reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return "", eris.Wrap(err, "prompt: read string")
 	}
 	username = strings.TrimSpace(username)
 	if username == "" {
-		return "", fmt.Errorf("username cannot be empty")
+		return "", eris.New("prompt: username cannot be empty")
 	}
 	return username, nil
 }
@@ -67,7 +69,7 @@ func runDashboard(app *NexusApp, username string) error {
 
 	session, err := app.RunScan(ctx, username)
 	if err != nil {
-		return fmt.Errorf("failed to start scan: %w", err)
+		return eris.Wrap(err, "dashboard: start scan")
 	}
 
 	p := tea.NewProgram(ui.NewModel(username))
@@ -122,7 +124,7 @@ func runDashboard(app *NexusApp, username string) error {
 	}()
 
 	if _, err := p.Run(); err != nil {
-		return fmt.Errorf("failed to run dashboard: %w", err)
+		return eris.Wrap(err, "dashboard: run tea program")
 	}
 	return nil
 }
@@ -160,7 +162,7 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 	if err := run(); err != nil {
-		log.Printf("Error: %v\n", err)
+		log.Printf("Error: %+v\n", err)
 		os.Exit(1)
 	}
 }

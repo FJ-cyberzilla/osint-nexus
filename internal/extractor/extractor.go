@@ -11,6 +11,23 @@ import (
 	"github.com/osint-nexus/internal/types"
 )
 
+var platformMap = map[string]string{
+	"twitter.com":   "Twitter",
+	"x.com":         "Twitter",
+	"instagram.com": "Instagram",
+	"linkedin.com":  "LinkedIn",
+	"github.com":    "GitHub",
+	"t.me":          "Telegram",
+}
+
+var ignoredHandles = map[string]bool{
+	"share":  true,
+	"home":   true,
+	"intent": true,
+	"search": true,
+	"p":      true,
+}
+
 // PivotExtractor coordinates regex and HTML parsing engines.
 type PivotExtractor struct {
 	emailRegex    *regexp.Regexp
@@ -50,7 +67,7 @@ func (p *PivotExtractor) Extract(ctx context.Context, rawHTML string, sourceURL 
 	}
 
 	emails := p.extractEmails(rawHTML, doc)
-	pgpKeys := p.extractPGPKeys(rawHTML)
+	pgpKeys := p.pgpRegex.FindAllString(rawHTML, -1)
 	links, handles := p.extractLinksAndHandles(doc, sourceURL)
 	bio := p.extractBio(doc)
 
@@ -64,20 +81,25 @@ func (p *PivotExtractor) Extract(ctx context.Context, rawHTML string, sourceURL 
 }
 
 func (p *PivotExtractor) extractEmails(rawHTML string, doc *goquery.Document) []string {
-	emailSet := make(map[string]struct{})
+	emailSet := make(map[string]struct{}, 8)
 
-	// Regex extraction
 	matches := p.emailRegex.FindAllString(rawHTML, -1)
 	for _, m := range matches {
 		emailSet[m] = struct{}{}
 	}
 
-	// Mailto extraction
 	doc.Find("a[href^='mailto:']").Each(func(i int, s *goquery.Selection) {
-		href, _ := s.Attr("href")
+		href, exists := s.Attr("href")
+		if !exists {
+			return
+		}
+		
 		email := strings.TrimPrefix(href, "mailto:")
-		email = strings.Split(email, "?")[0]
-		if p.emailRegex.MatchString(email) {
+		if idx := strings.IndexByte(email, '?'); idx != -1 {
+			email = email[:idx]
+		}
+		
+		if _, found := emailSet[email]; !found && p.emailRegex.MatchString(email) {
 			emailSet[email] = struct{}{}
 		}
 	})
@@ -89,10 +111,6 @@ func (p *PivotExtractor) extractEmails(rawHTML string, doc *goquery.Document) []
 	return emails
 }
 
-func (p *PivotExtractor) extractPGPKeys(rawHTML string) []string {
-	return p.pgpRegex.FindAllString(rawHTML, -1)
-}
-
 func (p *PivotExtractor) extractLinksAndHandles(doc *goquery.Document, sourceURL string) ([]string, []types.SocialHandle) {
 	u, _ := url.Parse(sourceURL)
 	sourceDomain := ""
@@ -100,12 +118,12 @@ func (p *PivotExtractor) extractLinksAndHandles(doc *goquery.Document, sourceURL
 		sourceDomain = strings.ToLower(u.Host)
 	}
 
-	linkSet := make(map[string]struct{})
+	linkSet := make(map[string]struct{}, 16)
 	var socialHandles []types.SocialHandle
 
 	doc.Find("a[href]").Each(func(i int, s *goquery.Selection) {
-		href, _ := s.Attr("href")
-		if !strings.HasPrefix(href, "http://") && !strings.HasPrefix(href, "https://") {
+		href, exists := s.Attr("href")
+		if !exists || (!strings.HasPrefix(href, "http://") && !strings.HasPrefix(href, "https://")) {
 			return
 		}
 
@@ -121,7 +139,6 @@ func (p *PivotExtractor) extractLinksAndHandles(doc *goquery.Document, sourceURL
 
 		linkSet[href] = struct{}{}
 
-		// Simple handle detection
 		platform, username := p.identifySocial(hrefDomain, parsed.Path)
 		if platform != "" {
 			socialHandles = append(socialHandles, types.SocialHandle{
@@ -140,20 +157,13 @@ func (p *PivotExtractor) extractLinksAndHandles(doc *goquery.Document, sourceURL
 }
 
 func (p *PivotExtractor) identifySocial(domain, path string) (string, string) {
-	platforms := map[string]string{
-		"twitter.com":   "Twitter",
-		"x.com":         "Twitter",
-		"instagram.com": "Instagram",
-		"linkedin.com":  "LinkedIn",
-		"github.com":    "GitHub",
-		"t.me":          "Telegram",
-	}
-
-	platform := ""
-	for dom, name := range platforms {
-		if domain == dom || strings.HasSuffix(domain, "."+dom) {
-			platform = name
-			break
+	platform, found := platformMap[domain]
+	if !found {
+		for d, name := range platformMap {
+			if strings.HasSuffix(domain, "."+d) {
+				platform = name
+				break
+			}
 		}
 	}
 
@@ -161,15 +171,22 @@ func (p *PivotExtractor) identifySocial(domain, path string) (string, string) {
 		return "", ""
 	}
 
-	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if len(parts) > 0 && parts[0] != "" {
-		ignored := map[string]bool{"share": true, "home": true, "intent": true, "search": true, "p": true}
-		if !ignored[parts[0]] {
-			return platform, parts[0]
-		}
+	trimmedPath := strings.Trim(path, "/")
+	if trimmedPath == "" {
+		return "", ""
+	}
+	
+	idx := strings.IndexByte(trimmedPath, '/')
+	username := trimmedPath
+	if idx != -1 {
+		username = trimmedPath[:idx]
 	}
 
-	return "", ""
+	if ignoredHandles[username] {
+		return "", ""
+	}
+
+	return platform, username
 }
 
 func (p *PivotExtractor) extractBio(doc *goquery.Document) string {
@@ -178,12 +195,12 @@ func (p *PivotExtractor) extractBio(doc *goquery.Document) string {
 		"meta[property='og:description']",
 		"meta[property='twitter:description']",
 	}
+	
 	for _, sel := range selectors {
 		if content, exists := doc.Find(sel).Attr("content"); exists {
 			return strings.TrimSpace(content)
 		}
 	}
-	// Fallback to text content if meta descriptions are absent
 	bio := doc.Find("div[class*='bio'], div[class*='description'], p").First().Text()
 	return strings.TrimSpace(bio)
 }

@@ -2,9 +2,10 @@ package detector
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
+
+	"github.com/rotisserie/eris"
 )
 
 // DNSResult holds the outcome of a DNS probe.
@@ -39,7 +40,7 @@ func (d *DNSDetector) Probe(ctx context.Context, hostname string) (*DNSResult, e
 	start := time.Now()
 	ips, err := d.resolver.LookupHost(ctx, hostname)
 	if err != nil {
-		return nil, fmt.Errorf("detector: dns lookup failed: %w", err)
+		return nil, eris.Wrap(err, "detector: dns lookup failed")
 	}
 
 	return &DNSResult{

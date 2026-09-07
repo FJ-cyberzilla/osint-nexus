@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/rotisserie/eris"
 
 	"github.com/osint-nexus/internal/config"
 	"github.com/osint-nexus/internal/db"
@@ -30,24 +31,24 @@ func NewNexusApp() (*NexusApp, error) {
 	// Initialize DB
 	cfg, err := config.Get()
 	if err != nil {
-		return nil, fmt.Errorf("app: failed to get config: %w", err)
+		return nil, eris.Wrap(err, "app: failed to get config")
 	}
 	dbPath := cfg.Database.Path
 	// Fix G301: Set directory permissions to 0750
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0750); err != nil {
-		return nil, fmt.Errorf("app: failed to create db directory: %w", err)
+		return nil, eris.Wrapf(err, "app: failed to create db directory at %s", filepath.Dir(dbPath))
 	}
 	engineDB, err := db.NewSQLiteEngine(dbPath)
 	if err != nil {
-		return nil, fmt.Errorf("app: failed to initialize db engine: %w", err)
+		return nil, eris.Wrap(err, "app: failed to initialize db engine")
 	}
 
 	// Fix G104: Explicitly handle Close errors
 	if err := engineDB.EnsureSchema(); err != nil {
 		if closeErr := engineDB.Close(); closeErr != nil {
-			return nil, fmt.Errorf("app: failed to ensure schema (and failed to close db: %v): %w", closeErr, err)
+			return nil, eris.Wrapf(err, "app: failed to ensure schema (and failed to close db: %v)", closeErr)
 		}
-		return nil, fmt.Errorf("app: failed to ensure schema: %w", err)
+		return nil, eris.Wrap(err, "app: failed to ensure schema")
 	}
 
 	resultRepo := db.NewResultRepository(engineDB)
@@ -56,18 +57,18 @@ func NewNexusApp() (*NexusApp, error) {
 	repo, err := db.NewFingerprintRepository("data/fingerprints.json")
 	if err != nil {
 		if closeErr := engineDB.Close(); closeErr != nil {
-			return nil, fmt.Errorf("app: failed to initialize fingerprint repository (and failed to close db: %v): %w", closeErr, err)
+			return nil, eris.Wrapf(err, "app: failed to initialize fingerprint repository (and failed to close db: %v)", closeErr)
 		}
-		return nil, fmt.Errorf("app: failed to initialize fingerprint repository: %w", err)
+		return nil, eris.Wrap(err, "app: failed to initialize fingerprint repository")
 	}
 
 	profileDetector := detector.NewProfileDetector()
 	orchestrator, err := engine.NewOrchestrator(5, profileDetector)
 	if err != nil {
 		if closeErr := engineDB.Close(); closeErr != nil {
-			return nil, fmt.Errorf("app: failed to initialize orchestrator (and failed to close db: %v): %w", closeErr, err)
+			return nil, eris.Wrapf(err, "app: failed to initialize orchestrator (and failed to close db: %v)", closeErr)
 		}
-		return nil, fmt.Errorf("app: failed to initialize orchestrator: %w", err)
+		return nil, eris.Wrap(err, "app: failed to initialize orchestrator")
 	}
 
 	// Initialize FingerprintOrchestrator
@@ -112,5 +113,8 @@ func (a *NexusApp) RunScan(ctx context.Context, username string) (*engine.ScanSe
 
 // SaveResult persists scan results to the repository.
 func (a *NexusApp) SaveResult(username, platform string) error {
-	return a.resultRepo.Save(username, platform, true)
+	if err := a.resultRepo.Save(username, platform, true); err != nil {
+		return eris.Wrap(err, "app: failed to save result")
+	}
+	return nil
 }

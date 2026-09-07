@@ -65,3 +65,33 @@ Key data
 		t.Errorf("Expected 'Test Bio', got '%s'", *pivots.Bio)
 	}
 }
+
+func BenchmarkPivotExtractor_Extract(b *testing.B) {
+	extractor, err := NewPivotExtractor()
+	if err != nil {
+		b.Fatalf("Failed to create extractor: %v", err)
+	}
+
+	rawHTML := `
+<html>
+<head>
+    <meta name="description" content="Test Bio">
+</head>
+<body>
+    <a href="mailto:test@example.com">Email</a>
+    <a href="https://github.com/testuser">GitHub</a>
+    <a href="https://t.me/telegramuser">Telegram</a>
+    <pre>
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Key data
+-----END PGP PUBLIC KEY BLOCK-----
+    </pre>
+</body>
+</html>
+`
+	ctx := context.Background()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = extractor.Extract(ctx, rawHTML, "https://example.com")
+	}
+}

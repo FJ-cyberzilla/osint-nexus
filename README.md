@@ -38,19 +38,29 @@ To ensure security and stability, **OSINT-Nexus strictly prohibits the installat
 
 ## Development
 
-- **Tech Stack**: Go 1.23+, `charmbracelet/lipgloss` (UI), `rotisserie/eris` (Errors), `uber-go/mock` (Testing).
+- **Tech Stack**: Go 1.23+, `charmbracelet/lipgloss` (UI), `rotisserie/eris` (Structured Error Handling), `uber-go/mock` (Testing).
 - **Standards**: Strictly typed, zero-panic, explicit error propagation, `context.Context` for all network calls.
+- **Error Handling**: Use `github.com/rotisserie/eris` for all errors to ensure actionable, traceable context.
 - **Testing**: Run all tests: `go test ./...`
 
+### Error Handling Pattern
+All operations that can fail must return `error` and wrap them using `eris` to maintain a traceable stack:
+```go
+if err != nil {
+    return eris.Wrap(err, "contextual description")
+}
+```
+Never ignore errors or use `fmt.Errorf` without `eris` wrapping.
+
 ### Initialization Pattern
-Components requiring configuration should be initialized using the explicit error-handling pattern:
+Components requiring configuration should follow the explicit error-handling pattern:
 ```go
 cfg, err := config.Get()
 if err != nil {
     return nil, eris.Wrap(err, "failed to initialize")
 }
 ```
-`config.Get()` now returns `(*Config, error)`. Never ignore the error.
+`config.Get()` returns `(*Config, error)`. Never ignore the error.
 
 ## Command Center TUI
 

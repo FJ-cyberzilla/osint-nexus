@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rotisserie/eris"
@@ -34,7 +35,7 @@ func NewOrchestrator(maxConcurrency int, detector Detector) (*Orchestrator, erro
 }
 
 // ScanState represents the current state of a scan.
-type ScanState int
+type ScanState int32
 
 const (
 	ScanStateInitiated ScanState = iota
@@ -45,8 +46,7 @@ const (
 
 // ScanSession manages the lifecycle of a single scan.
 type ScanSession struct {
-	mu           sync.Mutex
-	State        ScanState                    `json:"state" yaml:"state"`
+	State        atomic.Int32
 	ResultChan   <-chan *types.IdentityProfile `json:"-" yaml:"-"`
 	ErrChan      <-chan error                 `json:"-" yaml:"-"`
 	ProgressChan <-chan float64               `json:"-" yaml:"-"`
@@ -54,16 +54,12 @@ type ScanSession struct {
 
 // setState safely updates the scan state.
 func (s *ScanSession) setState(state ScanState) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.State = state
+	s.State.Store(int32(state))
 }
 
 // getState safely reads the scan state.
 func (s *ScanSession) getState() ScanState {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.State
+	return ScanState(s.State.Load())
 }
 
 // RunScan executes a scan across multiple providers concurrently and returns a ScanSession.
@@ -77,11 +73,11 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 	progressChan := make(chan float64, len(providers))
 
 	session := &ScanSession{
-		State:        ScanStateInitiated,
 		ResultChan:   resultChan,
 		ErrChan:      errChan,
 		ProgressChan: progressChan,
 	}
+	session.setState(ScanStateInitiated)
 
 	go func() {
 		defer func() {
@@ -97,8 +93,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 		sem := make(chan struct{}, o.maxConcurrency)
 		var wg sync.WaitGroup
 
-		completed := 0
-		var progressMu sync.Mutex
+		var completed atomic.Int64
 
 		for _, p := range providers {
 			wg.Add(1)
@@ -115,10 +110,8 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 				res, err := p.CheckUsername(scanCtx, username)
 
 				// Update progress
-				progressMu.Lock()
-				completed++
-				progressChan <- float64(completed) / float64(len(providers))
-				progressMu.Unlock()
+				completed.Add(1)
+				progressChan <- float64(completed.Load()) / float64(len(providers))
 
 				if err != nil {
 					session.setState(ScanStateError)

@@ -3,9 +3,12 @@ package detector
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/rotisserie/eris"
 )
+
+const defaultHTTPTimeout = 10 * time.Second
 
 // DNSLeakResult holds the outcome of a DNS leak check.
 type DNSLeakResult struct {
@@ -22,7 +25,9 @@ type DNSLeakProbe struct {
 // NewDNSLeakProbe initializes a new DNSLeakProbe.
 func NewDNSLeakProbe() *DNSLeakProbe {
 	return &DNSLeakProbe{
-		client: &http.Client{},
+		client: &http.Client{
+			Timeout: defaultHTTPTimeout,
+		},
 	}
 }
 
@@ -42,10 +47,8 @@ func (p *DNSLeakProbe) Check(ctx context.Context, targetURL string, testEndpoint
 			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "execute request").Error()})
 			continue
 		}
-		if err := resp.Body.Close(); err != nil {
-			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "close response body").Error()})
-			continue
-		}
+		// Body must be drained and closed to reuse connections
+		_ = resp.Body.Close()
 
 		// A successful reach indicates potential leak (if the endpoint is meant to test for it)
 		results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: resp.StatusCode == http.StatusOK})
