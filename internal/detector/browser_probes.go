@@ -47,7 +47,7 @@ func (p *chromedpProbe) run(ctx context.Context, targetURL string, actions ...ch
 		return nil, nil, eris.New("browser-based fingerprinting is not supported in Termux environment")
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
+	timeoutCtx, timeoutCancel := context.WithTimeout(ctx, p.timeout)
 
 	// Add flags to fix CI/CD environment restrictions
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -58,17 +58,22 @@ func (p *chromedpProbe) run(ctx context.Context, targetURL string, actions ...ch
 		chromedp.Flag("disable-features", "dbus"), // use lowercase dbus
 	)
 
-	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
+	allocCtx, allocCancel := chromedp.NewExecAllocator(timeoutCtx, opts...)
 	defer allocCancel()
 
-	ctx, cancel = chromedp.NewContext(allocCtx)
+	browserCtx, browserCancel := chromedp.NewContext(allocCtx)
 
-	if err := chromedp.Run(ctx, append([]chromedp.Action{chromedp.Navigate(targetURL)}, actions...)...); err != nil {
-		cancel()
+	combinedCancel := func() {
+		browserCancel()
+		timeoutCancel()
+	}
+
+	if err := chromedp.Run(browserCtx, append([]chromedp.Action{chromedp.Navigate(targetURL)}, actions...)...); err != nil {
+		combinedCancel()
 		return nil, nil, eris.Wrap(err, "chromedp run failed")
 	}
 
-	return ctx, cancel, nil
+	return browserCtx, combinedCancel, nil
 }
 
 // WebGLProbe extracts WebGL rendering fingerprinting.

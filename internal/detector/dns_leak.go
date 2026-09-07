@@ -42,7 +42,10 @@ func (p *DNSLeakProbe) Check(ctx context.Context, targetURL string, testEndpoint
 			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "execute request").Error()})
 			continue
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "close response body").Error()})
+			continue
+		}
 
 		// A successful reach indicates potential leak (if the endpoint is meant to test for it)
 		results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: resp.StatusCode == http.StatusOK})

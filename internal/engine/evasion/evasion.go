@@ -1,7 +1,8 @@
 package evasion
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 
 	"github.com/chromedp/chromedp"
 )
@@ -20,7 +21,13 @@ func GetAllocatorOptions(opts SpoofingOptions) []chromedp.ExecAllocatorOption {
 		}
 	}
 
-	userAgent := opts.UserAgents[rand.Intn(len(opts.UserAgents))]
+	var index int64
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(opts.UserAgents))))
+	if err == nil {
+		index = n.Int64()
+	}
+
+	userAgent := opts.UserAgents[index]
 	return []chromedp.ExecAllocatorOption{
 		chromedp.Flag("user-agent", userAgent),
 		chromedp.Flag("headless", true),

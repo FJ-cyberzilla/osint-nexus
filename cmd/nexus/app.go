@@ -27,22 +27,26 @@ type NexusApp struct {
 
 // NewNexusApp initializes a fully configured NexusApp.
 func NewNexusApp() (*NexusApp, error) {
-        // Initialize DB
-        cfg, err := config.Get()
-        if err != nil {
-                return nil, fmt.Errorf("app: failed to get config: %w", err)
-        }
-        dbPath := cfg.Database.Path
-        if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
-                return nil, fmt.Errorf("app: failed to create db directory: %w", err)
-        }
+	// Initialize DB
+	cfg, err := config.Get()
+	if err != nil {
+		return nil, fmt.Errorf("app: failed to get config: %w", err)
+	}
+	dbPath := cfg.Database.Path
+	// Fix G301: Set directory permissions to 0750
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0750); err != nil {
+		return nil, fmt.Errorf("app: failed to create db directory: %w", err)
+	}
 	engineDB, err := db.NewSQLiteEngine(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("app: failed to initialize db engine: %w", err)
 	}
 
+	// Fix G104: Explicitly handle Close errors
 	if err := engineDB.EnsureSchema(); err != nil {
-		engineDB.Close()
+		if closeErr := engineDB.Close(); closeErr != nil {
+			return nil, fmt.Errorf("app: failed to ensure schema (and failed to close db: %v): %w", closeErr, err)
+		}
 		return nil, fmt.Errorf("app: failed to ensure schema: %w", err)
 	}
 
@@ -51,14 +55,18 @@ func NewNexusApp() (*NexusApp, error) {
 	// Initialize FingerprintRepository
 	repo, err := db.NewFingerprintRepository("data/fingerprints.json")
 	if err != nil {
-		engineDB.Close()
+		if closeErr := engineDB.Close(); closeErr != nil {
+			return nil, fmt.Errorf("app: failed to initialize fingerprint repository (and failed to close db: %v): %w", closeErr, err)
+		}
 		return nil, fmt.Errorf("app: failed to initialize fingerprint repository: %w", err)
 	}
 
 	profileDetector := detector.NewProfileDetector()
 	orchestrator, err := engine.NewOrchestrator(5, profileDetector)
 	if err != nil {
-		engineDB.Close()
+		if closeErr := engineDB.Close(); closeErr != nil {
+			return nil, fmt.Errorf("app: failed to initialize orchestrator (and failed to close db: %v): %w", closeErr, err)
+		}
 		return nil, fmt.Errorf("app: failed to initialize orchestrator: %w", err)
 	}
 
@@ -89,15 +97,17 @@ func NewNexusApp() (*NexusApp, error) {
 }
 
 // Close gracefully closes application resources.
-func (a *NexusApp) Close() {
+// Fix G104: Return error on Close
+func (a *NexusApp) Close() error {
 	if a.engineDB != nil {
-		a.engineDB.Close()
+		return a.engineDB.Close()
 	}
+	return nil
 }
 
 // RunScan executes the scan orchestrator for the given username.
 func (a *NexusApp) RunScan(ctx context.Context, username string) (*engine.ScanSession, error) {
-        return a.orchestrator.RunScan(ctx, username, a.providers, time.Duration(config.DefaultTimeoutSeconds)*time.Second), nil
+	return a.orchestrator.RunScan(ctx, username, a.providers, time.Duration(config.DefaultTimeoutSeconds)*time.Second), nil
 }
 
 // SaveResult persists scan results to the repository.
