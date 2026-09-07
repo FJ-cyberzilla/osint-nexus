@@ -84,7 +84,7 @@ func (p *FingerbankClient) handleResponseError(resp *http.Response) error {
 }
 
 // executeGET is a helper to execute GET requests and decode response.
-func (p *FingerbankClient) executeGET(ctx context.Context, endpoint string, result any) error {
+func (p *FingerbankClient) executeGET[T any](ctx context.Context, endpoint string, result *T) error {
 	url := fmt.Sprintf("%s/%s?key=%s", p.baseURL, endpoint, p.apiKey)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
