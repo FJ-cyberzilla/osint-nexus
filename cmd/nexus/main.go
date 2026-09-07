@@ -34,7 +34,7 @@ func run() error {
 	defer app.Close()
 
 	if len(os.Args) < 2 {
-		return runDashboard(username)
+		return runDashboard(app, username)
 	}
 
 	fmt.Printf("Scanning for: %s\n", username)
@@ -61,8 +61,66 @@ func promptForUsername() (string, error) {
 	return username, nil
 }
 
-func runDashboard(username string) error {
+func runDashboard(app *NexusApp, username string) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	session, err := app.RunScan(ctx, username)
+	if err != nil {
+		return fmt.Errorf("failed to start scan: %w", err)
+	}
+
 	p := tea.NewProgram(ui.NewModel(username))
+
+	// Bridge session channels to Bubble Tea
+	go func() {
+		p.Send(ui.StatusMsg("Scan initiated..."))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case res, ok := <-session.ResultChan:
+				if !ok {
+					session.ResultChan = nil
+				} else if res != nil {
+					for _, acc := range res.Accounts {
+						if acc.Platform != nil {
+							p.Send(ui.ResultItem{
+								Platform: *acc.Platform,
+								Found:    true,
+							})
+						}
+					}
+					// Map relationships and shadows if present
+					for _, edge := range res.Relationships.Edges {
+						p.Send(ui.RelationMsg(fmt.Sprintf("%s -> %s (%s)", edge.Source, edge.Target, edge.RelationshipType)))
+					}
+				}
+			case err, ok := <-session.ErrChan:
+				if !ok {
+					session.ErrChan = nil
+				} else if err != nil {
+					p.Send(ui.ErrorMsg(err.Error()))
+				}
+			case prog, ok := <-session.ProgressChan:
+				if !ok {
+					session.ProgressChan = nil
+				} else {
+					p.Send(ui.ProgressMsg(prog))
+					if prog >= 1.0 {
+						p.Send(ui.StatusMsg("Scan completed."))
+					} else {
+						p.Send(ui.StatusMsg(fmt.Sprintf("Scanning... %.0f%%", prog*100)))
+					}
+				}
+			}
+
+			if session.ResultChan == nil && session.ErrChan == nil && session.ProgressChan == nil {
+				break
+			}
+		}
+	}()
+
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("failed to run dashboard: %w", err)
 	}

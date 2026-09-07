@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -18,6 +19,7 @@ var (
 	colorInfo    = lipgloss.Color("39")  // Light Blue (Advisory)
 	colorBrand   = lipgloss.Color("215") // Light Orange (Brand)
 	colorBlue    = lipgloss.Color("33")  // Blue
+	colorGray    = lipgloss.Color("240")
 
 	styleTitle = lipgloss.NewStyle().
 			Bold(true).
@@ -28,6 +30,7 @@ var (
 	styleMissing = lipgloss.NewStyle().Foreground(colorMissing)
 	styleUnknown = lipgloss.NewStyle().Foreground(colorUnknown)
 	styleInfo    = lipgloss.NewStyle().Foreground(colorInfo)
+	styleGray    = lipgloss.NewStyle().Foreground(colorGray)
 	styleBox     = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(colorTitle).
@@ -77,6 +80,8 @@ type DNSLeakResult struct {
 type ErrorMsg string
 type AdvisoryMsg string
 
+type tickMsg time.Time
+
 // ResultItem represents a single scan result.
 type ResultItem struct {
 	Platform string
@@ -86,22 +91,27 @@ type ResultItem struct {
 
 // Model represents the TUI state.
 type Model struct {
-	progress    progress.Model
-	spinner     spinner.Model
-	targetUser  string
-	status      string
-	results     []ResultItem
-	telemetry   string
-	fingerprint string
-	deviceType  string
-	relations   []string
-	shadowUsers []string
-	heatmap     string
-	fingerbank  *FingerbankFindingsMsg
-	fbStatus    *FingerbankStatusMsg
-	dnsLeaks    []DNSLeakResult
-	errors      []string
-	advisories  []string
+	progress      progress.Model
+	spinner       spinner.Model
+	targetUser    string
+	status        string
+	results       []ResultItem
+	telemetry     string
+	fingerprint   string
+	deviceType    string
+	relations     []string
+	shadowUsers   []string
+	heatmap       string
+	fingerbank    *FingerbankFindingsMsg
+	fbStatus      *FingerbankStatusMsg
+	dnsLeaks      []DNSLeakResult
+	errors        []string
+	advisories    []string
+	startTime     time.Time
+	percent       float64
+	liveStatus    string
+	statusPhrases []string
+	phraseIdx     int
 }
 
 func NewModel(username string) Model {
@@ -112,17 +122,36 @@ func NewModel(username string) Model {
 		progress:    p,
 		spinner:     s,
 		targetUser:  username,
-		status:      "Starting OSINT-Nexus...",
+		status:      "Initializing engine...",
 		results:     make([]ResultItem, 0),
 		relations:   make([]string, 0),
 		shadowUsers: make([]string, 0),
 		errors:      make([]string, 0),
 		advisories:  make([]string, 0),
+		startTime:   time.Now(),
+		statusPhrases: []string{
+			"Probing TLS fingerprints...",
+			"Analyzing JA3/JA4 signatures...",
+			"Traversing DNS record chains...",
+			"Harvesting secondary identifiers...",
+			"Correlating social graphs...",
+			"Scanning for DNS leaks...",
+			"Evaluating device entropy...",
+			"Executing pivot extraction...",
+			"Verifying STIX indicators...",
+			"Auditing network telemetry...",
+		},
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick)
+	return tea.Batch(m.spinner.Tick, tick())
+}
+
+func tick() tea.Cmd {
+	return tea.Every(time.Millisecond*500, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -131,6 +160,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "q" || msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
+	case tickMsg:
+		m.phraseIdx = (m.phraseIdx + 1) % len(m.statusPhrases)
+		m.liveStatus = m.statusPhrases[m.phraseIdx]
+		return m, tick()
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -139,7 +172,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status = string(msg)
 		return m, nil
 	case ProgressMsg:
-		m.progress.SetPercent(float64(msg))
+		m.percent = float64(msg)
+		m.progress.SetPercent(m.percent)
 		return m, nil
 	case ResultItem:
 		m.results = append(m.results, msg)
@@ -188,7 +222,7 @@ func (m Model) View() string {
 	header := fmt.Sprintf("%s powered by FJ™ Cybertronic Systems", styleBlue.Render("OSINT-Nexus"))
 	body = append(body, styleBrand.Render(header))
 	
-	body = append(body, styleTitle.Render("Command Center"))
+	body = append(body, styleTitle.Render(fmt.Sprintf("Command Center - Target: %s", m.targetUser)))
 	
 	// Metrics Panel
 	metrics := []string{
@@ -207,9 +241,20 @@ func (m Model) View() string {
 	body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, metrics...)))
 	
 	// Spinner + Progress
-	progressView := lipgloss.JoinHorizontal(lipgloss.Center, m.spinner.View(), " ", m.progress.View())
+	elapsed := time.Since(m.startTime)
+	var etaStr string
+	if m.percent > 0 {
+		total := elapsed.Seconds() / m.percent
+		remaining := time.Duration(total-elapsed.Seconds()) * time.Second
+		etaStr = fmt.Sprintf(" | ETA: %s", remaining.Round(time.Second))
+	} else {
+		etaStr = " | ETA: Estimating..."
+	}
+
+	progressView := lipgloss.JoinHorizontal(lipgloss.Center, m.spinner.View(), " ", m.progress.View(), styleGray.Render(etaStr))
 	body = append(body, progressView)
 	body = append(body, fmt.Sprintf("Status: %s", m.status))
+	body = append(body, styleInfo.Render(fmt.Sprintf("Active: %s", m.liveStatus)))
 
 	// Relations & Shadows Panel
 	if len(m.relations) > 0 || len(m.shadowUsers) > 0 {
@@ -292,6 +337,9 @@ func (m Model) View() string {
 			
 		body = append(body, errStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"!! SYSTEM ALERTS !!"}, m.errors...)...)))
 	}
+
+	// Help line
+	body = append(body, styleGray.Render("\nPress 'q' or 'ctrl+c' to cancel and quit"))
 
 	return lipgloss.JoinVertical(lipgloss.Left, body...) + "\n"
 }

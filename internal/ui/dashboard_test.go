@@ -6,10 +6,10 @@ import (
 )
 
 func TestNewModel(t *testing.T) {
-	m := NewModel("testuser")
-	if m.status != "Starting OSINT-Nexus..." {
-		t.Errorf("Expected initial status, got %s", m.status)
-	}
+        m := NewModel("testuser")
+        if m.status != "Initializing engine..." {
+                t.Errorf("Expected initial status, got %s", m.status)
+        }
 }
 
 func TestModel_View(t *testing.T) {
