@@ -10,13 +10,23 @@ import (
 
 // InstagramProvider probes the Instagram platform.
 type InstagramProvider struct {
-	client *http.Client
+	client  *http.Client
+	baseURL string
 }
 
 // NewInstagramProvider initializes a new InstagramProvider.
 func NewInstagramProvider() *InstagramProvider {
 	return &InstagramProvider{
-		client: NewHTTPClient(),
+		client:  NewHTTPClient(),
+		baseURL: "https://www.instagram.com",
+	}
+}
+
+// NewInstagramProviderWithURL initializes a new InstagramProvider with a custom base URL.
+func NewInstagramProviderWithURL(baseURL string) *InstagramProvider {
+	return &InstagramProvider{
+		client:  NewHTTPClient(),
+		baseURL: baseURL,
 	}
 }
 
@@ -27,7 +37,7 @@ func (p *InstagramProvider) Name() string {
 
 // CheckUsername performs an Instagram lookup for the given username.
 func (p *InstagramProvider) CheckUsername(ctx context.Context, username string) (*types.IdentityProfile, error) {
-	url := fmt.Sprintf("https://www.instagram.com/%s/", username)
+	url := fmt.Sprintf("%s/%s/", p.baseURL, username)
 
 	resp, err := PerformRequest(ctx, p.client, url)
 	if err != nil {
