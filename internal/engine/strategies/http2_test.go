@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 func TestHttp2FingerprintStrategy_Extract(t *testing.T) {

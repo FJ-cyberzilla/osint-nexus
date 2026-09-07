@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // Graph manages the relationship between entities.

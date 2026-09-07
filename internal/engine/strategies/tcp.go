@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // TCPPayload implements types.FingerprintPayload for TCP fingerprinting.

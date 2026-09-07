@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/osint-nexus/internal/db"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/db"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 func TestTLSStrategy_Extract(t *testing.T) {

@@ -87,7 +87,7 @@ TIMER_START = START_TIME=$$(date +%s%N)
 TIMER_END   = ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
               printf "  $(C_GRAY)└─ Completed in $${ELAPSED}ms$(RESET)\n\n"
 
-.PHONY: all banner build lint test complexity run diagnosis about version clean help
+.PHONY: all banner build lint test bench complexity run diagnosis about version clean help
 
 # Default Target
 all: banner build test ## Execute primary build and validation suite
@@ -143,6 +143,17 @@ test: banner ## Run unit test suite with coverage reporting
 		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"; \
 	fi; \
 	$(TIMER_END)
+
+bench: banner ## Run performance benchmarks
+	@$(TIMER_START); \
+	printf "$(C_PURPLE)$(GEAR) [BENCH]$(RESET) Running performance benchmarks...\n"; \
+	if go test -bench=. -benchmem ./...; then \
+		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Benchmarks Passed$(RESET)]\n"; \
+	else \
+		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Benchmark Failures Encountered$(RESET)]\n"; \
+	fi; \
+	$(TIMER_END)
+
 
 complexity: banner ## Analyze code complexity metrics using gocyclo
 	@$(TIMER_START); \
@@ -208,6 +219,7 @@ help: banner ## Display this interactive help interface
 			gsub("Build engine binaries with embedded build metadata", "Build engine", desc); \
 			gsub("Run static code analysis and quality checks", "Run lint", desc); \
 			gsub("Run unit test suite with coverage reporting", "Run tests", desc); \
+			gsub("Run performance benchmarks", "Run benchmarks", desc); \
 			gsub("Analyze code complexity metrics using gocyclo", "Check complexity", desc); \
 			gsub("Run engine dynamically \\(Usage: make run <args>\\)", "Run engine", desc); \
 			gsub("Execute runtime diagnostics and environment checks", "Run diagnostics", desc); \

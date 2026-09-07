@@ -3,7 +3,7 @@ package engine
 import (
 	"sync"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // FingerprintAggregator handles the aggregation of various fingerprinting strategies.

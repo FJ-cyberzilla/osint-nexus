@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/osint-nexus/internal/graph"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/graph"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 func TestMatcher_FindPath(t *testing.T) {

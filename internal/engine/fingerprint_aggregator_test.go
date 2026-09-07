@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 type TestTLSPayload struct{ Hash string }

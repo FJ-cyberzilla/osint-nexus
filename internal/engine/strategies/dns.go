@@ -3,7 +3,7 @@ package strategies
 import (
 	"context"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // DNSPayload implements types.FingerprintPayload for DNS fingerprinting input.

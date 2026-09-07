@@ -3,7 +3,7 @@ package exporter
 import (
 	"testing"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 func TestExportIdentityProfile(t *testing.T) {

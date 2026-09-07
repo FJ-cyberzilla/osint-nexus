@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/osint-nexus/internal/engine/strategies"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/engine/strategies"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // FingerprintOrchestrator manages the execution of fingerprinting strategies.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // ExtensionPayload implements types.FingerprintPayload for extension fingerprinting input.

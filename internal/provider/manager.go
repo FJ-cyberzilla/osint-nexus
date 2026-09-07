@@ -3,7 +3,7 @@ package provider
 import (
 	"sync"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 var (

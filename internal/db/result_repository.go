@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // ResultRepository handles CRUD operations for scan results.

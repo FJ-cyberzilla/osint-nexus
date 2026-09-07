@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/osint-nexus/internal/config"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/config"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 	"github.com/rotisserie/eris"
 )
 

@@ -2,7 +2,7 @@ package detector
 
 import (
 	"context"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 	"github.com/rotisserie/eris"
 )
 

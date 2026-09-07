@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // CDNPayload implements types.FingerprintPayload for CDN fingerprinting input.

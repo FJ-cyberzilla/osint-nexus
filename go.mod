@@ -1,4 +1,4 @@
-module github.com/osint-nexus
+module github.com/FJ-cyberzilla/osint-nexus
 
 go 1.27.0
 

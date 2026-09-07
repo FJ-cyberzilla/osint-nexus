@@ -3,8 +3,8 @@ package strategies
 import (
 	"context"
 
-	"github.com/osint-nexus/internal/db"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/db"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // TLSPayload implements types.FingerprintPayload for TLS fingerprinting input.

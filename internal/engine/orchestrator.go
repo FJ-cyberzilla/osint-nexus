@@ -8,8 +8,8 @@ import (
 
 	"github.com/rotisserie/eris"
 
-	"github.com/osint-nexus/internal/provider"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/provider"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // Detector interface for post-scan analysis.

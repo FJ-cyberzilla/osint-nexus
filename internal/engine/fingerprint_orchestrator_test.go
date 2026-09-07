@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/osint-nexus/internal/engine/strategies"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/engine/strategies"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 type MockPayload struct{ Val int }

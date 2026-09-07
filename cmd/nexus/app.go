@@ -8,13 +8,13 @@ import (
 
 	"github.com/rotisserie/eris"
 
-	"github.com/osint-nexus/internal/config"
-	"github.com/osint-nexus/internal/db"
-	"github.com/osint-nexus/internal/detector"
-	"github.com/osint-nexus/internal/engine"
-	"github.com/osint-nexus/internal/engine/strategies"
-	"github.com/osint-nexus/internal/provider"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/config"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/db"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/detector"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/engine"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/engine/strategies"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/provider"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // NexusApp encapsulates the dependencies and lifecycle of the Nexus application.

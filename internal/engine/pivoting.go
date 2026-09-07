@@ -2,7 +2,7 @@ package engine
 
 import (
 	"context"
-	"github.com/osint-nexus/internal/graph"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/graph"
 )
 
 // Pivoter handles entity relationship traversal.

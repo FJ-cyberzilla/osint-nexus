@@ -2,7 +2,7 @@ package scoring
 
 import (
 	"fmt"
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // ConfidenceCalculator computes the confidence score of an identification.

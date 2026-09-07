@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 	"golang.org/x/net/html"
 )
 

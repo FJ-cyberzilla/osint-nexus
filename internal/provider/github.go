@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // GitHubProvider probes GitHub.

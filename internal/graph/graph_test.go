@@ -3,7 +3,7 @@ package graph
 import (
 	"testing"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 func TestGraph_AddNode(t *testing.T) {

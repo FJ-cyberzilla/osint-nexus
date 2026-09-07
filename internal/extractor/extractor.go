@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/osint-nexus/internal/types"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 // PivotExtractor coordinates regex and HTML parsing engines.

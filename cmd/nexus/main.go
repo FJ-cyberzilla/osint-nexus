@@ -11,9 +11,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rotisserie/eris"
 
-	"github.com/osint-nexus/internal/config"
-	"github.com/osint-nexus/internal/engine"
-	"github.com/osint-nexus/internal/ui"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/config"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/engine"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/ui"
 	_ "go.uber.org/automaxprocs"
 )
 
