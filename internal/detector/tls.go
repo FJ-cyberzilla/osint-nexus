@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -53,7 +54,9 @@ func (d *TLSDetector) Probe(ctx context.Context, address string) (*TLSResult, er
 	var closed bool
 	defer func() {
 		if !closed {
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				log.Printf("detector: error closing connection: %v", err)
+			}
 		}
 	}()
 

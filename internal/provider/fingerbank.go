@@ -84,7 +84,7 @@ func (p *FingerbankClient) handleResponseError(resp *http.Response) error {
 }
 
 // executeGET is a helper to execute GET requests and decode response.
-func (p *FingerbankClient) executeGET[T any](ctx context.Context, endpoint string, result *T) error {
+func executeGET[T any](p *FingerbankClient, ctx context.Context, endpoint string, result *T) error {
 	url := fmt.Sprintf("%s/%s?key=%s", p.baseURL, endpoint, p.apiKey)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -151,7 +151,7 @@ func (p *FingerbankClient) GetDevice(ctx context.Context, id string) (*types.Dev
 		return nil, eris.New("fingerbank: provider disabled or missing API key")
 	}
 	var device types.Device
-	if err := p.executeGET(ctx, fmt.Sprintf("devices/%s", id), &device); err != nil {
+	if err := executeGET(p, ctx, fmt.Sprintf("devices/%s", id), &device); err != nil {
 		return nil, err
 	}
 	return &device, nil
@@ -163,7 +163,7 @@ func (p *FingerbankClient) GetDeviceProfilingRules(ctx context.Context, id strin
 		return nil, eris.New("fingerbank: provider disabled or missing API key")
 	}
 	var rules []types.ProfilingRule
-	if err := p.executeGET(ctx, fmt.Sprintf("devices/%s/profiling_rules", id), &rules); err != nil {
+	if err := executeGET(p, ctx, fmt.Sprintf("devices/%s/profiling_rules", id), &rules); err != nil {
 		return nil, err
 	}
 	return rules, nil
@@ -175,7 +175,7 @@ func (p *FingerbankClient) GetDeviceVulnerabilities(ctx context.Context, id stri
 		return nil, eris.New("fingerbank: provider disabled or missing API key")
 	}
 	var vulnerabilities []types.Vulnerability
-	if err := p.executeGET(ctx, fmt.Sprintf("devices/%s/vulnerabilities", id), &vulnerabilities); err != nil {
+	if err := executeGET(p, ctx, fmt.Sprintf("devices/%s/vulnerabilities", id), &vulnerabilities); err != nil {
 		return nil, err
 	}
 	return vulnerabilities, nil
@@ -187,7 +187,7 @@ func (p *FingerbankClient) IsDeviceA(ctx context.Context, id, otherID string) (b
 		return false, eris.New("fingerbank: provider disabled or missing API key")
 	}
 	var res types.IsAResponse
-	if err := p.executeGET(ctx, fmt.Sprintf("devices/%s/is_a/%s", id, otherID), &res); err != nil {
+	if err := executeGET(p, ctx, fmt.Sprintf("devices/%s/is_a/%s", id, otherID), &res); err != nil {
 		return false, err
 	}
 	return res.IsA, nil
