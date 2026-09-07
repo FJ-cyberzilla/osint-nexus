@@ -162,20 +162,39 @@ classDiagram
     OSINTAgent --> ScanOrchestrator
     OSINTAgent --> AdvancedReportGenerator
     AdvancedReportGenerator --> DatabaseManager
-    ScanOrchestrator --> HealthTracker
-    ScanOrchestrator --> DeviceInferenceService
-    ScanOrchestrator --> PassiveFingerprintingEngine
-    ScanOrchestrator --> DatabaseManager
-    ScanOrchestrator --> CaptchaRegistry
-    ScanOrchestrator --> BrowserPool
-    BrowserPool --> BrowserEngine
-    BrowserEngine <|-- PyQtBrowserEngine
-    BrowserEngine <|-- PlaywrightBrowserEngine
-    ScanOrchestrator --> TelemetryBridge
-    ScanOrchestrator --> DetectionEngine
-    ScanOrchestrator --> ExporterEngine
-    ScanOrchestrator --> Provider
-    ScanOrchestrator --> ComplianceEngine
+    class Extractor {
+        <<interface>>
+        +Extract(ctx, rawHTML)
+    }
+
+    class Orchestrator {
+        -extractors[] Extractor
+        +Extract(ctx, rawHTML)
+    }
+
+    class EmailExtractor {
+        +Extract(ctx, rawHTML)
+    }
+
+    class SocialExtractor {
+        +Extract(ctx, rawHTML)
+    }
+
+    class MetaExtractor {
+        +Extract(ctx, rawHTML)
+    }
+
+    class PGPExtractor {
+        +Extract(ctx, rawHTML)
+    }
+
+    Orchestrator --> Extractor
+    Extractor <|-- EmailExtractor
+    Extractor <|-- SocialExtractor
+    Extractor <|-- MetaExtractor
+    Extractor <|-- PGPExtractor
+    
+    ScanOrchestrator --> Orchestrator
     
     Provider <|-- GithubProvider
     Provider <|-- GenericProvider

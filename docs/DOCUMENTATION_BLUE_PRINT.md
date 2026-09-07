@@ -51,7 +51,7 @@ flowchart TB
 
 - **`internal/engine/`**: Manages the execution lifecycle, job scheduling, and worker pool.
 - **`internal/detector/`**: Low-level protocol probes (DNS, TLS, HTTP2).
-- **`internal/extractor/`**: Regex & HTML parsing pipeline.
+- **`internal/extractor/`**: Modular, streaming-based parsing pipeline (Email, Social, Meta, PGP).
 - **`internal/provider/`**: Provider implementations for target platforms.
 - **`internal/types/`**: Core domain structs and interfaces ensuring strict type safety.
 - **`internal/db/`**: Repository patterns for data persistence.

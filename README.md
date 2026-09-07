@@ -19,7 +19,7 @@ The project follows a strict Go directory structure:
 - `internal/`: Core components:
     - `engine/`: Provider orchestrator & worker pools.
     - `detector/`: Low-level protocol probes (DNS, TLS, HTTP2).
-    - `extractor/`: Regex & HTML parsing pipeline.
+    - extractor/: Modular, streaming-based parsing pipeline (Email, Social, Meta, PGP).
     - `captcha/`: Solver clients & TLS fingerprinting.
     - `types/`: Core domain structs and interfaces.
     - `telemetry/`: Socket metrics & network telemetry.
