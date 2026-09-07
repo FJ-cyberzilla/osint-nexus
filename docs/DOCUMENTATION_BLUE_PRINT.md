@@ -58,7 +58,19 @@ flowchart TB
 
 ---
 
-## 4. Development & Coding Standards
+## 4. Architectural Foundation (Low-Level Design)
+
+`osint-nexus` operates at a fundamental infrastructure layer, ensuring high-accuracy reconnaissance through three core characteristics:
+
+1. **Raw Socket Manipulation:** Bypasses standard OS network stacks to directly construct and inject raw packets for deep packet inspection.
+2. **Custom Protocol Handshakes:** Implements manual TLS/handshake logic (e.g., JA3/JA4 fingerprinting) instead of relying on default high-level library implementations.
+3. **Raw Byte-Stream Processing:** Operates directly on raw `[]byte` buffers for packet inspection and protocol parsing, ensuring maximum performance and minimal overhead.
+
+*Security Note:* Because this approach operates closer to the kernel/network-stack level, it requires rigorous dependency management. Daily automated security scans are mandatory to mitigate vulnerabilities in protocol handling dependencies.
+
+---
+
+## 5. Development & Coding Standards
 
 ### Standards
 - **Strict Typing**: No `any` types; concrete structs and interfaces only.

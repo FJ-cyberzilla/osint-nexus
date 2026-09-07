@@ -194,7 +194,7 @@
                     <span class="text-orange-500 text-xs font-bold mono-font uppercase tracking-widest">Engineering Highlights</span>
                     <h3 class="text-2xl font-bold text-white mt-1">Design Principles & Technical Specs</h3>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="space-y-2">
                         <div class="flex items-center gap-2.5 text-orange-400 font-semibold text-sm">
                             <i class="fa-solid fa-bolt text-orange-500"></i> Deterministic Execution
@@ -209,6 +209,14 @@
                         </div>
                         <p class="text-xs text-gray-300 leading-relaxed">
                             All network and I/O operations strictly respect `context.Context` to prevent hangs, resource exhaustion, and deadlocks.
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2.5 text-orange-400 font-semibold text-sm">
+                            <i class="fa-solid fa-microchip text-orange-500"></i> Low-Level Design
+                        </div>
+                        <p class="text-xs text-gray-300 leading-relaxed">
+                            Raw socket manipulation, custom TLS handshakes, and raw byte-stream processing ensure maximum performance and protocol accuracy.
                         </p>
                     </div>
                 </div>
