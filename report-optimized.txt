@@ -1,0 +1,6 @@
+goos: android
+goarch: arm64
+pkg: github.com/FJ-cyberzilla/osint-nexus/internal/extractor
+BenchmarkPivotExtractor_Extract-8   	   10000	   1176026 ns/op	  582550 B/op	      77 allocs/op
+PASS
+ok  	github.com/FJ-cyberzilla/osint-nexus/internal/extractor	11.821s

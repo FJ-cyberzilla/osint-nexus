@@ -23,6 +23,10 @@ func NewAparatProvider() *AparatProvider {
 	}
 }
 
+func init() {
+	Register(NewAparatProvider())
+}
+
 // Name returns the provider name.
 func (p *AparatProvider) Name() string {
 	return "Aparat"

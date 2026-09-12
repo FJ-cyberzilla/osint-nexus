@@ -23,6 +23,10 @@ func NewGitHubProvider() *GitHubProvider {
 	}
 }
 
+func init() {
+	Register(NewGitHubProvider())
+}
+
 // Name returns the provider name.
 func (p *GitHubProvider) Name() string {
 	return "GitHub"

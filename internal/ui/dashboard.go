@@ -173,8 +173,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case ProgressMsg:
 		m.percent = float64(msg)
-		m.progress.SetPercent(m.percent)
-		return m, nil
+		return m, m.progress.SetPercent(m.percent)
+	case progress.FrameMsg:
+		newProgressModel, cmd := m.progress.Update(msg)
+		if pm, ok := newProgressModel.(progress.Model); ok {
+			m.progress = pm
+		}
+		return m, cmd
 	case ResultItem:
 		m.results = append(m.results, msg)
 		return m, nil
