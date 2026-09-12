@@ -26,7 +26,7 @@ func (t *TLSProxy) FallbackToStandard(ctx context.Context, address string) (any,
 	defer conn.Close()
 
 	tlsConn := tls.Client(conn, &tls.Config{
-		InsecureSkipVerify: true, // Example
+		InsecureSkipVerify: false,
 	})
 
 	if err := tlsConn.Handshake(); err != nil {

@@ -60,6 +60,22 @@ func (m model) View() string {
 
 func execTarget(target string) tea.Cmd {
 	return func() tea.Msg {
+		// Validate target against allowlist
+		allowedTargets := map[string]bool{
+			"build":      true,
+			"lint":       true,
+			"test":       true,
+			"bench":      true,
+			"complexity": true,
+			"diagnosis":  true,
+			"about":      true,
+			"clean":      true,
+		}
+
+		if !allowedTargets[target] {
+			return tea.Quit
+		}
+
 		cmd := exec.Command("make", target)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
