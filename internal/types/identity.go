@@ -50,6 +50,8 @@ type IdentityProfile struct {
 	Username        string            `json:"username"`
 	Accounts        []Account         `json:"accounts"`
 	Relationships   RelationshipGraph `json:"relationships"`
+	Emails          []string          `json:"emails,omitempty"`
+	SocialMedia     []string          `json:"social_media,omitempty"`
 	Timeline        *Timeline         `json:"timeline,omitempty"`
 	Correlations    *Correlations     `json:"correlations,omitempty"`
 	ConfidenceScore float64           `json:"confidence_score"`

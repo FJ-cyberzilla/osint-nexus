@@ -14,6 +14,7 @@ func TestNewModel(t *testing.T) {
 
 func TestModel_View(t *testing.T) {
 	m := NewModel("testuser")
+	m.ready = true
 	view := m.View()
 
 	if !strings.Contains(view, "OSINT-Nexus") || !strings.Contains(view, "Command Center") {

@@ -19,6 +19,23 @@ func TestGraph_AddNode(t *testing.T) {
 	}
 }
 
+func TestGraph_GetNodes(t *testing.T) {
+	g := NewGraph()
+	nodes := []*types.GraphNode{
+		{ID: "1", Username: "user1", Platform: "platform1"},
+		{ID: "2", Username: "user2", Platform: "platform2"},
+	}
+
+	for _, n := range nodes {
+		g.AddNode(n)
+	}
+
+	retrieved := g.GetNodes()
+	if len(retrieved) != len(nodes) {
+		t.Errorf("expected %d nodes, got %d", len(nodes), len(retrieved))
+	}
+}
+
 func TestGraph_AddEdge(t *testing.T) {
 	g := NewGraph()
 	node1 := &types.GraphNode{ID: "1", Username: "user1", Platform: "platform1"}
@@ -37,5 +54,27 @@ func TestGraph_AddEdge(t *testing.T) {
 	invalidEdge := types.GraphEdge{SourceID: "1", TargetID: "3", Type: "follows"}
 	if err := g.AddEdge(invalidEdge); err == nil {
 		t.Error("expected error when adding edge with missing node, got nil")
+	}
+}
+
+func TestGraph_GetEdges(t *testing.T) {
+	g := NewGraph()
+	node1 := &types.GraphNode{ID: "1", Username: "user1", Platform: "platform1"}
+	node2 := &types.GraphNode{ID: "2", Username: "user2", Platform: "platform2"}
+
+	g.AddNode(node1)
+	g.AddNode(node2)
+
+	edges := []types.GraphEdge{
+		{SourceID: "1", TargetID: "2", Type: "follows"},
+	}
+
+	for _, e := range edges {
+		g.AddEdge(e)
+	}
+
+	retrieved := g.GetEdges()
+	if len(retrieved) != len(edges) {
+		t.Errorf("expected %d edges, got %d", len(edges), len(retrieved))
 	}
 }
