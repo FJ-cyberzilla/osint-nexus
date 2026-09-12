@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rotisserie/eris"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/provider"
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
@@ -89,22 +90,16 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 		var mu sync.Mutex
 		results := make([]*types.IdentityProfile, 0, len(providers))
 
-		// Semaphore to limit concurrency
-		sem := make(chan struct{}, o.maxConcurrency)
-		var wg sync.WaitGroup
+		g, gCtx := errgroup.WithContext(ctx)
+		g.SetLimit(o.maxConcurrency)
 
 		var completed atomic.Int64
 
 		for _, p := range providers {
-			wg.Add(1)
-			go func(p types.Provider) {
-				defer wg.Done()
-
-				sem <- struct{}{}
-				defer func() { <-sem }()
-
+			p := p // capture loop variable
+			g.Go(func() error {
 				// Create a timeout-aware context
-				scanCtx, cancel := context.WithTimeout(ctx, timeout)
+				scanCtx, cancel := context.WithTimeout(gCtx, timeout)
 				defer cancel()
 
 				res, err := p.CheckUsername(scanCtx, username)
@@ -114,9 +109,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 				progressChan <- float64(completed.Load()) / float64(len(providers))
 
 				if err != nil {
-					session.setState(ScanStateError)
-					errChan <- eris.Wrapf(err, "engine: provider %s failed", p.Name())
-					return
+					return eris.Wrapf(err, "engine: provider %s failed", p.Name())
 				}
 
 				if res != nil {
@@ -125,11 +118,14 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 					mu.Unlock()
 					resultChan <- res
 				}
-			}(p)
+				return nil
+			})
 		}
 
-		wg.Wait()
-
+		if err := g.Wait(); err != nil {
+			session.setState(ScanStateError)
+			errChan <- err
+		}
 		if o.detector != nil {
 			_, err := o.detector.Analyze(ctx, results)
 			if err != nil {

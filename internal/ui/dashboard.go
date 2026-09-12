@@ -54,6 +54,8 @@ type DeviceTypeMsg string
 type RelationMsg string
 type ShadowUserMsg string
 type HeatmapMsg string
+type EmailMsg string
+type SocialMediaMsg string
 type FingerbankFindingsMsg struct {
 	DeviceName      string
 	Score           int
@@ -99,6 +101,8 @@ type Model struct {
 	telemetry     string
 	fingerprint   string
 	deviceType    string
+	emails        []string
+	socialMedia   []string
 	relations     []string
 	shadowUsers   []string
 	heatmap       string
@@ -124,6 +128,8 @@ func NewModel(username string) Model {
 		targetUser:  username,
 		status:      "Initializing engine...",
 		results:     make([]ResultItem, 0),
+		emails:      make([]string, 0),
+		socialMedia: make([]string, 0),
 		relations:   make([]string, 0),
 		shadowUsers: make([]string, 0),
 		errors:      make([]string, 0),
@@ -201,6 +207,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case HeatmapMsg:
 		m.heatmap = string(msg)
 		return m, nil
+	case EmailMsg:
+		m.emails = append(m.emails, string(msg))
+		return m, nil
+	case SocialMediaMsg:
+		m.socialMedia = append(m.socialMedia, string(msg))
+		return m, nil
 	case FingerbankFindingsMsg:
 		m.fingerbank = &msg
 		return m, nil
@@ -261,8 +273,8 @@ func (m Model) View() string {
 	body = append(body, fmt.Sprintf("Status: %s", m.status))
 	body = append(body, styleInfo.Render(fmt.Sprintf("Active: %s", m.liveStatus)))
 
-	// Relations & Shadows Panel
-	if len(m.relations) > 0 || len(m.shadowUsers) > 0 {
+	// Relations, Shadows, Emails, Social Media Panel
+	if len(m.relations) > 0 || len(m.shadowUsers) > 0 || len(m.emails) > 0 || len(m.socialMedia) > 0 {
 		var infoBody []string
 		if len(m.relations) > 0 {
 			infoBody = append(infoBody, "Relations:")
@@ -274,6 +286,18 @@ func (m Model) View() string {
 			infoBody = append(infoBody, "Shadow Users:")
 			for _, s := range m.shadowUsers {
 				infoBody = append(infoBody, "  * "+s)
+			}
+		}
+		if len(m.emails) > 0 {
+			infoBody = append(infoBody, "Emails:")
+			for _, e := range m.emails {
+				infoBody = append(infoBody, "  * "+e)
+			}
+		}
+		if len(m.socialMedia) > 0 {
+			infoBody = append(infoBody, "Social Media:")
+			for _, sm := range m.socialMedia {
+				infoBody = append(infoBody, "  * "+sm)
 			}
 		}
 		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))

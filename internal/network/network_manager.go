@@ -2,7 +2,9 @@ package network
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/rotisserie/eris"
 )
@@ -10,19 +12,36 @@ import (
 // NetworkManager implements the Intermediator interface and manages
 // network operations with automatic fallback mechanisms.
 type NetworkManager struct {
-	dohClient *DoHClient
-	tlsProxy  *TLSProxy
-	dataDrop  *DataDropService
-	endpoints *Endpoints
+	dohClient  *DoHClient
+	tlsProxy   *TLSProxy
+	dataDrop   *DataDropService
+	endpoints  *Endpoints
+	httpClient *http.Client
 }
 
-// NewNetworkManager initializes a new NetworkManager with optional endpoints.
+// NewNetworkManager initializes a new NetworkManager with optional endpoints and a configured HTTP client.
 func NewNetworkManager(ep *Endpoints) *NetworkManager {
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   20,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
 	return &NetworkManager{
 		dohClient: &DoHClient{},
 		tlsProxy:  &TLSProxy{},
 		dataDrop:  &DataDropService{},
 		endpoints: ep,
+		httpClient: &http.Client{
+			Transport: transport,
+			Timeout:   60 * time.Second,
+		},
 	}
 }
 
@@ -64,7 +83,7 @@ func (nm *NetworkManager) UpdateLinkedIP(ctx context.Context) error {
 	if err != nil {
 		return eris.Wrap(err, "network: failed to create request for IP update")
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := nm.httpClient.Do(req)
 	if err != nil {
 		return eris.Wrap(err, "network: failed to execute IP update request")
 	}

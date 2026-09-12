@@ -76,6 +76,7 @@ func execTarget(target string) tea.Cmd {
 			return tea.Quit
 		}
 
+		// #nosec G204 -- The target is strictly validated against a whitelist of allowed make targets.
 		cmd := exec.Command("make", target)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

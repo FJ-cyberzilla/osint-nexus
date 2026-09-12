@@ -102,6 +102,14 @@ func runDashboard(app *NexusApp, username string) error {
 					for _, edge := range res.Relationships.Edges {
 						p.Send(ui.RelationMsg(fmt.Sprintf("%s -> %s (%s)", edge.Source, edge.Target, edge.RelationshipType)))
 					}
+
+					// Send emails and social media if present in Result
+					for _, email := range res.Emails {
+						p.Send(ui.EmailMsg(email))
+					}
+					for _, sm := range res.SocialMedia {
+						p.Send(ui.SocialMediaMsg(sm))
+					}
 				}
 			case err, ok := <-session.ErrChan:
 				if !ok {
