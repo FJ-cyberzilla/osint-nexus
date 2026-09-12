@@ -14,7 +14,7 @@ func TestNetworkManager_ResolveDNS(t *testing.T) {
 	// Should currently fail because doh is not implemented,
 	// but should trigger the fallback mechanism (if standard DNS is available).
 	_, err := nm.ResolveDNS(ctx, "google.com")
-	
+
 	// Based on implementation, it will attempt DoH (fails), then fallback to standard (should succeed).
 	assert.NoError(t, err, "fallback to standard DNS should succeed")
 }
@@ -27,7 +27,7 @@ func TestNetworkManager_SecureTLSHandshake(t *testing.T) {
 	// Similarly, advanced TLS fails, fallback to standard should trigger.
 	// We expect the fallback handshake to fail because the server is not a TLS server.
 	_, err := nm.SecureTLSHandshake(ctx, addr)
-	
+
 	assert.Error(t, err, "fallback to standard TLS should return handshake error, not TCP error")
 	assert.NotContains(t, err.Error(), "tcp dial failed")
 }

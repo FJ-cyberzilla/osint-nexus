@@ -21,16 +21,16 @@ func TestFingerbankClient_Interrogate(t *testing.T) {
 			DeviceType:      "Laptop",
 			OperatingSystem: "Linux",
 		},
-		DeviceName:      "TestDevice",
-		Score:           99,
-		Version:         "1.0",
-		RequestId:       "req123",
+		DeviceName: "TestDevice",
+		Score:      99,
+		Version:    "1.0",
+		RequestId:  "req123",
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Contains(t, r.URL.Path, "/combinations/interrogate")
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedResponse)
 	}))
@@ -58,7 +58,7 @@ func TestFingerbankClient_GetDevice(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Contains(t, r.URL.Path, "/devices/123")
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedDevice)
 	}))
@@ -80,7 +80,7 @@ func TestFingerbankClient_GetDeviceProfilingRules(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Contains(t, r.URL.Path, "/devices/123/profiling_rules")
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedRules)
 	}))
@@ -102,7 +102,7 @@ func TestFingerbankClient_GetDeviceVulnerabilities(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Contains(t, r.URL.Path, "/devices/123/vulnerabilities")
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedVulnerabilities)
 	}))
@@ -119,7 +119,7 @@ func TestFingerbankClient_IsDeviceA(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Contains(t, r.URL.Path, "/devices/123/is_a/456")
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(types.IsAResponse{IsA: true})
 	}))
@@ -131,5 +131,3 @@ func TestFingerbankClient_IsDeviceA(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, result)
 }
-
-

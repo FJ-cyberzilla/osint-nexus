@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/PuerkitoBio/goquery"
 )
 
 // Sample HTML for benchmarking

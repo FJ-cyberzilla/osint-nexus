@@ -17,7 +17,7 @@ func TestTLSProxy_FallbackToStandard(t *testing.T) {
 	addr := setupMockServer(t)
 	p := &TLSProxy{}
 	_, err := p.FallbackToStandard(context.Background(), addr)
-	
+
 	// Expect error because it's not a real TLS server, so handshake will fail.
 	// But it shouldn't be a TCP dial failure.
 	assert.Error(t, err)

@@ -12,9 +12,9 @@ const defaultHTTPTimeout = 10 * time.Second
 
 // DNSLeakResult holds the outcome of a DNS leak check.
 type DNSLeakResult struct {
-	URL        string `json:"url"`
-	IsLeaking  bool   `json:"is_leaking"`
-	Error      string `json:"error,omitempty"`
+	URL       string `json:"url"`
+	IsLeaking bool   `json:"is_leaking"`
+	Error     string `json:"error,omitempty"`
 }
 
 // DNSLeakProbe checks if DNS requests are leaking for a target.

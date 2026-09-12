@@ -28,10 +28,10 @@ func (t *TLSProxy) FallbackToStandard(ctx context.Context, address string) (any,
 	tlsConn := tls.Client(conn, &tls.Config{
 		InsecureSkipVerify: true, // Example
 	})
-	
+
 	if err := tlsConn.Handshake(); err != nil {
 		return nil, eris.Wrap(err, "network: standard tls fallback handshake failed")
 	}
-	
+
 	return tlsConn.ConnectionState(), nil
 }

@@ -90,10 +90,10 @@ type ProviderSetting struct {
 }
 
 type ProviderConfig struct {
-	GitHub    ProviderSetting `mapstructure:"github"`
-	Twitter   ProviderSetting `mapstructure:"twitter"`
-	Instagram ProviderSetting `mapstructure:"instagram"`
-	Aparat    ProviderSetting `mapstructure:"aparat"`
+	GitHub     ProviderSetting `mapstructure:"github"`
+	Twitter    ProviderSetting `mapstructure:"twitter"`
+	Instagram  ProviderSetting `mapstructure:"instagram"`
+	Aparat     ProviderSetting `mapstructure:"aparat"`
 	Fingerbank ProviderSetting `mapstructure:"fingerbank"`
 }
 

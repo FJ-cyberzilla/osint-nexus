@@ -24,7 +24,7 @@ func NewEmailExtractor() (*EmailExtractor, error) {
 	if err != nil {
 		return nil, fmt.Errorf("email_extractor: compile regex: %w", err)
 	}
-	
+
 	return &EmailExtractor{
 		emailRegex: pattern,
 		emails:     make(map[string]struct{}),

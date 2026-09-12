@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/chromedp/chromedp"
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/chromedp/chromedp"
 	"github.com/rotisserie/eris"
 )
 

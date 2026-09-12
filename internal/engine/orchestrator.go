@@ -48,8 +48,8 @@ const (
 type ScanSession struct {
 	State        atomic.Int32
 	ResultChan   <-chan *types.IdentityProfile `json:"-" yaml:"-"`
-	ErrChan      <-chan error                 `json:"-" yaml:"-"`
-	ProgressChan <-chan float64               `json:"-" yaml:"-"`
+	ErrChan      <-chan error                  `json:"-" yaml:"-"`
+	ProgressChan <-chan float64                `json:"-" yaml:"-"`
 }
 
 // setState safely updates the scan state.

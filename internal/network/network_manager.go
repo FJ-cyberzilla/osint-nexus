@@ -10,10 +10,10 @@ import (
 // NetworkManager implements the Intermediator interface and manages
 // network operations with automatic fallback mechanisms.
 type NetworkManager struct {
-	dohClient   *DoHClient
-	tlsProxy    *TLSProxy
-	dataDrop    *DataDropService
-	endpoints   *Endpoints
+	dohClient *DoHClient
+	tlsProxy  *TLSProxy
+	dataDrop  *DataDropService
+	endpoints *Endpoints
 }
 
 // NewNetworkManager initializes a new NetworkManager with optional endpoints.
@@ -74,4 +74,3 @@ func (nm *NetworkManager) UpdateLinkedIP(ctx context.Context) error {
 	}
 	return nil
 }
-

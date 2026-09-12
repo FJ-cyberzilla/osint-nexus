@@ -39,7 +39,7 @@ func (o *Orchestrator) Extract(ctx context.Context, rawHTML string) (*types.Extr
 	if len(o.handlers) == len(o.extractors) {
 		return o.extractStreaming(ctx, rawHTML)
 	}
-	
+
 	// Fallback to legacy extraction if not all extractors support streaming
 	result := &types.ExtractedPivots{
 		Emails:        []string{},
@@ -76,7 +76,7 @@ func (o *Orchestrator) Extract(ctx context.Context, rawHTML string) (*types.Extr
 
 func (o *Orchestrator) extractStreaming(ctx context.Context, rawHTML string) (*types.ExtractedPivots, error) {
 	tokenizer := html.NewTokenizer(strings.NewReader(rawHTML))
-	
+
 	for {
 		tokenType := tokenizer.Next()
 		if tokenType == html.ErrorToken {
@@ -84,7 +84,7 @@ func (o *Orchestrator) extractStreaming(ctx context.Context, rawHTML string) (*t
 		}
 
 		token := tokenizer.Token()
-		
+
 		if tokenType == html.TextToken {
 			text := token.Data
 			for _, h := range o.handlers {

@@ -10,7 +10,7 @@ func TestNewNextDNSEndpoints(t *testing.T) {
 	id := "b13e8b"
 	key := "8e55389efbdbcc98"
 	ep := NewNextDNSEndpoints(id, key)
-	
+
 	assert.Equal(t, id, ep.ID)
 	assert.Equal(t, key, ep.Key)
 	assert.Equal(t, "b13e8b.dns.nextdns.io", ep.DoT)

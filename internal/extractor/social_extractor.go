@@ -37,7 +37,7 @@ func (s *SocialExtractor) Extract(ctx context.Context, rawHTML string) (*types.E
 			break
 		}
 
-		if (tokenType == html.StartTagToken || tokenType == html.SelfClosingTagToken) {
+		if tokenType == html.StartTagToken || tokenType == html.SelfClosingTagToken {
 			token := tokenizer.Token()
 			if token.Data == "a" {
 				for _, attr := range token.Attr {

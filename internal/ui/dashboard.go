@@ -226,9 +226,9 @@ func (m Model) View() string {
 	// Header Panel
 	header := fmt.Sprintf("%s powered by FJ™ Cybertronic Systems", styleBlue.Render("OSINT-Nexus"))
 	body = append(body, styleBrand.Render(header))
-	
+
 	body = append(body, styleTitle.Render(fmt.Sprintf("Command Center - Target: %s", m.targetUser)))
-	
+
 	// Metrics Panel
 	metrics := []string{
 		fmt.Sprintf("Device Type: %s", m.deviceType),
@@ -244,7 +244,7 @@ func (m Model) View() string {
 		metrics = append(metrics, fmt.Sprintf("Fingerbank:  %s", status))
 	}
 	body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, metrics...)))
-	
+
 	// Spinner + Progress
 	elapsed := time.Since(m.startTime)
 	var etaStr string
@@ -266,11 +266,15 @@ func (m Model) View() string {
 		var infoBody []string
 		if len(m.relations) > 0 {
 			infoBody = append(infoBody, "Relations:")
-			for _, r := range m.relations { infoBody = append(infoBody, "  * " + r) }
+			for _, r := range m.relations {
+				infoBody = append(infoBody, "  * "+r)
+			}
 		}
 		if len(m.shadowUsers) > 0 {
 			infoBody = append(infoBody, "Shadow Users:")
-			for _, s := range m.shadowUsers { infoBody = append(infoBody, "  * " + s) }
+			for _, s := range m.shadowUsers {
+				infoBody = append(infoBody, "  * "+s)
+			}
 		}
 		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))
 	}
@@ -318,7 +322,7 @@ func (m Model) View() string {
 		}
 		body = append(body, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, resultsBody...)))
 	}
-	
+
 	// Advisory Panel (Conditional)
 	if len(m.advisories) > 0 {
 		advStyle := lipgloss.NewStyle().
@@ -327,7 +331,7 @@ func (m Model) View() string {
 			Foreground(colorInfo).
 			Padding(1, 2).
 			Margin(1, 0)
-			
+
 		body = append(body, advStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"i ADVISORY i"}, m.advisories...)...)))
 	}
 
@@ -339,7 +343,7 @@ func (m Model) View() string {
 			Foreground(colorUnknown).
 			Padding(1, 2).
 			Margin(1, 0)
-			
+
 		body = append(body, errStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"!! SYSTEM ALERTS !!"}, m.errors...)...)))
 	}
 

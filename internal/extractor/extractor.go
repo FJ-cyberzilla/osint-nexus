@@ -16,7 +16,7 @@ type PivotExtractor struct {
 // NewPivotExtractor initializes and returns a fully configured PivotExtractor.
 func NewPivotExtractor() (*PivotExtractor, error) {
 	cfg := types.NewDefaultConfig()
-	
+
 	emailExt, err := NewEmailExtractor()
 	if err != nil {
 		return nil, fmt.Errorf("pivot_extractor: %w", err)

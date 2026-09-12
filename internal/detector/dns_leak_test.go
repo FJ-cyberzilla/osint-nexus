@@ -25,7 +25,7 @@ func TestDNSLeakProbe_Check(t *testing.T) {
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
 	}
-	
+
 	if !results[0].IsLeaking {
 		t.Errorf("Expected IsLeaking to be true, got false")
 	}
