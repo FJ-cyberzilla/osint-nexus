@@ -72,7 +72,14 @@ var (
 // UI Messages
 type StatusMsg string
 type ProgressMsg float64
-type TelemetryMsg string
+type TelemetryData struct {
+	ActiveSockets int
+	BytesSent     int64
+	BytesReceived int64
+	Latency       time.Duration
+}
+
+type TelemetryMsg TelemetryData
 type FingerprintMsg string
 type DeviceTypeMsg string
 type RelationMsg string
@@ -126,7 +133,7 @@ type Model struct {
 	targetUser    string
 	status        string
 	results       []ResultItem
-	telemetry     string
+	telemetry     TelemetryData
 	fingerprint   string
 	deviceType    string
 	emails        []string
@@ -307,7 +314,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.results = append(m.results, msg)
 		m = m.notifyTab("Results")
 	case TelemetryMsg:
-		m.telemetry = string(msg)
+		m.telemetry = TelemetryData(msg)
 	case FingerprintMsg:
 		m.fingerprint = string(msg)
 	case DeviceTypeMsg:
@@ -382,7 +389,8 @@ func (m Model) View() string {
 			metrics := []string{
 				fmt.Sprintf("Device Type: %s", m.deviceType),
 				fmt.Sprintf("Fingerprint: %s", m.fingerprint),
-				fmt.Sprintf("Telemetry:   %s", m.telemetry),
+				fmt.Sprintf("Telemetry:   [Sockets: %d | Sent: %d B | Rcvd: %d B | Lat: %v]", 
+					m.telemetry.ActiveSockets, m.telemetry.BytesSent, m.telemetry.BytesReceived, m.telemetry.Latency),
 				fmt.Sprintf("Heatmap:     %s", m.heatmap),
 			}
 			if m.fbStatus != nil {
