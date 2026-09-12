@@ -257,19 +257,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		// Subtract roughly 12 lines to leave room for the header and footer
+		// Dynamic responsive scaling
 		vpHeight := msg.Height - 12
 		if vpHeight < 5 {
-			vpHeight = 5 // enforce a minimum
+			vpHeight = 5
 		}
 
-		if !m.ready {
-			m.viewport = viewport.New(msg.Width, vpHeight)
-			m.ready = true
-		} else {
-			m.viewport.Width = msg.Width
-			m.viewport.Height = vpHeight
-		}
+		m.viewport.Width = msg.Width
+		m.viewport.Height = vpHeight
+		m.ready = true
 		return m, nil
 
 	case tea.KeyMsg:

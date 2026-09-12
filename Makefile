@@ -90,17 +90,12 @@ TIMER_END   = ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
 .PHONY: all banner build lint test bench complexity run diagnosis about version clean help
 
 # Default Target
-all: banner build test ## Execute primary build and validation suite
+all: banner menu ## Launch interactive menu
 
 banner:
-	@printf "$(G1)$(BOLD)██████╗ ███████╗██╗███╗   ██╗████████╗   ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗$(RESET)\n"
-	@printf "$(G2)$(BOLD)██╔═══██╗██╔════╝██║████╗  ██║╚══██╔══╝   ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝$(RESET)\n"
-	@printf "$(G3)$(BOLD)██║   ██║███████╗██║██╔██╗ ██║   ██║█████╗██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗$(RESET)\n"
-	@printf "$(G4)$(BOLD)██║   ██║╚════██║██║██║╚██╗██║   ██║╚════╝██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║$(RESET)\n"
-	@printf "$(G5)$(BOLD)╚██████╔╝███████║██║██║ ╚████║   ██║      ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║$(RESET)\n"
-	@printf "$(G6)$(BOLD) ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝   ╚═╝      ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝$(RESET)\n"
-	@printf "$(VINTAGE_GREEN)$(BOLD)  :: $(APP_NAME) Framework :: v$(VERSION) :: Author: $(AUTHOR) ::          │$(RESET)\n"
-	@printf "$(ENV_COLOR)$(BOLD)  :: Environment: $(ENV_TYPE) ::$(RESET)\n\n"
+	@printf "$(G1)$(BOLD)OSINT-Nexus :: Framework v$(VERSION)$(RESET)\n"
+	@printf "$(VINTAGE_GREEN)$(BOLD)-----------------------------------$(RESET)\n"
+	@printf "$(ENV_COLOR)$(BOLD)Environment: $(ENV_TYPE)$(RESET)\n\n"
 
 build: banner ## Build engine binaries with embedded build metadata
 	@START_TIME=$$(date +%s%N); \
