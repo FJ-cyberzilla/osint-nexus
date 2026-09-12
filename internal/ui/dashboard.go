@@ -403,9 +403,9 @@ func (m Model) View() string {
 					}
 				}
 				if len(m.shadowUsers) > 0 {
-					infoBody = append(infoBody, "Shadow Users:")
+					infoBody = append(infoBody, styleUnknown.Render("Shadow Users:"))
 					for _, s := range m.shadowUsers {
-						infoBody = append(infoBody, "  * "+s)
+						infoBody = append(infoBody, styleUnknown.Render("  * "+s))
 					}
 				}
 				if len(m.emails) > 0 {
