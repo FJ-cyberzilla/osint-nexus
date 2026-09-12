@@ -17,6 +17,11 @@ import (
 	_ "go.uber.org/automaxprocs"
 )
 
+var (
+	Version string
+	Author  string
+)
+
 func run() error {
 	var username string
 	if len(os.Args) < 2 {

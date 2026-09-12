@@ -137,7 +137,7 @@ test: banner ## Run unit test suite with coverage reporting
 	printf "$(C_PURPLE)$(GEAR) [TEST]$(RESET) Running package tests...\n"; \
 	TEST_COUNT=$$(go test -list . ./... 2>/dev/null | grep -E '^Test' | wc -l | tr -d ' '); \
 	printf "  $(C_GRAY)├─ Executing $${TEST_COUNT} unit tests...$(RESET)\n"; \
-	if go test -v -timeout 30s ./...; then \
+	if go test -v -timeout 30s -cover -coverprofile=coverage.out ./...; then \
 		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)All Tests Passed$(RESET)]\n"; \
 	else \
 		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"; \
@@ -208,6 +208,9 @@ clean: banner ## Purge binary artifacts, logs, build output, and module caches
 	printf "  $(C_GRAY)├─ Purged Go build and module caches$(RESET)\n"; \
 	ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
 	printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)System Cleaned ($${ELAPSED}ms)$(RESET)]\n"
+
+menu: ## Launch interactive command menu
+	@go run ./cmd/nexus-menu/main.go
 
 help: banner ## Display this interactive help interface
 	@printf "$(C_CYAN)$(BOLD)Available Command Targets:$(RESET)\n\n"
