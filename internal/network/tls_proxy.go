@@ -13,7 +13,7 @@ type TLSProxy struct{}
 
 // Handshake attempts an advanced TLS handshake.
 func (t *TLSProxy) Handshake(ctx context.Context, address string) (any, error) {
-	// For now, return an error to force fallback as per designed behavior.
+	// Advanced TLS handshakes are currently disabled; defaulting to standard handshake.
 	return nil, eris.New("network: advanced tls handshake unavailable")
 }
 

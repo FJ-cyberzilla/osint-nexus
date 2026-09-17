@@ -12,7 +12,7 @@ type DoHClient struct{}
 
 // Resolve attempts DNS over HTTPS.
 func (c *DoHClient) Resolve(ctx context.Context, hostname string) ([]string, error) {
-	// For now, return an error to force fallback as per designed behavior.
+	// DNS over HTTPS is currently disabled; defaulting to standard resolver.
 	return nil, eris.New("network: doh resolution unavailable")
 }
 

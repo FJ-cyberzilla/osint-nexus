@@ -12,15 +12,20 @@ import (
 // NetworkManager implements the Intermediator interface and manages
 // network operations with automatic fallback mechanisms.
 type NetworkManager struct {
-	dohClient  *DoHClient
-	tlsProxy   *TLSProxy
-	dataDrop   *DataDropService
+	dohClient  Resolver
+	tlsProxy   Handshaker
+	dataDrop   DataSender
 	endpoints  *Endpoints
 	httpClient *http.Client
 }
 
 // NewNetworkManager initializes a new NetworkManager with optional endpoints and a configured HTTP client.
 func NewNetworkManager(ep *Endpoints) *NetworkManager {
+	return NewNetworkManagerWithDependencies(ep, &DoHClient{}, &TLSProxy{}, &DataDropService{})
+}
+
+// NewNetworkManagerWithDependencies initializes a new NetworkManager with injected dependencies.
+func NewNetworkManagerWithDependencies(ep *Endpoints, res Resolver, hs Handshaker, ds DataSender) *NetworkManager {
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
@@ -34,9 +39,9 @@ func NewNetworkManager(ep *Endpoints) *NetworkManager {
 	}
 
 	return &NetworkManager{
-		dohClient: &DoHClient{},
-		tlsProxy:  &TLSProxy{},
-		dataDrop:  &DataDropService{},
+		dohClient: res,
+		tlsProxy:  hs,
+		dataDrop:  ds,
 		endpoints: ep,
 		httpClient: &http.Client{
 			Transport: transport,

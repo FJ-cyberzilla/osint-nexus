@@ -105,6 +105,7 @@ build: banner ## Build engine binary with embedded build metadata
 	printf "  $(C_GRAY)├─ Processing $${GO_FILES} source files...$(RESET)\n"; \
 	if go build -ldflags "-X main.Version=$(VERSION) -X main.Author=$(AUTHOR)" -o $(BUILD_DIR)/nexus-cli $(CLI_TOOL); then \
 		printf "  $(C_GRAY)├─ Target binary:$(RESET) $(C_CYAN)$(BUILD_DIR)/nexus-cli$(RESET)\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Build Succeeded$(RESET)]\n"; \
+		rm -f main nexus; \
 	else \
 		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Build Failed$(RESET)]\n"; exit 1; \
 	fi; \

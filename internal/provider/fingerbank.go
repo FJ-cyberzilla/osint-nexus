@@ -30,7 +30,7 @@ func NewFingerbankClient() (*FingerbankClient, error) {
 		return nil, eris.Wrap(err, "fingerbank: failed to get config")
 	}
 	// In production, the API key should be loaded from a secure env var or secret manager.
-	// For now, we look for it in OSINT_FINGERBANK_API_KEY env var.
+	// The client attempts to load the API key from OSINT_FINGERBANK_API_KEY env var by default.
 	apiKey := os.Getenv("OSINT_FINGERBANK_API_KEY")
 
 	enabled := cfg.Provider.Fingerbank.Enabled && apiKey != ""
@@ -193,7 +193,10 @@ func (p *FingerbankClient) IsDeviceA(ctx context.Context, id, otherID string) (b
 	return res.IsA, nil
 }
 
+// ReliabilityThreshold defines the minimum confidence score for a device result to be considered reliable.
+const ReliabilityThreshold = 50
+
 // IsResultReliable checks if the confidence score meets the threshold for reliability.
 func (p *FingerbankClient) IsResultReliable(score int) bool {
-	return score >= 50
+	return score >= ReliabilityThreshold
 }

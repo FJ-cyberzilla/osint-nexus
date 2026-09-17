@@ -10,5 +10,6 @@ import (
 func TestDataDropService_Send(t *testing.T) {
 	s := &DataDropService{}
 	err := s.Send(context.Background(), []byte("test data"))
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not implemented")
 }

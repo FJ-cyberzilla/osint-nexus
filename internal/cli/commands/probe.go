@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/detector"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/telemetry"
 	"github.com/rotisserie/eris"
 	"github.com/spf13/cobra"
 )
@@ -102,7 +103,7 @@ var http2Cmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		target := args[0]
 		fmt.Printf("Probing HTTP/2 %s...\n", target)
-		d := detector.NewHTTP2Detector(time.Second * 5)
+		d := detector.NewHTTP2Detector(time.Second*5, telemetry.NewMetrics())
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
