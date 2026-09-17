@@ -30,10 +30,17 @@ OSINT Nexus is a professional-grade OSINT tool built for adaptive, high-performa
 
 ## 4. Operational Workflow
 
-The `make` interface is the recommended way to interact with OSINT Nexus.
+The `make` interface is the recommended way to interact with OSINT Nexus, but you can also use the `nexus-cli` for more granular control.
+
+### CLI Probing
+For manual reconnaissance tasks, use `nexus-cli`:
+```bash
+./nexus-cli probe dns google.com
+```
+See `docs/CLI_COMMANDS.md` for a complete reference of available CLI commands.
 
 ### Scanning a Target
-To initiate a reconnaissance scan for a specific username:
+To initiate a full-scale reconnaissance scan for a specific username:
 ```bash
 make run
 ```

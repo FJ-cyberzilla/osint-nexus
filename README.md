@@ -32,10 +32,23 @@ To ensure security and stability, **OSINT-Nexus strictly prohibits the installat
 
 ## Usage
 
+The primary and sole interface for the engine is the `nexus-cli` tool.
+
 ```bash
-# Run the CLI
-./cmd/nexus/nexus --help
+# Display help
+./nexus-cli --help
+
+# Run a DNS probe
+./nexus-cli probe dns google.com
+
+# Run a TLS probe
+./nexus-cli probe tls google.com:443
+
+# Run an HTTP probe
+./nexus-cli probe http https://google.com
 ```
+
+See `docs/CLI_COMMANDS.md` for full command documentation.
 
 ## Development
 

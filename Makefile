@@ -6,7 +6,7 @@
 APP_NAME    := OSINT-Nexus
 VERSION     := 1.0.0
 AUTHOR      := FJ-cyberzilla
-CLI_TOOL    := ./cmd/nexus-cli/main.go
+CLI_TOOL    := ./cmd/nexus-cli/
 BUILD_DIR   := bin
 LOG_DIR     := logs
 
@@ -90,21 +90,21 @@ TIMER_END   = ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
 .PHONY: all banner build lint test bench complexity run diagnosis about version clean help
 
 # Default Target
-all: banner menu ## Launch interactive menu
+all: banner help
 
 banner:
 	@printf "$(G1)$(BOLD)OSINT-Nexus :: Framework v$(VERSION)$(RESET)\n"
 	@printf "$(VINTAGE_GREEN)$(BOLD)-----------------------------------$(RESET)\n"
 	@printf "$(ENV_COLOR)$(BOLD)Environment: $(ENV_TYPE)$(RESET)\n\n"
 
-build: banner ## Build engine binaries with embedded build metadata
+build: banner ## Build engine binary with embedded build metadata
 	@START_TIME=$$(date +%s%N); \
 	printf "$(C_PURPLE)$(GEAR) [BUILD]$(RESET) Compiling core engine target...\n"; \
 	mkdir -p $(BUILD_DIR); \
 	GO_FILES=$$(find . -name "*.go" | wc -l | tr -d ' '); \
 	printf "  $(C_GRAY)├─ Processing $${GO_FILES} source files...$(RESET)\n"; \
-	if go build -ldflags "-X main.Version=$(VERSION) -X main.Author=$(AUTHOR)" -o $(BUILD_DIR)/nexus ./cmd/nexus/; then \
-		printf "  $(C_GRAY)├─ Target binary:$(RESET) $(C_CYAN)$(BUILD_DIR)/nexus$(RESET)\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Build Succeeded$(RESET)]\n"; \
+	if go build -ldflags "-X main.Version=$(VERSION) -X main.Author=$(AUTHOR)" -o $(BUILD_DIR)/nexus-cli $(CLI_TOOL); then \
+		printf "  $(C_GRAY)├─ Target binary:$(RESET) $(C_CYAN)$(BUILD_DIR)/nexus-cli$(RESET)\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Build Succeeded$(RESET)]\n"; \
 	else \
 		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Build Failed$(RESET)]\n"; exit 1; \
 	fi; \
@@ -168,7 +168,7 @@ complexity: banner ## Analyze code complexity metrics using gocyclo
 run: ## Run engine dynamically (Usage: make run <args>)
 	@printf "$(C_PURPLE)$(GEAR) [EXEC]$(RESET) Spawning application instance...\n"
 	@printf "  $(C_GRAY)├─ Arguments:$(RESET) $(C_CYAN)$(filter-out $@,$(MAKECMDGOALS))$(RESET)\n"
-	@go run ./cmd/nexus/ $(filter-out $@,$(MAKECMDGOALS))
+	@go run $(CLI_TOOL) $(filter-out $@,$(MAKECMDGOALS))
 
 %:
 	@:
@@ -184,7 +184,7 @@ diagnosis: banner ## Execute runtime diagnostics and environment checks
 	$(TIMER_END)
 
 about: banner ## Display module metadata and framework details
-	@go run $(CLI_TOOL) about
+	@go run $(CLI_TOOL)
 
 version: ## Display clean semver string
 	@printf "$(VERSION)\n"
@@ -204,9 +204,6 @@ clean: banner ## Purge binary artifacts, logs, build output, and module caches
 	ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
 	printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)System Cleaned ($${ELAPSED}ms)$(RESET)]\n"
 
-menu: ## Launch interactive command menu
-	@go run ./cmd/nexus-menu/main.go
-
 help: banner ## Display this interactive help interface
 	@printf "$(C_CYAN)$(BOLD)Available Command Targets:$(RESET)\n\n"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -214,7 +211,7 @@ help: banner ## Display this interactive help interface
 		| awk 'BEGIN {FS = ":.*?## "}; { \
 			desc = $$2; \
 			gsub("Execute primary build and validation suite", "Run all", desc); \
-			gsub("Build engine binaries with embedded build metadata", "Build engine", desc); \
+			gsub("Build engine binary with embedded build metadata", "Build engine", desc); \
 			gsub("Run static code analysis and quality checks", "Run lint", desc); \
 			gsub("Run unit test suite with coverage reporting", "Run tests", desc); \
 			gsub("Run performance benchmarks", "Run benchmarks", desc); \
