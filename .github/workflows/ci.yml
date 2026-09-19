@@ -18,7 +18,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.23'
+        go-version-file: go.mod
 
     - name: Build
       run: go build -v ./cmd/nexus-cli/main.go
@@ -33,6 +33,14 @@ jobs:
 
     - name: Check File Size
       run: |
-        find internal pkg -name "*.go" -exec wc -l {} + | awk '
-        $1 > 800 { print "Error: " $2 " exceeds 800 lines"; exit 1 }
-        $1 > 500 { print "Warning: " $2 " exceeds 500 lines" }'
+        find internal pkg -type f -name "*.go" -print0 |
+          while IFS= read -r -d '' file; do
+            lines=$(wc -l < "$file")
+
+            if [ "$lines" -gt 800 ]; then
+              echo "Error: $file exceeds 800 lines ($lines lines)"
+              exit 1
+            elif [ "$lines" -gt 500 ]; then
+              echo "Warning: $file exceeds 500 lines ($lines lines)"
+            fi
+          done
