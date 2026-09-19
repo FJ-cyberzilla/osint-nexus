@@ -40,6 +40,7 @@ endif
 # ------------------------------------------------------------------------------
 BOLD        := \033[1m
 RESET       := \033[0m
+VINTAGE_ORANGE := \033[38;2;230;140;70m
 
 # Truecolor RGB Gradient for Banner
 G1          := \033[38;2;147;51;234m
@@ -94,8 +95,14 @@ all: banner help
 
 banner:
 	@printf "$(G1)$(BOLD)OSINT-Nexus :: Framework v$(VERSION)$(RESET)\n"
+	@printf "$(VINTAGE_ORANGE)$(BOLD)FJ™ Cybertronic Systems$(RESET)\n"
 	@printf "$(VINTAGE_GREEN)$(BOLD)-----------------------------------$(RESET)\n"
 	@printf "$(ENV_COLOR)$(BOLD)Environment: $(ENV_TYPE)$(RESET)\n\n"
+
+install: build ## Prepare environment and build the application
+	@printf "$(C_PURPLE)$(GEAR) [INSTALL]$(RESET) Initializing environment...\n"
+	@mkdir -p $(LOG_DIR)
+	@printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Environment Initialized$(RESET)]\n\n"
 
 build: banner ## Build engine binary with embedded build metadata
 	@START_TIME=$$(date +%s%N); \
