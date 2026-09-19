@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 	"golang.org/x/net/html"
@@ -15,7 +14,6 @@ import (
 type EmailExtractor struct {
 	emailRegex *regexp.Regexp
 	emails     map[string]struct{}
-	pool       sync.Pool
 }
 
 // NewEmailExtractor initializes and returns a configured EmailExtractor.
@@ -28,36 +26,20 @@ func NewEmailExtractor() (*EmailExtractor, error) {
 	return &EmailExtractor{
 		emailRegex: pattern,
 		emails:     make(map[string]struct{}),
-		pool: sync.Pool{
-			New: func() any {
-				return make(map[string]struct{})
-			},
-		},
 	}, nil
 }
 
 // Extract implements the Extractor interface for email harvesting.
 func (e *EmailExtractor) Extract(ctx context.Context, rawHTML string) (*types.ExtractedPivots, error) {
-	emailSet := e.pool.Get().(map[string]struct{})
-	defer func() {
-		// Clear map before returning to pool
-		for k := range emailSet {
-			delete(emailSet, k)
-		}
-		e.pool.Put(emailSet)
-	}()
+	// Reset internal state for non-streaming use
+	e.reset()
 
 	matches := e.emailRegex.FindAllString(rawHTML, -1)
 	for _, m := range matches {
-		emailSet[m] = struct{}{}
+		e.emails[m] = struct{}{}
 	}
 
-	emails := make([]string, 0, len(emailSet))
-	for email := range emailSet {
-		emails = append(emails, email)
-	}
-
-	return &types.ExtractedPivots{Emails: emails}, nil
+	return e.GetPivots(), nil
 }
 
 func (e *EmailExtractor) HandleToken(token html.Token) {
@@ -85,5 +67,14 @@ func (e *EmailExtractor) GetPivots() *types.ExtractedPivots {
 	for email := range e.emails {
 		emails = append(emails, email)
 	}
+	// Note: We don't clear the map here to allow Orchestrator 
+	// to aggregate multiple extractors if needed, 
+	// though the current Orchestrator clears state per Extract.
 	return &types.ExtractedPivots{Emails: emails}
+}
+
+func (e *EmailExtractor) reset() {
+	for k := range e.emails {
+		delete(e.emails, k)
+	}
 }

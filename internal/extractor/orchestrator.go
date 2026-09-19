@@ -36,6 +36,13 @@ func NewOrchestrator(extractors ...types.Extractor) *Orchestrator {
 
 // Extract runs all registered extractors and aggregates the results.
 func (o *Orchestrator) Extract(ctx context.Context, rawHTML string) (*types.ExtractedPivots, error) {
+	// Ensure handlers are reset for fresh extraction
+	for _, h := range o.handlers {
+		if r, ok := h.(interface{ reset() }); ok {
+			r.reset()
+		}
+	}
+
 	if len(o.handlers) == len(o.extractors) {
 		return o.extractStreaming(ctx, rawHTML)
 	}

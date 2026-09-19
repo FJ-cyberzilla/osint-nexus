@@ -18,6 +18,13 @@ type Detector interface {
 	Analyze(ctx context.Context, profiles []*types.IdentityProfile) (float64, error)
 }
 
+// profilePool manages a pool of IdentityProfile objects to reduce GC pressure.
+var profilePool = sync.Pool{
+	New: func() interface{} {
+		return &types.IdentityProfile{}
+	},
+}
+
 // Orchestrator coordinates concurrent provider execution.
 type Orchestrator struct {
 	maxConcurrency int
@@ -81,63 +88,70 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 	session.setState(ScanStateInitiated)
 
 	go func() {
-		defer func() {
-			close(resultChan)
-			close(errChan)
-			close(progressChan)
-		}()
-		session.setState(ScanStateRunning)
-		var mu sync.Mutex
-		results := make([]*types.IdentityProfile, 0, len(providers))
-
-		g, gCtx := errgroup.WithContext(ctx)
-		g.SetLimit(o.maxConcurrency)
-
-		var completed atomic.Int64
-
-		for _, p := range providers {
-			p := p // capture loop variable
-			g.Go(func() error {
-				// Create a timeout-aware context
-				scanCtx, cancel := context.WithTimeout(gCtx, timeout)
-				defer cancel()
-
-				res, err := p.CheckUsername(scanCtx, username)
-
-				// Update progress
-				completed.Add(1)
-				progressChan <- float64(completed.Load()) / float64(len(providers))
-
-				if err != nil {
-					return eris.Wrapf(err, "engine: provider %s failed", p.Name())
-				}
-
-				if res != nil {
-					mu.Lock()
-					results = append(results, res)
-					mu.Unlock()
-					resultChan <- res
-				}
-				return nil
-			})
-		}
-
-		if err := g.Wait(); err != nil {
-			session.setState(ScanStateError)
-			errChan <- err
-		}
-		if o.detector != nil {
-			_, err := o.detector.Analyze(ctx, results)
-			if err != nil {
-				session.setState(ScanStateError)
-				errChan <- eris.Wrap(err, "engine: post-scan analysis failed")
-			}
-		}
-
-		if session.getState() != ScanStateError {
-			session.setState(ScanStateCompleted)
-		}
+	defer func() {
+		close(resultChan)
+		close(errChan)
+		close(progressChan)
 	}()
+	session.setState(ScanStateRunning)
 
+	results := make([]*types.IdentityProfile, len(providers))
+
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(o.maxConcurrency)
+
+	var completed atomic.Int64
+
+	for i, p := range providers {
+		i := i // capture loop variable
+		p := p // capture loop variable
+		g.Go(func() error {
+			// Create a timeout-aware context
+			scanCtx, cancel := context.WithTimeout(gCtx, timeout)
+			defer cancel()
+
+			res, err := p.CheckUsername(scanCtx, username)
+
+			// Update progress
+			completed.Add(1)
+			progressChan <- float64(completed.Load()) / float64(len(providers))
+
+			if err != nil {
+				return eris.Wrapf(err, "engine: provider %s failed", p.Name())
+			}
+
+			if res != nil {
+				results[i] = res
+				resultChan <- res
+			}
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		session.setState(ScanStateError)
+		errChan <- err
+	}
+
+	// Filter out nil results (providers that didn't find the username)
+	finalResults := make([]*types.IdentityProfile, 0, len(results))
+	for _, r := range results {
+		if r != nil {
+			finalResults = append(finalResults, r)
+		}
+	}
+
+	if o.detector != nil {
+		_, err := o.detector.Analyze(ctx, finalResults)
+		if err != nil {
+			session.setState(ScanStateError)
+			errChan <- eris.Wrap(err, "engine: post-scan analysis failed")
+		}
+	}
+
+	if session.getState() != ScanStateError {
+		session.setState(ScanStateCompleted)
+	}
+	}()
 	return session
 }

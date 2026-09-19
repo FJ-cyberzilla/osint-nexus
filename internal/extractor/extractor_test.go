@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestPivotExtractor_Extract(t *testing.T) {
-	extractor, err := NewPivotExtractor()
+func TestOrchestrator_Extract(t *testing.T) {
+	orchestrator, err := NewDefaultOrchestrator()
 	if err != nil {
-		t.Fatalf("Failed to create extractor: %v", err)
+		t.Fatalf("Failed to create orchestrator: %v", err)
 	}
 
 	rawHTML := `
@@ -29,7 +29,7 @@ Key data
 </html>
 `
 	ctx := context.Background()
-	pivots, err := extractor.Extract(ctx, rawHTML, "https://example.com")
+	pivots, err := orchestrator.Extract(ctx, rawHTML)
 	if err != nil {
 		t.Fatalf("Extract failed: %v", err)
 	}
@@ -66,10 +66,10 @@ Key data
 	}
 }
 
-func BenchmarkPivotExtractor_Extract(b *testing.B) {
-	extractor, err := NewPivotExtractor()
+func BenchmarkOrchestrator_Extract(b *testing.B) {
+	orchestrator, err := NewDefaultOrchestrator()
 	if err != nil {
-		b.Fatalf("Failed to create extractor: %v", err)
+		b.Fatalf("Failed to create orchestrator: %v", err)
 	}
 
 	rawHTML := `
@@ -92,6 +92,6 @@ Key data
 	ctx := context.Background()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = extractor.Extract(ctx, rawHTML, "https://example.com")
+		_, _ = orchestrator.Extract(ctx, rawHTML)
 	}
 }
