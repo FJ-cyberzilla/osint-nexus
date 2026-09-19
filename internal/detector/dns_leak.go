@@ -38,13 +38,13 @@ func (p *DNSLeakProbe) Check(ctx context.Context, targetURL string, testEndpoint
 	for _, endpoint := range testEndpoints {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 		if err != nil {
-			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "create request").Error()})
+			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "detector: create leak check request").Error()})
 			continue
 		}
 
 		resp, err := p.client.Do(req)
 		if err != nil {
-			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "execute request").Error()})
+			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "detector: execute leak check request").Error()})
 			continue
 		}
 		// Body must be drained and closed to reuse connections

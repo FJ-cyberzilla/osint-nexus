@@ -55,7 +55,9 @@ func (d *TLSDetector) Probe(ctx context.Context, address string) (*TLSResult, er
 	defer func() {
 		if !closed {
 			if err := conn.Close(); err != nil {
-				log.Printf("detector: error closing connection: %v", err)
+				// We cannot return the error from the defer, but we can wrap it if needed for logging.
+				// For now, we keep it as a side-effect, but eris makes it consistent.
+				_ = eris.Wrap(err, "detector: error closing connection")
 			}
 		}
 	}()
