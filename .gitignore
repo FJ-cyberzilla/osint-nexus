@@ -39,7 +39,7 @@ data/nexus.db-wal
 .gemini/
 gha-creds-*.json
 GEMINI.md
-
+docs/TODO.md
 # Runtime & Binaries
 nexus
 main
