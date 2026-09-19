@@ -84,7 +84,13 @@ type FingerprintMsg string
 type DeviceTypeMsg string
 type RelationMsg string
 type ShadowUserMsg string
-type HeatmapMsg string
+type HeatmapData []float64
+type HeatmapMsg HeatmapData
+type ChartData struct {
+	Title  string
+	Values []float64
+}
+type ChartMsg ChartData
 type EmailMsg string
 type SocialMediaMsg string
 type GraphMsg struct {
@@ -108,6 +114,18 @@ type FingerbankStatusMsg struct {
 	Enabled bool
 	Usage   int
 }
+type DorkResult struct {
+	Query string
+	URL   string
+}
+type DorkMsg []DorkResult
+type TimezoneMsg string
+type DeviceFingerprint struct {
+	JA3    string
+	JA3S   string
+	UserAgent string
+}
+type DeviceFingerprintMsg DeviceFingerprint
 type DNSLeakMsg []DNSLeakResult
 type DNSLeakResult struct {
 	URL       string
@@ -140,19 +158,21 @@ type Model struct {
 	socialMedia   []string
 	relations     []string
 	shadowUsers   []string
-	heatmap       string
+	heatmap       HeatmapData
+	charts        []ChartData
 	graphNodes    []string
 	graphEdges    []string
 	fingerbank    *FingerbankFindingsMsg
 	fbStatus      *FingerbankStatusMsg
+	dorks         []DorkResult
+	timezone      string
+	deviceFingerprint DeviceFingerprint
 	dnsLeaks      []DNSLeakResult
 	errors        []string
 	advisories    []string
-	startTime     time.Time
+	startTime   time.Time
 	percent       float64
 	liveStatus    string
-	statusPhrases []string
-	phraseIdx     int
 
 	// Tab and Viewport state
 	viewport  viewport.Model
@@ -176,23 +196,16 @@ func NewModel(username string) Model {
 		socialMedia: make([]string, 0),
 		relations:   make([]string, 0),
 		shadowUsers: make([]string, 0),
+		heatmap:     make(HeatmapData, 0),
+		charts:      make([]ChartData, 0),
 		graphNodes:  make([]string, 0),
 		graphEdges:  make([]string, 0),
+		dorks:       make([]DorkResult, 0),
+		timezone:    "Unknown",
+		deviceFingerprint: DeviceFingerprint{},
 		errors:      make([]string, 0),
 		advisories:  make([]string, 0),
 		startTime:   time.Now(),
-		statusPhrases: []string{
-			"Probing TLS fingerprints...",
-			"Analyzing JA3/JA4 signatures...",
-			"Traversing DNS record chains...",
-			"Harvesting secondary identifiers...",
-			"Correlating social graphs...",
-			"Scanning for DNS leaks...",
-			"Evaluating device entropy...",
-			"Executing pivot extraction...",
-			"Verifying STIX indicators...",
-			"Auditing network telemetry...",
-		},
 		tabs:      []string{"Overview", "Results"},
 		activeTab: 0,
 		unread:    make(map[string]bool),
@@ -204,7 +217,7 @@ func (m Model) Init() tea.Cmd {
 }
 
 func tick() tea.Cmd {
-	return tea.Every(time.Millisecond*500, func(t time.Time) tea.Msg {
+	return tea.Every(time.Second*2, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
 }
@@ -220,6 +233,10 @@ func (m Model) syncTabs() Model {
 
 	if len(m.graphNodes) > 0 || len(m.graphEdges) > 0 {
 		nextTabs = append(nextTabs, "Graph")
+	}
+
+	if len(m.heatmap) > 0 || len(m.charts) > 0 || len(m.relations) > 0 {
+		nextTabs = append(nextTabs, "Analysis")
 	}
 
 	if m.fingerbank != nil || len(m.dnsLeaks) > 0 {
@@ -284,11 +301,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.GotoTop()
 				m.unread[m.tabs[m.activeTab]] = false
 			}
+		case "pgup":
+			m.viewport.ViewDown()
+		case "pgdown":
+			m.viewport.ViewUp()
+		case "enter":
+			// Placeholder for "select/initiate" action
+			m.status = fmt.Sprintf("Selected: %s", m.tabs[m.activeTab])
 		}
 
 	case tickMsg:
-		m.phraseIdx = (m.phraseIdx + 1) % len(m.statusPhrases)
-		m.liveStatus = m.statusPhrases[m.phraseIdx]
 		cmds = append(cmds, tick())
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -320,7 +342,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ShadowUserMsg:
 		m.shadowUsers = append(m.shadowUsers, string(msg))
 	case HeatmapMsg:
-		m.heatmap = string(msg)
+		m.heatmap = HeatmapData(msg)
+	case ChartMsg:
+		m.charts = append(m.charts, ChartData(msg))
 	case EmailMsg:
 		m.emails = append(m.emails, string(msg))
 	case SocialMediaMsg:
@@ -343,6 +367,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AdvisoryMsg:
 		m.advisories = append(m.advisories, string(msg))
 		m = m.notifyTab("Alerts")
+	case DorkMsg:
+		m.dorks = append(m.dorks, msg...)
+		m = m.notifyTab("Results")
+	case TimezoneMsg:
+		m.timezone = string(msg)
+	case DeviceFingerprintMsg:
+		m.deviceFingerprint = DeviceFingerprint(msg)
 	}
 
 	if m.ready {
@@ -360,8 +391,11 @@ func (m Model) View() string {
 		return "\n  Initializing TUI...\n"
 	}
 
+	// --- 0. BRANDING ---
+	brandingBox := styleBrand.Render("Powered by FJ™ Cybertronic Systems")
+
 	// --- 1. HEADER ---
-	header := fmt.Sprintf("%s powered by FJ™ Cybertronic Systems\n", styleBlue.Render("OSINT-Nexus"))
+	header := brandingBox + "\n" + fmt.Sprintf("%s\n", styleBlue.Render("OSINT-Nexus"))
 	header += styleTitle.Render(fmt.Sprintf("Command Center - Target: %s", m.targetUser)) + "\n\n"
 
 	var renderedTabs []string
@@ -377,134 +411,23 @@ func (m Model) View() string {
 	header += lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...) + "\n"
 
 	// --- 2. TAB CONTENT ---
+	vr := ViewRendering{m: &m}
 	var tabContent []string
 
 	if len(m.tabs) > 0 {
 		switch m.tabs[m.activeTab] {
 		case "Overview":
-			metrics := []string{
-				fmt.Sprintf("Device Type: %s", m.deviceType),
-				fmt.Sprintf("Fingerprint: %s", m.fingerprint),
-				fmt.Sprintf("Telemetry:   [Sockets: %d | Sent: %d B | Rcvd: %d B | Lat: %v]", 
-					m.telemetry.ActiveSockets, m.telemetry.BytesSent, m.telemetry.BytesReceived, m.telemetry.Latency),
-				fmt.Sprintf("Heatmap:     %s", m.heatmap),
-			}
-			if m.fbStatus != nil {
-				status := "Disabled"
-				if m.fbStatus.Enabled {
-					status = fmt.Sprintf("Enabled (Usage: %d)", m.fbStatus.Usage)
-				}
-				metrics = append(metrics, fmt.Sprintf("Fingerbank:  %s", status))
-			}
-			tabContent = append(tabContent, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, metrics...)))
-
-			if len(m.relations) > 0 || len(m.shadowUsers) > 0 || len(m.emails) > 0 || len(m.socialMedia) > 0 {
-				var infoBody []string
-				if len(m.relations) > 0 {
-					infoBody = append(infoBody, "Relations:")
-					for _, r := range m.relations {
-						infoBody = append(infoBody, "  * "+r)
-					}
-				}
-				if len(m.shadowUsers) > 0 {
-					infoBody = append(infoBody, styleUnknown.Render("Shadow Users:"))
-					for _, s := range m.shadowUsers {
-						infoBody = append(infoBody, styleUnknown.Render("  * "+s))
-					}
-				}
-				if len(m.emails) > 0 {
-					infoBody = append(infoBody, "Emails:")
-					for _, e := range m.emails {
-						infoBody = append(infoBody, "  * "+e)
-					}
-				}
-				if len(m.socialMedia) > 0 {
-					infoBody = append(infoBody, "Social Media:")
-					for _, sm := range m.socialMedia {
-						infoBody = append(infoBody, "  * "+sm)
-					}
-				}
-				tabContent = append(tabContent, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))
-			}
-
+			tabContent = vr.Overview()
 		case "Results":
-			if len(m.results) > 0 {
-				var resultsBody []string
-				for _, res := range m.results {
-					if res.Found {
-						resultsBody = append(resultsBody, styleFound.Render(fmt.Sprintf("  ✓ %s", res.Platform)))
-					} else if res.Error != "" {
-						resultsBody = append(resultsBody, styleUnknown.Render(fmt.Sprintf("  ? %s (Uncertain: %s)", res.Platform, res.Error)))
-					} else {
-						resultsBody = append(resultsBody, styleMissing.Render(fmt.Sprintf("  ✗ %s (Not Found)", res.Platform)))
-					}
-				}
-				tabContent = append(tabContent, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, resultsBody...)))
-			} else {
-				tabContent = append(tabContent, "\n  Awaiting scan results...\n")
-			}
-
+			tabContent = vr.Results()
 		case "Graph":
-			if len(m.graphNodes) > 0 || len(m.graphEdges) > 0 {
-				graphBody := []string{"Relationship Graph:"}
-				for _, node := range m.graphNodes {
-					graphBody = append(graphBody, styleFound.Render("  • "+node))
-				}
-				for _, edge := range m.graphEdges {
-					graphBody = append(graphBody, styleGray.Render("  → "+edge))
-				}
-				tabContent = append(tabContent, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, graphBody...)))
-			} else {
-				tabContent = append(tabContent, "\n  Awaiting graph data...\n")
-			}
-
+			tabContent = vr.Graph()
+		case "Analysis":
+			tabContent = vr.Analysis()
 		case "Network":
-			if m.fingerbank != nil {
-				fbBody := []string{
-					"Fingerbank Findings:",
-					fmt.Sprintf("  Device: %s (Score: %d)", m.fingerbank.DeviceName, m.fingerbank.Score),
-					fmt.Sprintf("  Vendor: %s", m.fingerbank.Vendor),
-					fmt.Sprintf("  Type: %s", m.fingerbank.DeviceType),
-					fmt.Sprintf("  OS: %s", m.fingerbank.OperatingSystem),
-				}
-				if len(m.fingerbank.Vulnerabilities.CveDevices) > 0 || len(m.fingerbank.Vulnerabilities.CveOs) > 0 {
-					fbBody = append(fbBody, "  [!] Vulnerabilities Detected")
-				}
-				tabContent = append(tabContent, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, fbBody...)))
-			}
-			if len(m.dnsLeaks) > 0 {
-				dnsBody := []string{"DNS Leak Results:"}
-				for _, res := range m.dnsLeaks {
-					if res.Error != "" {
-						dnsBody = append(dnsBody, styleUnknown.Render(fmt.Sprintf("  ! %s (Error: %s)", res.URL, res.Error)))
-					} else if res.IsLeaking {
-						dnsBody = append(dnsBody, styleUnknown.Render(fmt.Sprintf("  ! %s (LEAKING!)", res.URL)))
-					} else {
-						dnsBody = append(dnsBody, styleFound.Render(fmt.Sprintf("  ✓ %s (Secure)", res.URL)))
-					}
-				}
-				tabContent = append(tabContent, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, dnsBody...)))
-			}
-
+			tabContent = vr.Network()
 		case "Alerts":
-			if len(m.advisories) > 0 {
-				advStyle := lipgloss.NewStyle().
-					Border(lipgloss.RoundedBorder()).
-					BorderForeground(colorInfo).
-					Foreground(colorInfo).
-					Padding(1, 2).
-					Margin(1, 0)
-				tabContent = append(tabContent, advStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"i ADVISORY i"}, m.advisories...)...)))
-			}
-			if len(m.errors) > 0 {
-				errStyle := lipgloss.NewStyle().
-					Border(lipgloss.RoundedBorder()).
-					BorderForeground(colorUnknown).
-					Foreground(colorUnknown).
-					Padding(1, 2).
-					Margin(1, 0)
-				tabContent = append(tabContent, errStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"!! SYSTEM ALERTS !!"}, m.errors...)...)))
-			}
+			tabContent = vr.Alerts()
 		}
 	}
 
@@ -524,7 +447,7 @@ func (m Model) View() string {
 	progressView := lipgloss.JoinHorizontal(lipgloss.Center, m.spinner.View(), " ", m.progress.View(), styleGray.Render(etaStr))
 	
 	footer := fmt.Sprintf("\n%s\nStatus: %s\n%s\n", progressView, m.status, styleInfo.Render(fmt.Sprintf("Active: %s", m.liveStatus)))
-	footer += styleGray.Render("Navigate: ←/→ or Tab/Shift+Tab | Scroll: ↑/↓ | Quit: q")
+	footer += styleGray.Render("Navigate: ←/→ | Scroll: ↑/↓/PgUp/PgDown | Select: Enter | Quit: q")
 
 	return fmt.Sprintf("%s\n%s\n%s", header, m.viewport.View(), footer)
 }

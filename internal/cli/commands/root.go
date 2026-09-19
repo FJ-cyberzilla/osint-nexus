@@ -5,13 +5,16 @@ import (
 	"os"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
 	cfgFile      string
+	useDashboard bool
 	Version      = "1.0.0" // Set by linker
 	styleTitle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205")).MarginBottom(1)
 	styleSuccess = lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true)
@@ -23,19 +26,34 @@ var (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "nexus-cli",
+	Use:   "nexus-cli [target]",
 	Short: "OSINT-Nexus | Industrial Recon Engine",
 	Long:  `A high-accuracy, low-level OSINT and network reconnaissance engine.`,
+	Args:  cobra.ExactArgs(1),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		initConfig()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		target := args[0]
+		if useDashboard {
+			launchDashboard(target)
+			return
+		}
 		printAbout()
 	},
 }
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./configs/config.yaml)")
+	RootCmd.PersistentFlags().BoolVarP(&useDashboard, "dashboard", "d", false, "Launch the interactive dashboard")
+}
+
+func launchDashboard(target string) {
+	p := tea.NewProgram(ui.NewModel(target), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error launching dashboard: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func initConfig() {
