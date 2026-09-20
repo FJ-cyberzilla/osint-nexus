@@ -4,6 +4,7 @@ _A high-performance reconnaissance engine by_ **[FJ-cyberzilla](https://github.c
 
 > **[FJ™ Cybertronic Systems](https://github.com/FJ-cyberzilla)**
 
+[![Go CI](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/ci.yml)
 ## Overview
 
 OSINT Nexus is a high-accuracy, low-level OSINT and network reconnaissance engine built natively in Go (`go1.23+`). It handles deep packet inspection, raw socket manipulation, custom TLS fingerprinting (JA3/JA4), DNS record traversal, and multi-source pivot extraction.
