@@ -20,6 +20,9 @@ func (vr *ViewRendering) Overview() []string {
 		fmt.Sprintf("Telemetry:   [Sockets: %d | Sent: %d B | Rcvd: %d B | Lat: %v]",
 			vr.m.telemetry.ActiveSockets, vr.m.telemetry.BytesSent, vr.m.telemetry.BytesReceived, vr.m.telemetry.Latency),
 	}
+	if len(vr.m.sessions) > 0 {
+		metrics = append(metrics, fmt.Sprintf("Active Sessions: %d", len(vr.m.sessions)))
+	}
 	if vr.m.fbStatus != nil {
 		status := "Disabled"
 		if vr.m.fbStatus.Enabled {
@@ -28,6 +31,16 @@ func (vr *ViewRendering) Overview() []string {
 		metrics = append(metrics, fmt.Sprintf("Fingerbank:  %s", status))
 	}
 	content := []string{styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, metrics...))}
+
+	if len(vr.m.sessions) > 0 {
+		var sessionBody []string
+		sessionBody = append(sessionBody, "Session Inventory:")
+		for _, s := range vr.m.sessions {
+			sessionBody = append(sessionBody, fmt.Sprintf("  * %s [%s] (Last Seen: %s)", 
+				s.SessionID[:8], s.DeviceType, s.LastSeen.Format("15:04:05")))
+		}
+		content = append(content, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, sessionBody...)))
+	}
 
 	if len(vr.m.relations) > 0 || len(vr.m.shadowUsers) > 0 || len(vr.m.emails) > 0 || len(vr.m.socialMedia) > 0 || len(vr.m.dorks) > 0 {
 		var infoBody []string
@@ -105,6 +118,13 @@ func (vr *ViewRendering) Analysis() []string {
 			analysisBody = append(analysisBody, "  * "+r)
 		}
 	}
+	if len(vr.m.stylometry) > 0 {
+		analysisBody = append(analysisBody, "\nStylometric Analysis:")
+		for _, s := range vr.m.stylometry {
+			analysisBody = append(analysisBody, fmt.Sprintf("  [%s] AvgWordLen: %.1f | PunctDensity: %.2f | Richness: %.2f",
+				s.Language, s.AvgWordLength, s.PunctuationDensity, s.VocabularyRichness))
+		}
+	}
 	if len(vr.m.heatmap) > 0 {
 		analysisBody = append(analysisBody, "\nHeatmap Intensity:")
 		hMap := ""
@@ -163,6 +183,20 @@ func (vr *ViewRendering) Network() []string {
 
 func (vr *ViewRendering) Alerts() []string {
 	var alertBody []string
+	if len(vr.m.anomalyAlerts) > 0 {
+		var anomalyBody []string
+		anomalyBody = append(anomalyBody, "Anomaly Detection Alerts:")
+		for _, a := range vr.m.anomalyAlerts {
+			severityStyle := styleInfo
+			if a.Severity == "WARNING" {
+				severityStyle = styleUnknown
+			} else if a.Severity == "CRITICAL" {
+				severityStyle = styleUnknown.Bold(true)
+			}
+			anomalyBody = append(anomalyBody, severityStyle.Render(fmt.Sprintf("  [%s] %s: %s", a.Severity, a.SessionID[:8], a.Message)))
+		}
+		alertBody = append(alertBody, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, anomalyBody...)))
+	}
 	if len(vr.m.advisories) > 0 {
 		advStyle := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

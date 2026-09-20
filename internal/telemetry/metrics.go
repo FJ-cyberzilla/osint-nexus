@@ -10,6 +10,7 @@ type Metrics struct {
 	requestsSuccess  atomic.Uint64
 	requestsFailed   atomic.Uint64
 	bytesTransferred atomic.Uint64
+	credentialLeaks  atomic.Uint64
 }
 
 // MetricsSnapshot represents a serializable state of the metrics.
@@ -18,6 +19,7 @@ type MetricsSnapshot struct {
 	RequestsSuccess  uint64 `json:"requests_success"`
 	RequestsFailed   uint64 `json:"requests_failed"`
 	BytesTransferred uint64 `json:"bytes_transferred"`
+	CredentialLeaks  uint64 `json:"credential_leaks"`
 }
 
 // NewMetrics initializes a new Metrics instance.
@@ -45,6 +47,11 @@ func (m *Metrics) RecordBytes(bytes uint64) {
 	m.bytesTransferred.Add(bytes)
 }
 
+// RecordCredentialLeak increments the credential leak counter.
+func (m *Metrics) RecordCredentialLeak() {
+	m.credentialLeaks.Add(1)
+}
+
 // Snapshot returns the current state of metrics as a serializable snapshot.
 func (m *Metrics) Snapshot() MetricsSnapshot {
 	return MetricsSnapshot{
@@ -52,5 +59,6 @@ func (m *Metrics) Snapshot() MetricsSnapshot {
 		RequestsSuccess:  m.requestsSuccess.Load(),
 		RequestsFailed:   m.requestsFailed.Load(),
 		BytesTransferred: m.bytesTransferred.Load(),
+		CredentialLeaks:  m.credentialLeaks.Load(),
 	}
 }

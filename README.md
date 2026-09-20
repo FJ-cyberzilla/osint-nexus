@@ -7,7 +7,7 @@
 [![Go CI](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/FJ-cyberzilla/osint-nexus/actions/workflows/ci.yml)
 ## Overview
 
-OSINT Nexus is a high-accuracy, low-level OSINT and network reconnaissance engine built natively in Go (`go1.23+`). It handles deep packet inspection, raw socket manipulation, custom TLS fingerprinting (JA3/JA4), DNS record traversal, and multi-source pivot extraction.
+OSINT Nexus is a high-accuracy, low-level OSINT and network reconnaissance engine built natively in Go (`go1.23+`). It handles deep packet inspection, raw socket manipulation, custom TLS fingerprinting (JA3/JA4), DNS record traversal, multi-source pivot extraction, and real-time credential leakage detection.
 
 The system is designed for maximum performance, deterministic data integrity, and strict type safety.
 
@@ -19,11 +19,11 @@ The project follows a strict Go directory structure:
 - `pkg/osint/`: Publicly exportable client APIs.
 - `internal/`: Core components:
     - `engine/`: Provider orchestrator (high-concurrency, lock-free aggregation).
-    - `detector/`: Low-level protocol probes (DNS, TLS, HTTP2).
+    - `detector/`: Low-level protocol probes (DNS, TLS, HTTP2, Credential Leak).
     - `extractor/`: Modular, streaming-based parsing pipeline (Email, Social, Meta, PGP).
     - `captcha/`: Solver clients & TLS fingerprinting.
     - `types/`: Core domain structs and interfaces.
-    - `telemetry/`: Socket metrics & network telemetry.
+    - `telemetry/`: Socket metrics, network telemetry, and system-wide counters.
 
 ## Build & Installation
 

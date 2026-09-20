@@ -132,6 +132,24 @@ type DNSLeakResult struct {
 	IsLeaking bool
 	Error     string
 }
+type AnomalyAlertMsg struct {
+	SessionID string
+	Message   string
+	Severity  string
+}
+type StylometryMsg struct {
+	Language           string
+	AvgSentenceLength  float64
+	AvgWordLength      float64
+	PunctuationDensity float64
+	VocabularyRichness float64
+}
+type SessionMsg struct {
+	SessionID  string
+	ProfileID  string
+	DeviceType string
+	LastSeen   time.Time
+}
 type ErrorMsg string
 type AdvisoryMsg string
 
@@ -168,6 +186,9 @@ type Model struct {
 	timezone      string
 	deviceFingerprint DeviceFingerprint
 	dnsLeaks      []DNSLeakResult
+	anomalyAlerts []AnomalyAlertMsg
+	stylometry    []StylometryMsg
+	sessions      []SessionMsg
 	errors        []string
 	advisories    []string
 	startTime   time.Time
@@ -203,7 +224,10 @@ func NewModel(username string) Model {
 		dorks:       make([]DorkResult, 0),
 		timezone:    "Unknown",
 		deviceFingerprint: DeviceFingerprint{},
-		errors:      make([]string, 0),
+		anomalyAlerts: make([]AnomalyAlertMsg, 0),
+		stylometry:    make([]StylometryMsg, 0),
+		sessions:      make([]SessionMsg, 0),
+		errors:        make([]string, 0),
 		advisories:  make([]string, 0),
 		startTime:   time.Now(),
 		tabs:      []string{"Overview", "Results"},
@@ -374,6 +398,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.timezone = string(msg)
 	case DeviceFingerprintMsg:
 		m.deviceFingerprint = DeviceFingerprint(msg)
+	case AnomalyAlertMsg:
+		m.anomalyAlerts = append(m.anomalyAlerts, msg)
+		m = m.notifyTab("Alerts")
+	case StylometryMsg:
+		m.stylometry = append(m.stylometry, msg)
+		m = m.notifyTab("Analysis")
+	case SessionMsg:
+		found := false
+		for i, s := range m.sessions {
+			if s.SessionID == msg.SessionID {
+				m.sessions[i] = msg
+				found = true
+				break
+			}
+		}
+		if !found {
+			m.sessions = append(m.sessions, msg)
+		}
 	}
 
 	if m.ready {

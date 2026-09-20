@@ -94,8 +94,9 @@ TIMER_END   = ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
 all: banner help
 
 banner:
+	@printf "$(VINTAGE_GREEN)$(BOLD)-----------------------------------$(RESET)\n"
 	@printf "$(G1)$(BOLD)OSINT-Nexus :: Framework v$(VERSION)$(RESET)\n"
-	@printf "$(VINTAGE_ORANGE)$(BOLD)FJ™ Cybertronic Systems$(RESET)\n"
+	@printf "$(VINTAGE_GREEN)$(BOLD)FJ™ Cybertronic Systems$(RESET)\n"
 	@printf "$(VINTAGE_GREEN)$(BOLD)-----------------------------------$(RESET)\n"
 	@printf "$(ENV_COLOR)$(BOLD)Environment: $(ENV_TYPE)$(RESET)\n\n"
 
@@ -175,8 +176,12 @@ complexity: banner ## Analyze code complexity metrics using gocyclo
 
 run: ## Run engine dynamically (Usage: make run <args>)
 	@printf "$(C_PURPLE)$(GEAR) [EXEC]$(RESET) Spawning application instance...\n"
-	@printf "  $(C_GRAY)├─ Arguments:$(RESET) $(C_CYAN)$(filter-out $@,$(MAKECMDGOALS))$(RESET)\n"
-	@go run $(CLI_TOOL) $(filter-out $@,$(MAKECMDGOALS))
+	@args="$(filter-out $@,$(MAKECMDGOALS))"; \
+	if [ -z "$$args" ]; then \
+		args="-d"; \
+	fi; \
+	printf "  $(C_GRAY)├─ Arguments:$(RESET) $(C_CYAN)$$args$(RESET)\n"
+	@go run $(CLI_TOOL) $$args
 
 %:
 	@:

@@ -29,12 +29,15 @@ var RootCmd = &cobra.Command{
 	Use:   "nexus-cli [target]",
 	Short: "OSINT-Nexus | Industrial Recon Engine",
 	Long:  `A high-accuracy, low-level OSINT and network reconnaissance engine.`,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		initConfig()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		target := args[0]
+		target := ""
+		if len(args) > 0 {
+			target = args[0]
+		}
 		if useDashboard {
 			launchDashboard(target)
 			return

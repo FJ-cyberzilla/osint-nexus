@@ -2,8 +2,9 @@
 
 ## Immediate Tasks
 - [x] Align `internal/telemetry/android_socket_tracer.go` with production kernel ABI.
-- [ ] Review and stage pending workspace changes (Git status cleanup).
-- [ ] Incorporate untracked files into the repository structure.
+- [x] Review and stage pending workspace changes (Git status cleanup).
+- [x] Implement credential leak detection and telemetry tracking.
+- [x] Incorporate untracked files into the repository structure.
 - [x] Remove `internal/ui/dashboard.go.bak`.
 - [ ] Audit memory allocations in `internal/detector`.
 - [ ] Investigate lock contention in `internal/engine/orchestrator.go`.
