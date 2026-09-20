@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -32,15 +33,22 @@ var RootCmd = &cobra.Command{
 	Short: "OSINT-Nexus | Industrial Recon Engine",
 	Run: func(cmd *cobra.Command, args []string) {
 		p := tea.NewProgram(initialDashboardModel())
-		if _, err := p.Run(); err != nil {
+		m, err := p.Run()
+		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
+		}
+		
+		// If a target was provided, launch the main UI
+		if model, ok := m.(dashboardModel); ok && model.target != "" {
+			launchDashboard(model.target)
 		}
 	},
 }
 
 type dashboardModel struct {
 	textInput textinput.Model
+	target    string
 	err       error
 }
 
@@ -67,8 +75,8 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if target == "" {
 				return m, nil
 			}
-			// Switch to the actual dashboard UI with target
-			return m, tea.Batch(tea.Quit) // Close input, then run scan in actual UI
+			m.target = target
+			return m, tea.Quit 
 		}
 	}
 	m.textInput, cmd = m.textInput.Update(msg)
@@ -81,6 +89,14 @@ func (m dashboardModel) View() string {
 			styleTitle.Render("Enter target username to begin reconnaissance:"),
 			m.textInput.View()),
 	) + "\n"
+}
+
+func launchDashboard(target string) {
+	p := tea.NewProgram(ui.NewModel(target), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error launching dashboard: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func init() {
