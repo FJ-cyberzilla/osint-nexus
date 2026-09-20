@@ -2,8 +2,9 @@ package detector
 
 import (
 	"context"
-	"fmt"
 	"regexp"
+
+	"github.com/rotisserie/eris"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/telemetry"
 )
@@ -19,7 +20,7 @@ func NewCredentialLeakDetector(metrics *telemetry.Metrics) (*CredentialLeakDetec
 	// Regex to detect potential credential leaks in data
 	leakPattern, err := regexp.Compile(`(?i)(password|secret|key|cred).*[:=]\s*[a-zA-Z0-9]+`)
 	if err != nil {
-		return nil, fmt.Errorf("detector: compile credential leak regex: %w", err)
+		return nil, eris.Wrap(err, "detector: compile credential leak regex")
 	}
 
 	return &CredentialLeakDetector{

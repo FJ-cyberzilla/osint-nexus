@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"os"
 
@@ -32,27 +31,33 @@ func NewAndroidSocketTracer(mapPath string) (*AndroidSocketTracer, error) {
 	}, nil
 }
 
+// Key:   struct { uint32 uid; uint32 tag; } (8 bytes)
+type bpfKey struct {
+	uid uint32
+	tag uint32
+}
+
+// Value: struct { uint64 rx_bytes; uint64 rx_packets; uint64 tx_bytes; uint64 tx_packets; } (32 bytes)
+type bpfValue struct {
+	rxBytes   uint64
+	rxPackets uint64
+	txBytes   uint64
+	txPackets uint64
+}
+
 // PollRecords iterates over the pinned BPF map and converts raw entries to SocketTrafficEntry.
 func (ast *AndroidSocketTracer) PollRecords(ctx context.Context) ([]SocketTrafficEntry, error) {
 	var records []SocketTrafficEntry
 
-	// Android BPF map (e.g., netd's total_stats_map)
-	// Key:   struct { uint32 uid; uint32 tag; } (8 bytes)
-	// Value: struct { uint64 rx_bytes; uint64 rx_packets; uint64 tx_bytes; uint64 tx_packets; } (32 bytes)
-	
 	iter := ast.bpfMap.Iterate()
-	var key []byte
-	var value []byte
+	var key bpfKey
+	var value bpfValue
 
 	for iter.Next(&key, &value) {
-		if len(key) < 8 || len(value) < 32 {
-			continue // Skip entries not matching expected ABI
-		}
-
 		entry := SocketTrafficEntry{
-			UID:     binary.LittleEndian.Uint32(key[0:4]),
-			BytesRx: binary.LittleEndian.Uint64(value[0:8]),
-			BytesTx: binary.LittleEndian.Uint64(value[16:24]),
+			UID:     key.uid,
+			BytesRx: value.rxBytes,
+			BytesTx: value.txBytes,
 		}
 		records = append(records, entry)
 	}

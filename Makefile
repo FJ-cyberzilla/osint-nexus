@@ -175,13 +175,17 @@ complexity: banner ## Analyze code complexity metrics using gocyclo
 	$(TIMER_END)
 
 run: ## Run engine dynamically (Usage: make run <args>)
-	@printf "$(C_PURPLE)$(GEAR) [EXEC]$(RESET) Spawning application instance...\n"
+	@printf "$(C_PURPLE)$(GEAR) [EXEC]$(RESET) Spawning application instance from binary...\n"
 	@args="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ -z "$$args" ]; then \
 		args="-d"; \
 	fi; \
 	printf "  $(C_GRAY)├─ Arguments:$(RESET) $(C_CYAN)$$args$(RESET)\n"
-	@go run $(CLI_TOOL) $$args
+	@if [ ! -f "$(BUILD_DIR)/nexus-cli" ]; then \
+		printf "  $(C_GRAY)└─ $(C_YELLOW)Binary not found. Building...$(RESET)\n"; \
+		$(MAKE) build; \
+	fi; \
+	$(BUILD_DIR)/nexus-cli $$args
 
 %:
 	@:
@@ -189,7 +193,8 @@ run: ## Run engine dynamically (Usage: make run <args>)
 diagnosis: banner ## Execute runtime diagnostics and environment checks
 	@$(TIMER_START); \
 	printf "$(C_PURPLE)$(GEAR) [DIAGNOSIS]$(RESET) Querying system state via CLI tool...\n"; \
-	if go run $(CLI_TOOL) status; then \
+	if [ ! -f "$(BUILD_DIR)/nexus-cli" ]; then $(MAKE) build; fi; \
+	if $(BUILD_DIR)/nexus-cli status; then \
 		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Diagnostics Completed$(RESET)]\n"; \
 	else \
 		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Diagnostics Error$(RESET)]\n"; \
@@ -197,7 +202,8 @@ diagnosis: banner ## Execute runtime diagnostics and environment checks
 	$(TIMER_END)
 
 about: banner ## Display module metadata and framework details
-	@go run $(CLI_TOOL)
+	@if [ ! -f "$(BUILD_DIR)/nexus-cli" ]; then $(MAKE) build; fi; \
+	$(BUILD_DIR)/nexus-cli
 
 version: ## Display clean semver string
 	@printf "$(VERSION)\n"
@@ -229,7 +235,7 @@ help: banner ## Display this interactive help interface
 			gsub("Run unit test suite with coverage reporting", "Run tests", desc); \
 			gsub("Run performance benchmarks", "Run benchmarks", desc); \
 			gsub("Analyze code complexity metrics using gocyclo", "Check complexity", desc); \
-			gsub("Run engine dynamically \\(Usage: make run <args>\\)", "Run engine", desc); \
+			gsub("Run engine dynamically \\(Usage: make run <args>\\)", "Run engine from binary", desc); \
 			gsub("Execute runtime diagnostics and environment checks", "Run diagnostics", desc); \
 			gsub("Display module metadata and framework details", "Show info", desc); \
 			gsub("Display clean semver string", "Show version", desc); \

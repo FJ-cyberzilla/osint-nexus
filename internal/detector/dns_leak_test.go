@@ -30,3 +30,19 @@ func TestDNSLeakProbe_Check(t *testing.T) {
 		t.Errorf("Expected IsLeaking to be true, got false")
 	}
 }
+
+func BenchmarkDNSLeakProbe_Check(b *testing.B) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	urls := []string{server.URL}
+	probe := NewDNSLeakProbe()
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = probe.Check(ctx, "http://test.com", urls)
+	}
+}

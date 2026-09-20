@@ -18,7 +18,7 @@ The project follows a strict Go directory structure:
 - `cmd/nexus-cli/`: CLI application entrypoint.
 - `pkg/osint/`: Publicly exportable client APIs.
 - `internal/`: Core components:
-    - `engine/`: Provider orchestrator (high-concurrency, lock-free aggregation).
+    - `engine/`: Provider orchestrator (high-concurrency, lock-free aggregation, generic task queuing).
     - `detector/`: Low-level protocol probes (DNS, TLS, HTTP2, Credential Leak).
     - `extractor/`: Modular, streaming-based parsing pipeline (Email, Social, Meta, PGP).
     - `captcha/`: Solver clients & TLS fingerprinting.
@@ -62,7 +62,7 @@ See `docs/CLI_COMMANDS.md` for full command documentation.
 ## Development
 
 - **Tech Stack**: Go 1.23+, `charmbracelet/lipgloss` (UI), `rotisserie/eris` (Structured Error Handling), `uber-go/mock` (Testing).
-- **Performance**: High-concurrency operations utilize lock-free result aggregation in `internal/engine`. The `internal/extractor` utilizes a streaming tokenizer for memory-efficient parsing.
+- **Performance**: High-concurrency operations utilize lock-free result aggregation and high-performance generic task queues in `internal/engine`. The `internal/extractor` utilizes a streaming tokenizer for memory-efficient parsing.
 
 ### Error Handling Pattern
 All operations that can fail must return `error` and wrap them using `eris` to maintain a traceable stack:

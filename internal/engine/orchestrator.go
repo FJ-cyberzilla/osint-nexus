@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -16,13 +15,6 @@ import (
 // Detector interface for post-scan analysis.
 type Detector interface {
 	Analyze(ctx context.Context, profiles []*types.IdentityProfile) (float64, error)
-}
-
-// profilePool manages a pool of IdentityProfile objects to reduce GC pressure.
-var profilePool = sync.Pool{
-	New: func() interface{} {
-		return &types.IdentityProfile{}
-	},
 }
 
 // Orchestrator coordinates concurrent provider execution.
