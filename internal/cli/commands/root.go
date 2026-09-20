@@ -5,58 +5,86 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/FJ-cyberzilla/osint-nexus/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
 	cfgFile      string
-	useDashboard bool
-	Version      = "1.0.0" // Set by linker
+	Version      = "1.0.0" 
 	styleTitle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205")).MarginBottom(1)
 	styleSuccess = lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true)
 	styleFailed  = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
-	styleTip     = lipgloss.NewStyle().Foreground(lipgloss.Color("141")) // Light purple
-	styleWarning = lipgloss.NewStyle().Foreground(lipgloss.Color("226")) // Yellow
-	styleInfo    = lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
+	styleWarning = lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+	styleTip     = lipgloss.NewStyle().Foreground(lipgloss.Color("141")) 
+	styleBox     = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("205")).
+			Padding(1, 2)
 )
 
-// RootCmd represents the base command when called without any subcommands
+// RootCmd represents the base command
 var RootCmd = &cobra.Command{
-	Use:   "nexus-cli [target]",
+	Use:   "nexus-cli",
 	Short: "OSINT-Nexus | Industrial Recon Engine",
-	Long:  `A high-accuracy, low-level OSINT and network reconnaissance engine.`,
-	Args:  cobra.MaximumNArgs(1),
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		initConfig()
-	},
 	Run: func(cmd *cobra.Command, args []string) {
-		target := ""
-		if len(args) > 0 {
-			target = args[0]
+		p := tea.NewProgram(initialDashboardModel())
+		if _, err := p.Run(); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
 		}
-		if useDashboard {
-			launchDashboard(target)
-			return
-		}
-		printAbout()
 	},
+}
+
+type dashboardModel struct {
+	textInput textinput.Model
+	err       error
+}
+
+func initialDashboardModel() dashboardModel {
+	ti := textinput.New()
+	ti.Placeholder = "Enter target username..."
+	ti.Focus()
+	return dashboardModel{textInput: ti}
+}
+
+func (m dashboardModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			return m, tea.Quit
+		case tea.KeyEnter:
+			target := m.textInput.Value()
+			if target == "" {
+				return m, nil
+			}
+			// Switch to the actual dashboard UI with target
+			return m, tea.Batch(tea.Quit) // Close input, then run scan in actual UI
+		}
+	}
+	m.textInput, cmd = m.textInput.Update(msg)
+	return m, cmd
+}
+
+func (m dashboardModel) View() string {
+	return styleBox.Render(
+		fmt.Sprintf("OSINT-Nexus | Command Center\n\n%s\n\n%s", 
+			styleTitle.Render("Enter target username to begin reconnaissance:"),
+			m.textInput.View()),
+	) + "\n"
 }
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./configs/config.yaml)")
-	RootCmd.PersistentFlags().BoolVarP(&useDashboard, "dashboard", "d", false, "Launch the interactive dashboard")
-}
-
-func launchDashboard(target string) {
-	p := tea.NewProgram(ui.NewModel(target), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error launching dashboard: %v\n", err)
-		os.Exit(1)
-	}
 }
 
 func initConfig() {
@@ -75,12 +103,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Printf("Using config file: %s\n", viper.ConfigFileUsed())
 	}
-}
-
-func printAbout() {
-	fmt.Println(styleTitle.Render("OSINT-Nexus | Industrial Recon Engine"))
-	fmt.Println(styleInfo.Render("A high-accuracy, low-level OSINT and network reconnaissance engine."))
-	fmt.Printf("%s Version: %s\n", styleTip.Render("?"), Version)
 }
 
 func Execute() {
