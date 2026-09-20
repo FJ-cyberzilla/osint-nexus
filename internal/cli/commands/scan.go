@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/engine"
-	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 	"github.com/FJ-cyberzilla/osint-nexus/pkg/osint"
 	"github.com/rotisserie/eris"
 	"github.com/spf13/cobra"
