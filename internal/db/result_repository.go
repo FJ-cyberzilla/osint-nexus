@@ -2,6 +2,8 @@ package db
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
@@ -32,21 +34,23 @@ func (r *ResultRepository) SaveBatch(query string, data ...[]interface{}) error 
 
 // Query retrieves scan results based on filters.
 func (r *ResultRepository) Query(username, platform string, limit int) ([]types.ScanResult, error) {
-	query := "SELECT id, username, platform, found, timestamp FROM results WHERE 1=1"
+	var queryBuilder strings.Builder
+	queryBuilder.WriteString("SELECT id, username, platform, found, timestamp FROM results WHERE 1=1")
+	
 	var params []interface{}
 
 	if username != "" {
-		query += " AND username = ?"
+		queryBuilder.WriteString(" AND username = ?")
 		params = append(params, username)
 	}
 	if platform != "" {
-		query += " AND platform = ?"
+		queryBuilder.WriteString(" AND platform = ?")
 		params = append(params, platform)
 	}
-	query += " ORDER BY timestamp DESC LIMIT ?"
+	queryBuilder.WriteString(" ORDER BY timestamp DESC LIMIT ?")
 	params = append(params, limit)
 
-	rows, err := r.engine.DB().Query(query, params...)
+	rows, err := r.engine.DB().Query(queryBuilder.String(), params...)
 	if err != nil {
 		return nil, fmt.Errorf("db: query: %w", err)
 	}
