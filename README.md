@@ -1,6 +1,6 @@
-# OSINT Nexus - Go Edition
+## OSINT Nexus
 
-_A high-performance reconnaissance engine by_ **[FJ-cyberzilla](https://github.com/FJ-cyberzilla)**
+* A high-performance reconnaissance engine
 
 > **[FJ™ Cybertronic Systems](https://github.com/FJ-cyberzilla)**
 
