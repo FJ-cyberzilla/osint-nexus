@@ -18,7 +18,7 @@ async def test_dns_leak_probe():
 
     results = await probe.run()
 
-    assert "http://leaktest.com" in results.keys()
+    assert "http://leaktest.com" in results
     assert results["http://leaktest.com"]["success"] is True
     assert results["http://leaktest.com"]["is_reachable"] is True
     mock_network.fetch.assert_called_once_with("http://leaktest.com", use_browser=False)
