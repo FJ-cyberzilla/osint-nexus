@@ -49,7 +49,7 @@ func (s *TLSStrategy) Extract(ctx context.Context, data types.FingerprintData) (
 			Name: s.Name(),
 			Data: types.FingerprintData{
 				Type:    "tls_ja3",
-				Payload: TLSOutputPayload{JA3Hash: "unknown", InferredDevice: "unknown"},
+				Payload: TLSOutputPayload{JA3Hash: types.UnknownLower, InferredDevice: types.UnknownLower},
 			},
 			Confidence: 0.0,
 		}, nil
@@ -57,11 +57,11 @@ func (s *TLSStrategy) Extract(ctx context.Context, data types.FingerprintData) (
 
 	deviceInfo := s.repo.GetSignature("ja3", payload.JA3Hash)
 	if deviceInfo == "" {
-		deviceInfo = "unknown"
+		deviceInfo = types.UnknownLower
 	}
 
 	confidence := 0.10
-	if deviceInfo != "unknown" {
+	if deviceInfo != types.UnknownLower {
 		confidence = 0.90
 	}
 

@@ -2,9 +2,9 @@ package db
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rotisserie/eris"
 )
 
 // PostgresEngine implements the database engine using PostgreSQL (pgxpool).
@@ -16,11 +16,11 @@ type PostgresEngine struct {
 func NewPostgresEngine(ctx context.Context, connString string) (*PostgresEngine, error) {
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
-		return nil, fmt.Errorf("db: create pgxpool: %w", err)
+		return nil, eris.Wrapf(err, "db: create pgxpool")
 	}
 
 	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("db: ping postgres: %w", err)
+		return nil, eris.Wrapf(err, "db: ping postgres")
 	}
 
 	return &PostgresEngine{

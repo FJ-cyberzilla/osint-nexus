@@ -42,10 +42,11 @@ OSINT-Nexus is a high-accuracy, low-level OSINT and network reconnaissance engin
 ### Immediate / Critical
 - [ ] Audit memory allocations in `internal/detector`.
 - [ ] Investigate lock contention in `internal/engine/orchestrator.go`.
-- [ ] Audit context propagation and error wrapping in `internal/detector`.
+- [x] Audit context propagation and error wrapping in `internal/detector`.
 
 ### Future / Maintenance
 - [ ] Expand test coverage for `internal/detector`.
 - [ ] Refactor CLI commands in `internal/cli/`.
 - [ ] Optimize `ResultRepository.Query` dynamic SQL construction.
 - [ ] Review `internal/extractor` and `internal/detector` for technical debt.
+- [x] Decomposition of Browser Logic (Environment dependency decoupling).

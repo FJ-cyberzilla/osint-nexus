@@ -25,10 +25,13 @@ type IceCandidate struct {
 	Protocol   string              `json:"protocol"`
 	Priority   uint32              `json:"priority"`
 	Address    net.IP              `json:"address"`
+	Hostname   string              `json:"hostname,omitempty"`
 	Port       int                 `json:"port"`
 	Type       WebRTCCandidateType `json:"type"`
 	RelAddr    net.IP              `json:"rel_addr,omitempty"`
 	RelPort    int                 `json:"rel_port,omitempty"`
+	TCPType    string              `json:"tcptype,omitempty"`
+	Attributes map[string]string   `json:"attributes,omitempty"`
 }
 
 // String returns the string representation of the candidate type.

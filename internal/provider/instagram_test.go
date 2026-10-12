@@ -5,9 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInstagramProvider_CheckUsername(t *testing.T) {
@@ -52,16 +49,26 @@ func TestInstagramProvider_CheckUsername(t *testing.T) {
 			profile, err := p.CheckUsername(context.Background(), tt.username)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
 				return
 			}
 
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			if tt.wantFound {
-				assert.NotNil(t, profile)
-				assert.Equal(t, tt.username, profile.Username)
+				if profile == nil {
+					t.Fatalf("expected profile, got nil")
+				}
+				if profile.Username != tt.username {
+					t.Errorf("expected username %s, got %s", tt.username, profile.Username)
+				}
 			} else {
-				assert.Nil(t, profile)
+				if profile != nil {
+					t.Errorf("expected nil profile, got %+v", profile)
+				}
 			}
 		})
 	}

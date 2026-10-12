@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/rotisserie/eris"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -19,7 +20,7 @@ func NewSQLiteEngine(dbPath string) (*SQLiteEngine, error) {
 	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_foreign_keys=ON", dbPath)
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("db: open sqlite: %w", err)
+		return nil, eris.Wrapf(err, "db: open sqlite")
 	}
 
 	// Configure connection pool for SQLite.
@@ -36,7 +37,7 @@ func NewSQLiteEngine(dbPath string) (*SQLiteEngine, error) {
 func (e *SQLiteEngine) Exec(query string, args ...interface{}) error {
 	_, err := e.db.Exec(query, args...)
 	if err != nil {
-		return fmt.Errorf("db: exec: %w", err)
+		return eris.Wrapf(err, "db: exec")
 	}
 	return nil
 }

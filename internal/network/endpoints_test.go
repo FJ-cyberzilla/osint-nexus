@@ -1,9 +1,8 @@
 package network
 
 import (
+	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNextDNSEndpoints(t *testing.T) {
@@ -11,11 +10,32 @@ func TestNewNextDNSEndpoints(t *testing.T) {
 	key := "8e55389efbdbcc98"
 	ep := NewNextDNSEndpoints(id, key)
 
-	assert.Equal(t, id, ep.ID)
-	assert.Equal(t, key, ep.Key)
-	assert.Equal(t, "b13e8b.dns.nextdns.io", ep.DoT)
-	assert.Equal(t, "https://dns.nextdns.io/b13e8b", ep.DoH)
-	assert.Equal(t, "https://link-ip.nextdns.io/b13e8b/8e55389efbdbcc98", ep.LinkIPURL)
-	assert.Contains(t, ep.IPv6, "2a07:a8c0::b13e8b")
-	assert.Contains(t, ep.IPv6, "2a07:a8c1::b13e8b")
+	if ep.ID != id {
+		t.Errorf("expected ID %s, got %s", id, ep.ID)
+	}
+	if ep.Key != key {
+		t.Errorf("expected Key %s, got %s", key, ep.Key)
+	}
+	if ep.DoT != "b13e8b.dns.nextdns.io" {
+		t.Errorf("expected DoT b13e8b.dns.nextdns.io, got %s", ep.DoT)
+	}
+	if ep.DoH != "https://dns.nextdns.io/b13e8b" {
+		t.Errorf("expected DoH https://dns.nextdns.io/b13e8b, got %s", ep.DoH)
+	}
+	if ep.LinkIPURL != "https://link-ip.nextdns.io/b13e8b/8e55389efbdbcc98" {
+		t.Errorf("expected LinkIPURL, got %s", ep.LinkIPURL)
+	}
+	foundIPv61 := false
+	foundIPv62 := false
+	for _, ip := range ep.IPv6 {
+		if strings.Contains(ip, "2a07:a8c0::b13e8b") {
+			foundIPv61 = true
+		}
+		if strings.Contains(ip, "2a07:a8c1::b13e8b") {
+			foundIPv62 = true
+		}
+	}
+	if !foundIPv61 || !foundIPv62 {
+		t.Errorf("expected IPv6 addresses containing 2a07:a8c0::b13e8b and 2a07:a8c1::b13e8b, got %v", ep.IPv6)
+	}
 }

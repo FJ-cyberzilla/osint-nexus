@@ -2,11 +2,11 @@ package db
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rotisserie/eris"
 )
 
 // ProfilingRepository handles database operations for target profiles and sessions.
@@ -34,7 +34,7 @@ func (r *ProfilingRepository) CreateProfile(ctx context.Context, profileID uuid.
 	query := `INSERT INTO profiles (profile_id, confidence_score, metadata) VALUES ($1, $2, $3)`
 	_, err := r.pool.Exec(ctx, query, profileID, confidence, metadata)
 	if err != nil {
-		return fmt.Errorf("db: create profile: %w", err)
+		return eris.Wrapf(err, "db: create profile")
 	}
 	return nil
 }
@@ -50,7 +50,7 @@ func (r *ProfilingRepository) GetProfile(ctx context.Context, profileID uuid.UUI
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("db: get profile: %w", err)
+		return nil, eris.Wrapf(err, "db: get profile")
 	}
 	return &p, nil
 }
@@ -71,7 +71,7 @@ func (r *ProfilingRepository) AddSession(ctx context.Context, s *Session) error 
 	          VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := r.pool.Exec(ctx, query, s.SessionID, s.ProfileID, s.DeviceType, s.IPSubnetHash, s.TLSFingerprintHash, s.StartTime)
 	if err != nil {
-		return fmt.Errorf("db: add session: %w", err)
+		return eris.Wrapf(err, "db: add session")
 	}
 	return nil
 }

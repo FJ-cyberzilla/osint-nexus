@@ -35,9 +35,9 @@ func TestTCPStrategy_Extract(t *testing.T) {
 			wantConf: 0.9,
 		},
 		{
-			name:     "Unknown",
+			name:     types.Unknown,
 			data:     types.FingerprintData{Type: "tcp_stack", Payload: TCPPayload{TTL: 100}},
-			wantOS:   "unknown",
+			wantOS:   types.UnknownLower,
 			wantConf: 0.0,
 		},
 	}

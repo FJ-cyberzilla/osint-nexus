@@ -3,33 +3,32 @@ package telemetry
 import (
 	"testing"
 	"unsafe"
-
-	"github.com/stretchr/testify/assert"
 )
 
-// Mocking the BPFMap is difficult due to unexported fields, 
-// so we focus on testing the logic that depends on the ABI.
-
 func TestPollRecords_ABICompatibility(t *testing.T) {
-	// Simulate the key/value pairs based on the defined bpfKey/bpfValue structs
-	// This ensures that if the structs change, this test will fail if it deviates
-	// from the expected 8/32 byte layout.
-	
 	key := bpfKey{uid: 1000, tag: 0}
 	val := bpfValue{rxBytes: 1024, rxPackets: 10, txBytes: 512, txPackets: 5}
 
-	// Manual check of struct sizes to ensure they match ABI
-	assert.Equal(t, uintptr(8), unsafe.Sizeof(key), "bpfKey size must be 8 bytes")
-	assert.Equal(t, uintptr(32), unsafe.Sizeof(val), "bpfValue size must be 32 bytes")
+	if unsafe.Sizeof(key) != 8 {
+		t.Errorf("bpfKey size must be 8 bytes, got %d", unsafe.Sizeof(key))
+	}
+	if unsafe.Sizeof(val) != 32 {
+		t.Errorf("bpfValue size must be 32 bytes, got %d", unsafe.Sizeof(val))
+	}
 
-	// Validate the logic in PollRecords by using a struct-based approach
 	entry := SocketTrafficEntry{
 		UID:     key.uid,
 		BytesRx: val.rxBytes,
 		BytesTx: val.txBytes,
 	}
 
-	assert.Equal(t, uint32(1000), entry.UID)
-	assert.Equal(t, uint64(1024), entry.BytesRx)
-	assert.Equal(t, uint64(512), entry.BytesTx)
+	if entry.UID != 1000 {
+		t.Errorf("expected UID 1000, got %d", entry.UID)
+	}
+	if entry.BytesRx != 1024 {
+		t.Errorf("expected BytesRx 1024, got %d", entry.BytesRx)
+	}
+	if entry.BytesTx != 512 {
+		t.Errorf("expected BytesTx 512, got %d", entry.BytesTx)
+	}
 }

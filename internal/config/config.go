@@ -19,7 +19,6 @@ const (
 // DeviceInference Constants
 const (
 	DeviceUnidentified   = "Unidentified"
-	DeviceUnknown        = "Unknown"
 	MinConfidence        = 0.0
 	MaxConfidence        = 1.0
 	RegexMatchConfidence = 0.8

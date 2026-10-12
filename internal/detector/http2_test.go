@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/http2"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/telemetry"
@@ -24,7 +23,9 @@ func TestHTTP2Detector_Probe(t *testing.T) {
 		NextProtos: []string{"h2", "http/1.1"},
 	}
 	err := http2.ConfigureServer(server.Config, &http2.Server{})
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("unexpected error configuring server: %v", err)
+	}
 	server.StartTLS()
 	defer server.Close()
 
@@ -36,15 +37,31 @@ func TestHTTP2Detector_Probe(t *testing.T) {
 
 	// Perform the probe
 	result, err := detector.Probe(context.Background(), server.URL)
-	assert.NoError(t, err)
-	assert.NotNil(t, result)
-	assert.Equal(t, server.URL, result.Target)
-	assert.Equal(t, "HTTP/2", result.Protocol)
-	assert.True(t, result.Supported)
+	if err != nil {
+		t.Fatalf("unexpected probe error: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("expected result, got nil")
+	}
+	if result.Target != server.URL {
+		t.Errorf("expected target %s, got %s", server.URL, result.Target)
+	}
+	if result.Protocol != "HTTP/2" {
+		t.Errorf("expected protocol HTTP/2, got %s", result.Protocol)
+	}
+	if !result.Supported {
+		t.Errorf("expected supported true, got false")
+	}
 
 	// Verify metrics
 	snapshot := metrics.Snapshot()
-	assert.Equal(t, uint64(1), snapshot.RequestsTotal)
-	assert.Equal(t, uint64(1), snapshot.RequestsSuccess)
-	assert.Equal(t, uint64(0), snapshot.RequestsFailed)
+	if snapshot.RequestsTotal != 1 {
+		t.Errorf("expected RequestsTotal 1, got %d", snapshot.RequestsTotal)
+	}
+	if snapshot.RequestsSuccess != 1 {
+		t.Errorf("expected RequestsSuccess 1, got %d", snapshot.RequestsSuccess)
+	}
+	if snapshot.RequestsFailed != 0 {
+		t.Errorf("expected RequestsFailed 0, got %d", snapshot.RequestsFailed)
+	}
 }

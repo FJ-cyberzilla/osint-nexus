@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestParseIceCandidate(t *testing.T) {
@@ -50,11 +49,26 @@ func TestParseIceCandidate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ParseIceCandidate(tt.raw)
 			if tt.wantErr {
-				assert.Error(t, err)
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
 				return
 			}
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got == nil {
+				t.Fatalf("expected candidate, got nil")
+			}
+			if got.Foundation != tt.want.Foundation ||
+				got.Component != tt.want.Component ||
+				got.Protocol != tt.want.Protocol ||
+				got.Priority != tt.want.Priority ||
+				!got.Address.Equal(tt.want.Address) ||
+				got.Port != tt.want.Port ||
+				got.Type != tt.want.Type {
+				t.Errorf("got %+v, want %+v", got, tt.want)
+			}
 		})
 	}
 }

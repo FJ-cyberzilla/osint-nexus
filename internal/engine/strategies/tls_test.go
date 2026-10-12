@@ -36,9 +36,9 @@ func TestTLSStrategy_Extract(t *testing.T) {
 			name: "Unknown JA3",
 			data: types.FingerprintData{
 				Type:    "tls_ja3",
-				Payload: TLSPayload{JA3Hash: "unknown"},
+				Payload: TLSPayload{JA3Hash: types.UnknownLower},
 			},
-			wantDevice: "unknown",
+			wantDevice: types.UnknownLower,
 			wantConf:   0.10,
 		},
 	}

@@ -57,8 +57,8 @@ func TestBrowserProbes(t *testing.T) {
 		if !ok {
 			t.Fatal("expected WebRTCPayload")
 		}
-		if payload.IceCandidates == "" {
-			t.Error("expected non-empty ice_candidates in payload")
+		if len(payload.Candidates) == 0 && len(payload.RawLines) == 0 {
+			t.Error("expected non-empty candidates or raw lines in payload")
 		}
 	})
 }

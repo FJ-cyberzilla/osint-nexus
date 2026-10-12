@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFingerbankClient_Interrogate(t *testing.T) {
@@ -28,8 +28,12 @@ func TestFingerbankClient_Interrogate(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodPost, r.Method)
-		assert.Contains(t, r.URL.Path, "/combinations/interrogate")
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if !strings.Contains(r.URL.Path, "/combinations/interrogate") {
+			t.Errorf("expected path to contain /combinations/interrogate, got %s", r.URL.Path)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedResponse)
@@ -42,8 +46,12 @@ func TestFingerbankClient_Interrogate(t *testing.T) {
 	}
 	result, err := client.Interrogate(context.Background(), payload)
 
-	require.NoError(t, err)
-	assert.Equal(t, &expectedResponse, result)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(&expectedResponse, result) {
+		t.Errorf("got %+v, want %+v", result, &expectedResponse)
+	}
 }
 
 func TestFingerbankClient_GetDevice(t *testing.T) {
@@ -56,8 +64,12 @@ func TestFingerbankClient_GetDevice(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodGet, r.Method)
-		assert.Contains(t, r.URL.Path, "/devices/123")
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if !strings.Contains(r.URL.Path, "/devices/123") {
+			t.Errorf("expected path to contain /devices/123, got %s", r.URL.Path)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedDevice)
@@ -67,8 +79,12 @@ func TestFingerbankClient_GetDevice(t *testing.T) {
 	client := NewFingerbankClientWithURL("test-api-key", server.URL)
 	result, err := client.GetDevice(context.Background(), "123")
 
-	require.NoError(t, err)
-	assert.Equal(t, &expectedDevice, result)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(&expectedDevice, result) {
+		t.Errorf("got %+v, want %+v", result, &expectedDevice)
+	}
 }
 
 func TestFingerbankClient_GetDeviceProfilingRules(t *testing.T) {
@@ -78,8 +94,12 @@ func TestFingerbankClient_GetDeviceProfilingRules(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodGet, r.Method)
-		assert.Contains(t, r.URL.Path, "/devices/123/profiling_rules")
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if !strings.Contains(r.URL.Path, "/devices/123/profiling_rules") {
+			t.Errorf("expected path to contain /devices/123/profiling_rules, got %s", r.URL.Path)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedRules)
@@ -89,8 +109,12 @@ func TestFingerbankClient_GetDeviceProfilingRules(t *testing.T) {
 	client := NewFingerbankClientWithURL("test-api-key", server.URL)
 	result, err := client.GetDeviceProfilingRules(context.Background(), "123")
 
-	require.NoError(t, err)
-	assert.Equal(t, expectedRules, result)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(expectedRules, result) {
+		t.Errorf("got %+v, want %+v", result, expectedRules)
+	}
 }
 
 func TestFingerbankClient_GetDeviceVulnerabilities(t *testing.T) {
@@ -100,8 +124,12 @@ func TestFingerbankClient_GetDeviceVulnerabilities(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodGet, r.Method)
-		assert.Contains(t, r.URL.Path, "/devices/123/vulnerabilities")
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if !strings.Contains(r.URL.Path, "/devices/123/vulnerabilities") {
+			t.Errorf("expected path to contain /devices/123/vulnerabilities, got %s", r.URL.Path)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(expectedVulnerabilities)
@@ -111,14 +139,22 @@ func TestFingerbankClient_GetDeviceVulnerabilities(t *testing.T) {
 	client := NewFingerbankClientWithURL("test-api-key", server.URL)
 	result, err := client.GetDeviceVulnerabilities(context.Background(), "123")
 
-	require.NoError(t, err)
-	assert.Equal(t, expectedVulnerabilities, result)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(expectedVulnerabilities, result) {
+		t.Errorf("got %+v, want %+v", result, expectedVulnerabilities)
+	}
 }
 
 func TestFingerbankClient_IsDeviceA(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodGet, r.Method)
-		assert.Contains(t, r.URL.Path, "/devices/123/is_a/456")
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if !strings.Contains(r.URL.Path, "/devices/123/is_a/456") {
+			t.Errorf("expected path to contain /devices/123/is_a/456, got %s", r.URL.Path)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(types.IsAResponse{IsA: true})
@@ -128,6 +164,10 @@ func TestFingerbankClient_IsDeviceA(t *testing.T) {
 	client := NewFingerbankClientWithURL("test-api-key", server.URL)
 	result, err := client.IsDeviceA(context.Background(), "123", "456")
 
-	require.NoError(t, err)
-	assert.True(t, result)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result {
+		t.Errorf("expected true, got false")
+	}
 }

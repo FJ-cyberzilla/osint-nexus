@@ -14,6 +14,11 @@ type FallbackPayload struct {
 // PayloadType returns the payload type identifier.
 func (p FallbackPayload) PayloadType() string { return "fallback" }
 
+// BrowserProbe defines the interface for browser-based probes.
+type BrowserProbe interface {
+	Probe(ctx context.Context, targetURL string) (types.FingerprintData, error)
+}
+
 // FallbackEngine orchestrates multiple probes and provides fallback logic.
 type FallbackEngine struct {
 	primaryProbes []BrowserProbe

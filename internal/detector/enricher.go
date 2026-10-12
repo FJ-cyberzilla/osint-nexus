@@ -1,7 +1,6 @@
 package detector
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/oschwald/maxminddb-golang"

@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"testing"
+
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 func TestShadowTracker(t *testing.T) {
@@ -21,9 +23,9 @@ func TestShadowTracker(t *testing.T) {
 	}
 
 	// Test: Get non-existent
-	_, exists = tracker.GetState(ctx, "unknown")
+	_, exists = tracker.GetState(ctx, types.UnknownLower)
 	if exists {
-		t.Error("Expected 'unknown' to not exist")
+		t.Errorf("Expected '%s' to not exist", types.UnknownLower)
 	}
 
 	// Test: Update state

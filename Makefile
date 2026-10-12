@@ -141,10 +141,10 @@ test: banner ## Run unit test suite with coverage reporting
 	printf "$(C_PURPLE)$(GEAR) [TEST]$(RESET) Running package tests...\n"; \
 	TEST_COUNT=$$(go test -list . ./... 2>/dev/null | grep -E '^Test' | wc -l | tr -d ' '); \
 	printf "  $(C_GRAY)├─ Executing $${TEST_COUNT} unit tests...$(RESET)\n"; \
-	if go test -v -timeout 30s -cover -coverprofile=coverage.out ./...; then \
-		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)All Tests Passed$(RESET)]\n"; \
+	if go test -v -timeout 30s -cover -coverprofile=coverage.out ./... 2>&1 | sed -e 's/PASS/$(C_GREEN)PASS$(RESET)/g' -e 's/FAIL/$(C_RED)FAIL$(RESET)/g' | tee /dev/tty | grep -q "$(C_RED)FAIL$(RESET)"; then \
+		printf "\n  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"; exit 1; \
 	else \
-		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"; \
+		printf "\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)All Tests Passed$(RESET)]\n"; \
 	fi; \
 	$(TIMER_END)
 

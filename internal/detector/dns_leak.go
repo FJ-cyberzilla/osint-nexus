@@ -2,6 +2,7 @@ package detector
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -47,8 +48,9 @@ func (p *DNSLeakProbe) Check(ctx context.Context, targetURL string, testEndpoint
 			results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: false, Error: eris.Wrap(err, "detector: execute leak check request").Error()})
 			continue
 		}
-		// Body must be drained and closed to reuse connections
-		_ = resp.Body.Close()
+		// Properly drain and close the body to allow connection reuse.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
 
 		// A successful reach indicates potential leak (if the endpoint is meant to test for it)
 		results = append(results, DNSLeakResult{URL: endpoint, IsLeaking: resp.StatusCode == http.StatusOK})

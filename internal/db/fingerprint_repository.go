@@ -2,9 +2,11 @@ package db
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"sync"
+
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // FingerprintRepository manages loading and querying fingerprint signatures from disk.
@@ -21,7 +23,7 @@ func NewFingerprintRepository(dataFilePath string) (*FingerprintRepository, erro
 		data:         make(map[string]map[string]string),
 	}
 	if err := repo.loadData(); err != nil {
-		return nil, fmt.Errorf("fingerprint_repository: load data: %w", err)
+		return nil, eris.Wrap(err, "fingerprint_repository: load data")
 	}
 	return repo, nil
 }
@@ -43,11 +45,11 @@ func (r *FingerprintRepository) loadData() error {
 			}
 			return nil
 		}
-		return fmt.Errorf("read file: %w", err)
+		return eris.Wrap(err, "read file")
 	}
 
 	if err := json.Unmarshal(data, &r.data); err != nil {
-		return fmt.Errorf("unmarshal json: %w", err)
+		return eris.Wrap(err, "unmarshal json")
 	}
 	return nil
 }
@@ -62,5 +64,5 @@ func (r *FingerprintRepository) GetSignature(category, signature string) string 
 			return val
 		}
 	}
-	return "unknown"
+	return types.UnknownLower
 }

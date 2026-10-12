@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // AparatProvider probes the Aparat video platform.
@@ -37,12 +38,12 @@ func (p *AparatProvider) CheckUsername(ctx context.Context, username string) (*t
 	url := fmt.Sprintf("https://www.aparat.com/%s", username)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("aparat: create request: %w", err)
+		return nil, eris.Wrapf(err, "aparat: create request")
 	}
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("aparat: execute request: %w", err)
+		return nil, eris.Wrapf(err, "aparat: execute request")
 	}
 	defer resp.Body.Close()
 

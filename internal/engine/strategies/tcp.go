@@ -65,7 +65,7 @@ func (s *TCPStrategy) detectOS(ttl int, options []string) (string, float64) {
 	case 255:
 		return "Network device (Cisco/Juniper)", 0.9
 	default:
-		return "unknown", 0.0
+		return types.UnknownLower, 0.0
 	}
 }
 

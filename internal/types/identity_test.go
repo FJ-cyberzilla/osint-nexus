@@ -54,4 +54,12 @@ func TestIdentityProfile_JSON(t *testing.T) {
 	if !decoded.Timeline.Events[0].Timestamp.Equal(now) {
 		t.Errorf("Timestamp mismatch: expected %v, got %v", now, decoded.Timeline.Events[0].Timestamp)
 	}
+
+	t.Run("InvalidJSON", func(t *testing.T) {
+		malformedJSON := []byte(`{"username": "test_user", "accounts": [`)
+		var decoded IdentityProfile
+		if err := json.Unmarshal(malformedJSON, &decoded); err == nil {
+			t.Errorf("Expected error for malformed JSON, but got nil")
+		}
+	})
 }

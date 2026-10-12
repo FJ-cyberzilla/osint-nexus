@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
 
 func TestFingerprintRepository_New(t *testing.T) {
@@ -73,8 +75,8 @@ func TestFingerprintRepository_GetSignature(t *testing.T) {
 		expected  string
 	}{
 		{"Valid", "ja3", "72a589da586844d7f0818ce684948eea", "Chrome 120 on Windows 10"},
-		{"UnknownCategory", "unknown", "hash", "unknown"},
-		{"UnknownSignature", "ja3", "unknown-hash", "unknown"},
+		{"UnknownCategory", types.UnknownLower, "hash", types.UnknownLower},
+		{"UnknownSignature", "ja3", "unknown-hash", types.UnknownLower},
 	}
 
 	for _, tt := range tests {

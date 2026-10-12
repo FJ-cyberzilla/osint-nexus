@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/rotisserie/eris"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 )
@@ -51,7 +52,7 @@ func NewStatisticalAnomalyDetector(windowSize int, threshold float64) *Statistic
 // Detect checks for anomalies in the telemetry event.
 func (d *StatisticalAnomalyDetector) Detect(event *types.TelemetryEvent) (*AnomalyAlert, error) {
 	if event == nil || event.Payload == nil {
-		return nil, fmt.Errorf("detector: invalid telemetry event")
+		return nil, eris.New("detector: invalid telemetry event")
 	}
 
 	d.mu.Lock()

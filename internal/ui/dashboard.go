@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -222,7 +223,7 @@ func NewModel(username string) Model {
 		graphNodes:  make([]string, 0),
 		graphEdges:  make([]string, 0),
 		dorks:       make([]DorkResult, 0),
-		timezone:    "Unknown",
+		timezone:    types.Unknown,
 		deviceFingerprint: DeviceFingerprint{},
 		anomalyAlerts: make([]AnomalyAlertMsg, 0),
 		stylometry:    make([]StylometryMsg, 0),
