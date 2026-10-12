@@ -20,6 +20,10 @@ func NewRegistryProvider() *RegistryProvider {
 	}
 }
 
+func init() {
+	Register(NewRegistryProvider())
+}
+
 // Name returns the provider name.
 func (p *RegistryProvider) Name() string {
 	return "RegistryProvider"

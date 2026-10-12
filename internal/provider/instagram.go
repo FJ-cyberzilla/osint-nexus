@@ -30,6 +30,10 @@ func NewInstagramProviderWithURL(baseURL string) *InstagramProvider {
 	}
 }
 
+func init() {
+	Register(NewInstagramProvider())
+}
+
 // Name returns the provider name.
 func (p *InstagramProvider) Name() string {
 	return "InstagramProvider"

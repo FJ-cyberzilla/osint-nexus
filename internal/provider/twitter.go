@@ -20,6 +20,10 @@ func NewTwitterProvider() *TwitterProvider {
 	}
 }
 
+func init() {
+	Register(NewTwitterProvider())
+}
+
 // Name returns the provider name.
 func (p *TwitterProvider) Name() string {
 	return "TwitterProvider"

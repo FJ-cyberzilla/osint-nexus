@@ -1,14 +1,18 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/FJ-cyberzilla/osint-nexus/internal/engine"
 	"github.com/FJ-cyberzilla/osint-nexus/internal/ui"
+	"github.com/FJ-cyberzilla/osint-nexus/pkg/osint"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -92,7 +96,77 @@ func (m dashboardModel) View() string {
 }
 
 func launchDashboard(target string) {
-	p := tea.NewProgram(ui.NewModel(target), tea.WithAltScreen())
+	model := ui.NewModel(target)
+	p := tea.NewProgram(model, tea.WithAltScreen())
+
+	go func() {
+		orchestrator, err := engine.NewOrchestrator(5, nil)
+		if err != nil {
+			p.Send(ui.ErrorMsg(err.Error()))
+			return
+		}
+
+		agent, err := osint.NewAgent(target)
+		if err != nil {
+			p.Send(ui.ErrorMsg(err.Error()))
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		p.Send(ui.StatusMsg("Starting OSINT reconnaissance..."))
+		session, err := agent.RunScan(ctx, orchestrator, nil, time.Second*15)
+		if err != nil {
+			p.Send(ui.ErrorMsg(err.Error()))
+			return
+		}
+
+		doneChan := make(chan struct{})
+		go func() {
+			defer close(doneChan)
+			for prog := range session.ProgressChan {
+				p.Send(ui.ProgressMsg(prog))
+				p.Send(ui.StatusMsg(fmt.Sprintf("Scanning... (%.0f%%)", prog*100)))
+			}
+		}()
+
+		go func() {
+			for profile := range session.ResultChan {
+				if profile != nil {
+					for _, acc := range profile.Accounts {
+						platform := "Unknown"
+						if acc.Platform != nil {
+							platform = *acc.Platform
+						}
+						p.Send(ui.ResultItem{
+							Platform: platform,
+							Found:    true,
+						})
+					}
+					for _, email := range profile.Emails {
+						p.Send(ui.EmailMsg(email))
+					}
+					for _, sm := range profile.SocialMedia {
+						p.Send(ui.SocialMediaMsg(sm))
+					}
+				}
+			}
+		}()
+
+		go func() {
+			for scanErr := range session.ErrChan {
+				if scanErr != nil {
+					p.Send(ui.ErrorMsg(scanErr.Error()))
+				}
+			}
+		}()
+
+		<-doneChan
+		p.Send(ui.StatusMsg("Scan completed."))
+		p.Send(ui.ProgressMsg(1.0))
+	}()
+
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error launching dashboard: %v\n", err)
 		os.Exit(1)
