@@ -1,10 +1,10 @@
 package graph
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // Graph manages the relationship between entities.
@@ -28,7 +28,7 @@ func (g *Graph) AddNode(node *types.GraphNode) error {
 	defer g.mu.Unlock()
 
 	if _, exists := g.nodes[node.ID]; exists {
-		return fmt.Errorf("graph: node with ID %s already exists", node.ID)
+		return eris.Errorf("graph: node with ID %s already exists", node.ID)
 	}
 
 	g.nodes[node.ID] = node
@@ -41,10 +41,10 @@ func (g *Graph) AddEdge(edge types.GraphEdge) error {
 	defer g.mu.Unlock()
 
 	if _, exists := g.nodes[edge.SourceID]; !exists {
-		return fmt.Errorf("graph: source node %s not found", edge.SourceID)
+		return eris.Errorf("graph: source node %s not found", edge.SourceID)
 	}
 	if _, exists := g.nodes[edge.TargetID]; !exists {
-		return fmt.Errorf("graph: target node %s not found", edge.TargetID)
+		return eris.Errorf("graph: target node %s not found", edge.TargetID)
 	}
 
 	g.edges = append(g.edges, edge)

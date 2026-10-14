@@ -2,6 +2,8 @@ package permutator
 
 import (
 	"fmt"
+
+	"github.com/rotisserie/eris"
 )
 
 // Permutator defines the contract for generating target variants.
@@ -22,7 +24,7 @@ func NewSimplePermutator(suffixes []string) *SimplePermutator {
 // Permute generates variations.
 func (p *SimplePermutator) Permute(target string) ([]string, error) {
 	if target == "" {
-		return nil, fmt.Errorf("permutator: empty target")
+		return nil, eris.New("permutator: empty target")
 	}
 	var results []string
 	for _, suffix := range p.suffixes {

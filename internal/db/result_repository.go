@@ -1,10 +1,10 @@
 package db
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // ResultRepository handles CRUD operations for scan results.
@@ -35,9 +35,10 @@ func (r *ResultRepository) SaveBatch(query string, data ...[]interface{}) error 
 // Query retrieves scan results based on filters.
 func (r *ResultRepository) Query(username, platform string, limit int) ([]types.ScanResult, error) {
 	var queryBuilder strings.Builder
+	queryBuilder.Grow(128)
 	queryBuilder.WriteString("SELECT id, username, platform, found, timestamp FROM results WHERE 1=1")
 	
-	var params []interface{}
+	params := make([]interface{}, 0, 3)
 
 	if username != "" {
 		queryBuilder.WriteString(" AND username = ?")
@@ -52,7 +53,7 @@ func (r *ResultRepository) Query(username, platform string, limit int) ([]types.
 
 	rows, err := r.engine.DB().Query(queryBuilder.String(), params...)
 	if err != nil {
-		return nil, fmt.Errorf("db: query: %w", err)
+		return nil, eris.Wrap(err, "db: query")
 	}
 	defer rows.Close()
 
@@ -61,7 +62,7 @@ func (r *ResultRepository) Query(username, platform string, limit int) ([]types.
 		var res types.ScanResult
 		var foundInt int
 		if err := rows.Scan(&res.ID, &res.Username, &res.Platform, &foundInt, &res.Timestamp); err != nil {
-			return nil, fmt.Errorf("db: scan: %w", err)
+			return nil, eris.Wrap(err, "db: scan")
 		}
 		res.Found = (foundInt == 1)
 		results = append(results, res)

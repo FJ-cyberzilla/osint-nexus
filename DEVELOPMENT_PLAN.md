@@ -35,18 +35,18 @@ OSINT-Nexus is a high-accuracy, low-level OSINT and network reconnaissance engin
 - [x] Cleanup Makefile to use compiled binary exclusively.
 
 ### Future Architectural Initiatives
-- [ ] Complete tool integration.
+- [x] Complete tool integration.
 
 ## Actionable Task Backlog
 
 ### Immediate / Critical
-- [ ] Audit memory allocations in `internal/detector`.
-- [ ] Investigate lock contention in `internal/engine/orchestrator.go`.
+- [x] Audit memory allocations in `internal/detector`.
+- [x] Investigate lock contention in `internal/engine/orchestrator.go`.
 - [x] Audit context propagation and error wrapping in `internal/detector`.
 
 ### Future / Maintenance
-- [ ] Expand test coverage for `internal/detector`.
-- [ ] Refactor CLI commands in `internal/cli/`.
-- [ ] Optimize `ResultRepository.Query` dynamic SQL construction.
-- [ ] Review `internal/extractor` and `internal/detector` for technical debt.
+- [x] Expand test coverage for `internal/detector`.
+- [x] Refactor CLI commands in `internal/cli/`.
+- [x] Optimize `ResultRepository.Query` dynamic SQL construction.
+- [x] Review `internal/extractor` and `internal/detector` for technical debt.
 - [x] Decomposition of Browser Logic (Environment dependency decoupling).

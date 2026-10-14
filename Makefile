@@ -1,6 +1,7 @@
 # ==============================================================================
 # OSINT-Nexus | Industrial Automation Framework
 # Author: FJ-cyberzilla
+# Version: 1.0.0
 # ==============================================================================
 
 APP_NAME    := OSINT-Nexus
@@ -9,63 +10,75 @@ AUTHOR      := FJ-cyberzilla
 CLI_TOOL    := ./cmd/nexus-cli/
 BUILD_DIR   := bin
 LOG_DIR     := logs
+BINARY      := $(BUILD_DIR)/nexus-cli
 
 # ------------------------------------------------------------------------------
-# Build Restriction Policy
+# Shell & Global Settings
 # ------------------------------------------------------------------------------
-# Strictly prohibited: Ad-hoc installation of tools/dependencies via Makefile.
-# All tasks must use only the pre-defined targets. See docs/BUILD_RESTRICTIONS.md.
+SHELL           := /bin/bash
+.SHELLFLAGS     := -eu -o pipefail -c
+.DEFAULT_GOAL   := all
+MAKEFLAGS       += --no-print-directory
+
+GIT_COMMIT      := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME      := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GO_FILES        := $(shell find . -name "*.go" -not -path "./vendor/*" 2>/dev/null | wc -l | tr -d ' ')
 
 # ------------------------------------------------------------------------------
 # Environment Detection
 # ------------------------------------------------------------------------------
-# Detect Apple platforms first to block them
-ifneq ($(shell uname | grep -i darwin),)
-  $(error "OSINT-Nexus does not support macOS or iOS. Please use Linux, WSL2, or a native terminal environment.")
+UNAME_S := $(shell uname -s 2>/dev/null || echo "unknown")
+UNAME_A := $(shell uname -a 2>/dev/null || echo "unknown")
+
+ifneq ($(findstring Darwin,$(UNAME_S)),)
+  $(error OSINT-Nexus does not support macOS or iOS. Use Linux, WSL2, or Termux.)
 endif
 
-# Detect other environments
 ifneq ($(wildcard /data/data/com.termux),)
   ENV_TYPE := TERMUX
-else ifneq ($(shell uname -a | grep -i microsoft),)
+else ifneq ($(findstring microsoft,$(UNAME_A)),)
   ENV_TYPE := WSL2
-else ifneq ($(OS),Windows_NT)
-  ENV_TYPE := LINUX
-else
+else ifeq ($(OS),Windows_NT)
   ENV_TYPE := POWERSHELL
+else
+  ENV_TYPE := LINUX
 endif
 
 # ------------------------------------------------------------------------------
-# Aesthetic Styling & Truecolor (24-bit RGB Gradients)
+# ANSI Aesthetic Palette
 # ------------------------------------------------------------------------------
-BOLD        := \033[1m
-RESET       := \033[0m
-VINTAGE_ORANGE := \033[38;2;230;140;70m
+ESC          := $(shell printf '\033')
+RESET        := $(ESC)[0m
+BOLD         := $(ESC)[1m
+DIM          := $(ESC)[2m
 
-# Truecolor RGB Gradient for Banner
-G1          := \033[38;2;147;51;234m
-G2          := \033[38;2;126;34;206m
-G3          := \033[38;2;50;50;200m
-G4          := \033[38;2;50;150;250m
-G5          := \033[38;2;100;200;250m
-G6          := \033[38;2;150;220;250m
+# Banner gradient stops (Pagga wordmark, 6 rows, 6 colors L→R)
+B1           := $(ESC)[38;2;168;85;247m   # purple
+B2           := $(ESC)[38;2;139;92;246m   # violet
+B3           := $(ESC)[38;2;99;102;241m   # indigo
+B4           := $(ESC)[38;2;59;130;246m   # blue
+B5           := $(ESC)[38;2;56;189;248m   # sky
+B6           := $(ESC)[38;2;125;211;252m  # light
 
-# Status Palette
-C_PURPLE    := \033[38;2;168;85;247m
-C_CYAN      := \033[38;2;56;189;248m
-C_GREEN     := \033[38;2;74;222;128m
-C_RED       := \033[38;2;248;113;113m
-C_YELLOW    := \033[38;2;250;204;21m
-C_GRAY      := \033[38;2;100;116;139m
-VINTAGE_GREEN := \033[38;2;130;180;130m
-VINTAGE_YELLOW := \033[38;2;210;180;100m
-VINTAGE_GRADIENT_ORANGE := \033[38;2;230;140;70m
+# Status palette
+C_PURPLE     := $(ESC)[38;2;168;85;247m
+C_CYAN       := $(ESC)[38;2;56;189;248m
+C_GREEN      := $(ESC)[38;2;74;222;128m
+C_RED        := $(ESC)[38;2;248;113;113m
+C_YELLOW     := $(ESC)[38;2;250;204;21m
+C_GRAY       := $(ESC)[38;2;100;116;139m
+C_WHITE      := $(ESC)[38;2;226;232;240m
 
-# Environment Specific Colors
-C_TERMUX := \033[38;2;255;165;0m
-C_WSL2   := \033[38;2;0;100;0m
-C_LINUX  := \033[38;2;0;0;255m
-C_POWERSHELL := \033[38;2;255;255;0m
+# Vintage accents
+V_GREEN      := $(ESC)[38;2;130;180;130m
+V_YELLOW     := $(ESC)[38;2;210;180;100m
+V_ORANGE     := $(ESC)[38;2;230;140;70m
+
+# Environment colors
+C_TERMUX     := $(ESC)[38;2;255;165;0m
+C_WSL2       := $(ESC)[38;2;0;200;120m
+C_LINUX      := $(ESC)[38;2;100;150;255m
+C_POWERSHELL := $(ESC)[38;2;255;220;0m
 
 ifeq ($(ENV_TYPE),TERMUX)
   ENV_COLOR := $(C_TERMUX)
@@ -77,170 +90,288 @@ else
   ENV_COLOR := $(C_POWERSHELL)
 endif
 
-# Status Symbols
-CHECK       := $(C_GREEN)✔$(RESET)
-CROSS       := $(C_RED)✘$(RESET)
-WARN        := $(C_YELLOW)⚡$(RESET)
-GEAR        := $(C_PURPLE)⚙$(RESET)
+# Symbols
+CHECK        := $(C_GREEN)✔$(RESET)
+CROSS        := $(C_RED)✘$(RESET)
+WARN_SYM     := $(C_YELLOW)⚡$(RESET)
+GEAR         := $(C_PURPLE)⚙$(RESET)
+BRANCH       := $(C_GRAY)├─$(RESET)
+END_BRANCH   := $(C_GRAY)└─$(RESET)
 
-# Helper Macro for Timed Execution
-TIMER_START = START_TIME=$$(date +%s%N)
-TIMER_END   = ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
-              printf "  $(C_GRAY)└─ Completed in $${ELAPSED}ms$(RESET)\n\n"
+# ------------------------------------------------------------------------------
+# Helper Macros
+# ------------------------------------------------------------------------------
+define TIMER_START
+START_TIME=$$(date +%s%N);
+endef
 
-.PHONY: all banner build lint test bench complexity run diagnosis about version clean help
+define TIMER_END
+ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
+printf "  $(C_GRAY)└─ $(DIM)Completed in $${ELAPSED}ms$(RESET)\n\n"
+endef
 
-# Default Target
+# ------------------------------------------------------------------------------
+# Phony Targets
+# ------------------------------------------------------------------------------
+.PHONY: all banner build install lint test coverage bench complexity run \
+        diagnosis about version clean clean-all help fmt vet check stats
+
+# ==============================================================================
+# Default
+# ==============================================================================
 all: banner help
 
+# ==============================================================================
+# Banner — Pagga wordmark with 6-stop gradient
+# ==============================================================================
 banner:
-	@printf "$(VINTAGE_GREEN)$(BOLD)-----------------------------------$(RESET)\n"
-	@printf "$(G1)$(BOLD)OSINT-Nexus :: Framework v$(VERSION)$(RESET)\n"
-	@printf "$(VINTAGE_GREEN)$(BOLD)FJ™ Cybertronic Systems$(RESET)\n"
-	@printf "$(VINTAGE_GREEN)$(BOLD)-----------------------------------$(RESET)\n"
-	@printf "$(ENV_COLOR)$(BOLD)Environment: $(ENV_TYPE)$(RESET)\n\n"
+	@printf '\n'
+	@printf '%s\n' '$(B1)░█▀█░█▀▀░▀█▀░█▀█░▀█▀░░░░░█▀█░█▀▀░█░█░█░█░█▀▀░░$(RESET)'
+	@printf '%s\n' '$(B2)░█░█░▀▀█░░█░░█░█░░█░░▄▄▄░█░█░█▀▀░▄▀▄░█░█░▀▀█░░$(RESET)'
+	@printf '%s\n' '$(B3)░▀▀▀░▀▀▀░▀▀▀░▀░▀░░▀░░░░░░▀░▀░▀▀▀░▀░▀░▀▀▀░▀▀▀░░$(RESET)'
+	@printf '\n'
+	@printf '%s\n' '  $(C_WHITE)$(BOLD)Industrial Automation Framework$(RESET)  $(C_GRAY)·$(RESET)  $(V_YELLOW)FJ Cybertronic Systems$(RESET)'
+	@printf '%s\n' '  $(C_GRAY)env$(RESET) $(ENV_COLOR)$(BOLD)$(ENV_TYPE)$(RESET)  $(C_GRAY)·$(RESET)  $(C_GRAY)commit$(RESET) $(C_CYAN)$(GIT_COMMIT)$(RESET)  $(C_GRAY)·$(RESET)  $(C_GRAY)v$(VERSION)$(RESET)'
+	@printf '\n'
 
+# ==============================================================================
+# Install
+# ==============================================================================
 install: build ## Prepare environment and build the application
-	@printf "$(C_PURPLE)$(GEAR) [INSTALL]$(RESET) Initializing environment...\n"
+	@printf "$(GEAR) $(C_PURPLE)$(BOLD)[INSTALL]$(RESET) Initializing environment...\n"
 	@mkdir -p $(LOG_DIR)
-	@printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Environment Initialized$(RESET)]\n\n"
+	@printf "  $(BRANCH) $(C_WHITE)Creating log directory $(C_CYAN)$(LOG_DIR)/$(RESET)\n"
+	@printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Environment Ready$(RESET)]\n\n"
 
+# ==============================================================================
+# Build
+# ==============================================================================
 build: banner ## Build engine binary with embedded build metadata
-	@START_TIME=$$(date +%s%N); \
-	printf "$(C_PURPLE)$(GEAR) [BUILD]$(RESET) Compiling core engine target...\n"; \
+	@$(TIMER_START) \
+	printf "$(GEAR) $(C_PURPLE)$(BOLD)[BUILD]$(RESET) Compiling core engine target...\n"; \
+	printf "  $(BRANCH) $(C_WHITE)Processing $(C_CYAN)$(GO_FILES)$(RESET) source files\n"; \
 	mkdir -p $(BUILD_DIR); \
-	GO_FILES=$$(find . -name "*.go" | wc -l | tr -d ' '); \
-	printf "  $(C_GRAY)├─ Processing $${GO_FILES} source files...$(RESET)\n"; \
-	if go build -ldflags "-X main.Version=$(VERSION) -X main.Author=$(AUTHOR)" -o $(BUILD_DIR)/nexus-cli $(CLI_TOOL); then \
-		printf "  $(C_GRAY)├─ Target binary:$(RESET) $(C_CYAN)$(BUILD_DIR)/nexus-cli$(RESET)\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Build Succeeded$(RESET)]\n"; \
-		rm -f main nexus; \
+	if go build \
+		-ldflags "-s -w -X main.Version=$(VERSION) -X main.Author=$(AUTHOR) -X main.Commit=$(GIT_COMMIT) -X main.BuildTime=$(BUILD_TIME)" \
+		-o $(BINARY) $(CLI_TOOL); then \
+		rm -f main nexus 2>/dev/null || true; \
+		SIZE=$$(du -h $(BINARY) | cut -f1); \
+		printf "  $(BRANCH) $(C_WHITE)Target binary: $(C_CYAN)$(BINARY)$(RESET) $(C_GRAY)($${SIZE})$(RESET)\n"; \
+		printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Build Succeeded$(RESET)]\n"; \
 	else \
-		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Build Failed$(RESET)]\n"; exit 1; \
+		printf "  $(END_BRANCH) Status: [$(CROSS) $(C_RED)Build Failed$(RESET)]\n"; \
+		exit 1; \
 	fi; \
-	ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
-	printf "  $(C_GRAY)└─ Completed in $${ELAPSED}ms$(RESET)\n\n"
+	$(TIMER_END)
 
+# ==============================================================================
+# Lint
+# ==============================================================================
 lint: banner ## Run static code analysis and quality checks
-	@$(TIMER_START); \
-	printf "$(C_PURPLE)$(GEAR) [LINT]$(RESET) Executing static analysis suite...\n"; \
-	if [ "$(ENV_TYPE)" != "TERMUX" ]; then \
-		LINT_FILES=$$(find . -name "*.go" -not -path "./vendor/*" | wc -l | tr -d ' '); \
-		printf "  $(C_GRAY)├─ Scanning $${LINT_FILES} source files...$(RESET)\n"; \
+	@$(TIMER_START) \
+	printf "$(GEAR) $(C_PURPLE)$(BOLD)[LINT]$(RESET) Executing static analysis suite...\n"; \
+	if [ "$(ENV_TYPE)" = "TERMUX" ]; then \
+		printf "  $(END_BRANCH) $(WARN_SYM) $(C_YELLOW)Skipped on Termux$(RESET)\n"; \
+	elif ! command -v golangci-lint >/dev/null 2>&1; then \
+		printf "  $(END_BRANCH) Status: [$(CROSS) $(C_RED)golangci-lint not installed$(RESET)]\n"; \
+		exit 1; \
+	else \
+		printf "  $(BRANCH) $(C_WHITE)Scanning $(C_CYAN)$(GO_FILES)$(RESET) source files\n"; \
 		if golangci-lint run ./...; then \
-			printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Lint Clean$(RESET)]\n"; \
+			printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Lint Clean$(RESET)]\n"; \
 		else \
-			printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Lint Issues Detected$(RESET)]\n"; \
+			printf "  $(END_BRANCH) Status: [$(CROSS) $(C_RED)Lint Issues Detected$(RESET)]\n"; \
+			exit 1; \
 		fi; \
-	else \
-		printf "  $(C_YELLOW)$(WARN) Termux environment detected. Skipping golangci-lint to prevent crash.$(RESET)\n"; \
 	fi; \
 	$(TIMER_END)
 
+# ==============================================================================
+# Tests — animated spinner + streaming results
+# ==============================================================================
 test: banner ## Run unit test suite with coverage reporting
-	@$(TIMER_START); \
-	printf "$(C_PURPLE)$(GEAR) [TEST]$(RESET) Running package tests...\n"; \
-	TEST_COUNT=$$(go test -list . ./... 2>/dev/null | grep -E '^Test' | wc -l | tr -d ' '); \
-	printf "  $(C_GRAY)├─ Executing $${TEST_COUNT} unit tests...$(RESET)\n"; \
-	if go test -v -timeout 30s -cover -coverprofile=coverage.out ./... 2>&1 | sed -e 's/PASS/$(C_GREEN)PASS$(RESET)/g' -e 's/FAIL/$(C_RED)FAIL$(RESET)/g' | tee /dev/tty | grep -q "$(C_RED)FAIL$(RESET)"; then \
-		printf "\n  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"; exit 1; \
+	@START_TIME=$$(date +%s%N); \
+	printf "$(GEAR) $(C_PURPLE)$(BOLD)[TEST]$(RESET) Running package tests...\n"; \
+	TEST_COUNT=$$(go test -list '.*' ./... 2>/dev/null | grep -c '^Test' || echo 0); \
+	printf "  $(BRANCH) $(C_WHITE)Executing $(C_CYAN)$${TEST_COUNT}$(RESET) unit tests\n\n"; \
+	LOG=$$(mktemp); \
+	( \
+		sp='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'; \
+		i=0; \
+		while kill -0 $$$$ 2>/dev/null; do \
+			c=$${sp:$$((i % 10)):1}; \
+			printf "\r  $(C_PURPLE)%s$(RESET)  $(C_GRAY)Testing$(RESET)  $(C_CYAN)%d$(RESET) $(C_GRAY)packages...$(RESET)" "$$c" "$$i"; \
+			i=$$((i+1)); \
+			sleep 0.08; \
+			[ $$i -ge 500 ] && break; \
+		done; \
+	) & \
+	SPIN_PID=$$!; \
+	set +e; \
+	go test -v -timeout 60s -cover -coverprofile=coverage.out ./... > "$$LOG" 2>&1; \
+	TEST_EXIT=$$?; \
+	set -e; \
+	kill $$SPIN_PID 2>/dev/null || true; \
+	wait $$SPIN_PID 2>/dev/null || true; \
+	printf "\r%-70s\r" ""; \
+	sed \
+		-e 's/^=== RUN/$(C_GRAY)=== RUN$(RESET)/' \
+		-e 's/--- PASS/$(C_GREEN)--- PASS$(RESET)/' \
+		-e 's/--- FAIL/$(C_RED)--- FAIL$(RESET)/' \
+		-e 's/^PASS/$(C_GREEN)PASS$(RESET)/' \
+		-e 's/^FAIL/$(C_RED)FAIL$(RESET)/' \
+		-e 's/^ok  /$(C_GREEN)ok  $(RESET)/' \
+		"$$LOG"; \
+	rm -f "$$LOG"; \
+	printf "\n"; \
+	if [ $$TEST_EXIT -eq 0 ]; then \
+		printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)All Tests Passed$(RESET)]\n"; \
 	else \
-		printf "\n  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)All Tests Passed$(RESET)]\n"; \
+		printf "  $(END_BRANCH) Status: [$(CROSS) $(C_RED)Test Failures Encountered$(RESET)]\n"; \
+		exit 1; \
 	fi; \
 	$(TIMER_END)
 
+# ==============================================================================
+# Coverage
+# ==============================================================================
+coverage: test ## Generate HTML coverage report
+	@printf "\n$(GEAR) $(C_PURPLE)$(BOLD)[COVERAGE]$(RESET) Generating coverage report...\n"
+	@go tool cover -html=coverage.out -o coverage.html
+	@printf "  $(END_BRANCH) Report: $(C_CYAN)coverage.html$(RESET)\n\n"
+
+# ==============================================================================
+# Benchmarks
+# ==============================================================================
 bench: banner ## Run performance benchmarks
-	@$(TIMER_START); \
-	printf "$(C_PURPLE)$(GEAR) [BENCH]$(RESET) Running performance benchmarks...\n"; \
-	if go test -bench=. -benchmem ./...; then \
-		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Benchmarks Passed$(RESET)]\n"; \
+	@$(TIMER_START) \
+	printf "$(GEAR) $(C_PURPLE)$(BOLD)[BENCH]$(RESET) Running performance benchmarks...\n\n"; \
+	if go test -bench=. -benchmem -run=^$$ ./...; then \
+		printf "\n  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Benchmarks Complete$(RESET)]\n"; \
 	else \
-		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Benchmark Failures Encountered$(RESET)]\n"; \
+		printf "\n  $(END_BRANCH) Status: [$(CROSS) $(C_RED)Benchmark Failures$(RESET)]\n"; \
+		exit 1; \
 	fi; \
 	$(TIMER_END)
 
-
-complexity: banner ## Analyze code complexity metrics using gocyclo
-	@$(TIMER_START); \
-	printf "$(C_PURPLE)$(GEAR) [METRICS]$(RESET) Calculating cyclomatic complexity...\n"; \
-	if [ "$(ENV_TYPE)" != "TERMUX" ]; then \
-		printf "  $(C_GRAY)├─ Threshold Limit:$(RESET) $(C_YELLOW)> 15$(RESET)\n"; \
+# ==============================================================================
+# Complexity
+# ==============================================================================
+complexity: banner ## Analyze cyclomatic complexity using gocyclo
+	@$(TIMER_START) \
+	printf "$(GEAR) $(C_PURPLE)$(BOLD)[METRICS]$(RESET) Calculating cyclomatic complexity...\n"; \
+	if [ "$(ENV_TYPE)" = "TERMUX" ]; then \
+		printf "  $(END_BRANCH) $(WARN_SYM) $(C_YELLOW)Skipped on Termux$(RESET)\n"; \
+	elif ! command -v gocyclo >/dev/null 2>&1; then \
+		printf "  $(END_BRANCH) $(CROSS) $(C_RED)gocyclo not installed$(RESET)\n"; \
+		exit 1; \
+	else \
+		printf "  $(BRANCH) $(C_WHITE)Threshold: $(C_YELLOW)> 15$(RESET)\n"; \
 		if gocyclo -over 15 .; then \
-			printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Complexity Low$(RESET)]\n"; \
+			printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Complexity Acceptable$(RESET)]\n"; \
 		else \
-			printf "  $(C_GRAY)└─ Status:$(RESET) [$(WARN) $(C_YELLOW)High Complexity Functions Found$(RESET)]\n"; \
+			printf "  $(END_BRANCH) Status: [$(WARN_SYM) $(C_YELLOW)High Complexity Functions Found$(RESET)]\n"; \
 		fi; \
-	else \
-		printf "  $(C_YELLOW)$(WARN) Termux environment detected. Skipping gocyclo to prevent crash.$(RESET)\n"; \
 	fi; \
 	$(TIMER_END)
 
-run: ## Run engine dynamically (Usage: make run <args>)
-	@printf "$(C_PURPLE)$(GEAR) [EXEC]$(RESET) Spawning application instance from binary...\n"
-	@args="$(filter-out $@,$(MAKECMDGOALS))"; \
-	if [ -z "$$args" ]; then \
-		args="-d"; \
-	fi; \
-	printf "  $(C_GRAY)├─ Arguments:$(RESET) $(C_CYAN)$$args$(RESET)\n"
-	@if [ ! -f "$(BUILD_DIR)/nexus-cli" ]; then \
-		printf "  $(C_GRAY)└─ $(C_YELLOW)Binary not found. Building...$(RESET)\n"; \
+# ==============================================================================
+# Format & Vet
+# ==============================================================================
+fmt: banner ## Format all Go source files
+	@printf "$(GEAR) $(C_PURPLE)$(BOLD)[FMT]$(RESET) Formatting source files...\n"
+	@go fmt ./...
+	@printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Formatted$(RESET)]\n\n"
+
+vet: banner ## Run go vet static analysis
+	@printf "$(GEAR) $(C_PURPLE)$(BOLD)[VET]$(RESET) Running go vet...\n"
+	@if go vet ./...; then \
+		printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Vet Clean$(RESET)]\n\n"; \
+	else \
+		printf "  $(END_BRANCH) Status: [$(CROSS) $(C_RED)Vet Issues$(RESET)]\n\n"; \
+		exit 1; \
+	fi
+
+check: fmt vet lint test ## Run all quality gates
+
+# ==============================================================================
+# Run
+# ==============================================================================
+run: ## Run engine (Usage: make run ARGS="-d")
+	@printf "$(GEAR) $(C_PURPLE)$(BOLD)[EXEC]$(RESET) Spawning application instance...\n"
+	@if [ ! -f "$(BINARY)" ]; then \
+		printf "  $(WARN_SYM) $(C_YELLOW)Binary missing — building first$(RESET)\n"; \
 		$(MAKE) build; \
-	fi; \
-	$(BUILD_DIR)/nexus-cli $$args
+	fi
+	@args="$(ARGS)"; \
+	if [ -z "$$args" ]; then args="-d"; fi; \
+	printf "  $(BRANCH) $(C_WHITE)Arguments: $(C_CYAN)$$args$(RESET)\n"; \
+	printf "  $(END_BRANCH) $(C_GRAY)──────────────────────────────$(RESET)\n\n"; \
+	$(BINARY) $$args
 
-%:
-	@:
-
-diagnosis: banner ## Execute runtime diagnostics and environment checks
-	@$(TIMER_START); \
-	printf "$(C_PURPLE)$(GEAR) [DIAGNOSIS]$(RESET) Querying system state via CLI tool...\n"; \
-	if [ ! -f "$(BUILD_DIR)/nexus-cli" ]; then $(MAKE) build; fi; \
-	if $(BUILD_DIR)/nexus-cli status; then \
-		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)Diagnostics Completed$(RESET)]\n"; \
+# ==============================================================================
+# Diagnosis
+# ==============================================================================
+diagnosis: banner ## Execute runtime diagnostics
+	@$(TIMER_START) \
+	printf "$(GEAR) $(C_PURPLE)$(BOLD)[DIAGNOSIS]$(RESET) Querying system state...\n"; \
+	if [ ! -f "$(BINARY)" ]; then $(MAKE) build; fi; \
+	if $(BINARY) status; then \
+		printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Diagnostics Completed$(RESET)]\n"; \
 	else \
-		printf "  $(C_GRAY)└─ Status:$(RESET) [$(CROSS) $(C_RED)Diagnostics Error$(RESET)]\n"; \
+		printf "  $(END_BRANCH) Status: [$(CROSS) $(C_RED)Diagnostics Error$(RESET)]\n"; \
+		exit 1; \
 	fi; \
 	$(TIMER_END)
 
-about: banner ## Display module metadata and framework details
-	@if [ ! -f "$(BUILD_DIR)/nexus-cli" ]; then $(MAKE) build; fi; \
-	$(BUILD_DIR)/nexus-cli
+# ==============================================================================
+# About / Version / Stats
+# ==============================================================================
+about: banner ## Display module metadata
+	@if [ ! -f "$(BINARY)" ]; then $(MAKE) build; fi
+	@$(BINARY)
 
 version: ## Display clean semver string
-	@printf "$(VERSION)\n"
+	@printf "$(C_CYAN)$(VERSION)$(RESET)\n"
 
-clean: banner ## Purge binary artifacts, logs, build output, and module caches
-	@START_TIME=$$(date +%s%N); \
-	printf "$(C_PURPLE)$(GEAR) [CLEAN]$(RESET) Purging generated artifacts...\n"; \
-	if [ -d "$(BUILD_DIR)" ]; then rm -rf $(BUILD_DIR); printf "  $(C_GRAY)├─ Removed target directory:$(RESET) $(C_CYAN)$(BUILD_DIR)/$(RESET)\n"; fi; \
-	if [ -d "$(LOG_DIR)" ]; then rm -rf $(LOG_DIR)/*; printf "  $(C_GRAY)├─ Flushed log directory:$(RESET) $(C_CYAN)$(LOG_DIR)/$(RESET)\n"; fi; \
-	rm -f data/nexus.db data/nexus.db-shm data/nexus.db-wal; \
-	printf "  $(C_GRAY)├─ Flushed database artifacts from data/$(RESET)\n"; \
-	TMP_COUNT=$$(find . -name "*.tmp" -type f | wc -l | tr -d ' '); \
-	find . -name "*.tmp" -type f -delete; \
-	printf "  $(C_GRAY)├─ Deleted $${TMP_COUNT} temporary files$(RESET)\n"; \
-	go clean -cache -modcache -testcache; \
-	printf "  $(C_GRAY)├─ Purged Go build and module caches$(RESET)\n"; \
-	ELAPSED=$$(( ($$(date +%s%N) - $$START_TIME) / 1000000 )); \
-	printf "  $(C_GRAY)└─ Status:$(RESET) [$(CHECK) $(C_GREEN)System Cleaned ($${ELAPSED}ms)$(RESET)]\n"
+stats: ## Show project statistics
+	@printf "$(GEAR) $(C_PURPLE)$(BOLD)[STATS]$(RESET) Project statistics\n"
+	@printf "  $(BRANCH) Go files:  $(C_CYAN)$(GO_FILES)$(RESET)\n"
+	@printf "  $(BRANCH) LOC:       $(C_CYAN)$$(find . -name '*.go' -not -path './vendor/*' -exec cat {} + | wc -l)$(RESET)\n"
+	@printf "  $(BRANCH) Packages:  $(C_CYAN)$$(go list ./... 2>/dev/null | wc -l)$(RESET)\n"
+	@printf "  $(END_BRANCH) Commit:  $(C_CYAN)$(GIT_COMMIT)$(RESET)\n\n"
 
-help: banner ## Display this interactive help interface
-	@printf "$(C_CYAN)$(BOLD)Available Command Targets:$(RESET)\n\n"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| sort \
-		| awk 'BEGIN {FS = ":.*?## "}; { \
-			desc = $$2; \
-			gsub("Execute primary build and validation suite", "Run all", desc); \
-			gsub("Build engine binary with embedded build metadata", "Build engine", desc); \
-			gsub("Run static code analysis and quality checks", "Run lint", desc); \
-			gsub("Run unit test suite with coverage reporting", "Run tests", desc); \
-			gsub("Run performance benchmarks", "Run benchmarks", desc); \
-			gsub("Analyze code complexity metrics using gocyclo", "Check complexity", desc); \
-			gsub("Run engine dynamically \\(Usage: make run <args>\\)", "Run engine from binary", desc); \
-			gsub("Execute runtime diagnostics and environment checks", "Run diagnostics", desc); \
-			gsub("Display module metadata and framework details", "Show info", desc); \
-			gsub("Display clean semver string", "Show version", desc); \
-			gsub("Purge binary artifacts, logs, build output, and module caches", "Clean project", desc); \
-			gsub("Display this interactive help interface", "Show help", desc); \
-			printf "  $(VINTAGE_YELLOW)%-16s$(RESET) $(C_GRAY)│$(RESET) $(VINTAGE_GRADIENT_ORANGE)%s$(RESET)\n", $$1, desc \
-		}'
-	@printf "\n"
+# ==============================================================================
+# Clean
+# ==============================================================================
+clean: banner ## Purge build artifacts, logs, temp files
+	@$(TIMER_START) \
+	printf "$(GEAR) $(C_PURPLE)$(BOLD)[CLEAN]$(RESET) Purging generated artifacts...\n"; \
+	if [ -d "$(BUILD_DIR)" ]; then rm -rf $(BUILD_DIR); printf "  $(BRANCH) Removed $(C_CYAN)$(BUILD_DIR)/$(RESET)\n"; fi; \
+	if [ -d "$(LOG_DIR)" ]; then rm -rf $(LOG_DIR)/*; printf "  $(BRANCH) Flushed $(C_CYAN)$(LOG_DIR)/$(RESET)\n"; fi; \
+	rm -f data/nexus.db data/nexus.db-shm data/nexus.db-wal coverage.out coverage.html; \
+	printf "  $(BRANCH) Removed database & coverage artifacts\n"; \
+	TMP_COUNT=$$(find . -name "*.tmp" -type f 2>/dev/null | wc -l | tr -d ' '); \
+	find . -name "*.tmp" -type f -delete 2>/dev/null || true; \
+	printf "  $(BRANCH) Deleted $(C_CYAN)$${TMP_COUNT}$(RESET) temp files\n"; \
+	printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Workspace Cleaned$(RESET)]\n"; \
+	$(TIMER_END)
+
+clean-all: clean ## Purge artifacts AND Go caches
+	@printf "$(GEAR) $(C_PURPLE)$(BOLD)[CLEAN-ALL]$(RESET) Purging Go caches...\n"
+	@go clean -cache -modcache -testcache
+	@printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Caches Purged$(RESET)]\n\n"
+
+# ==============================================================================
+# Help — clean single-accent layout
+# ==============================================================================
+help: ## Display this help interface
+	@printf '\n'
+	@printf '  $(C_GRAY)Available command targets$(RESET)\n\n'
+	@awk 'BEGIN {FS = ":.*?## "} \
+		/^[a-zA-Z_-]+:.*?## .*$$/ { \
+			printf "  $(C_CYAN)%-16s$(RESET) $(C_GRAY)%s$(RESET)\n", $$1, $$2 \
+		}' $(MAKEFILE_LIST)
+	@printf '\n'
+	@printf '  $(C_GRAY)Usage$(RESET)  $(C_WHITE)make$(RESET) $(C_CYAN)<target>$(RESET)\n'
+	@printf '         $(C_WHITE)make$(RESET) $(C_CYAN)run$(RESET) $(C_GRAY)ARGS="-d --verbose"$(RESET)\n\n'

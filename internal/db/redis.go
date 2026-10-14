@@ -2,9 +2,9 @@ package db
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/rotisserie/eris"
 )
 
 // RedisClient wraps the redis client.
@@ -22,7 +22,7 @@ func NewRedisClient(addr string, password string, db int) (*RedisClient, error) 
 
 	// Verify connection.
 	if err := client.Ping(context.Background()).Err(); err != nil {
-		return nil, fmt.Errorf("db: ping redis: %w", err)
+		return nil, eris.Wrap(err, "db: ping redis")
 	}
 
 	return &RedisClient{

@@ -46,20 +46,20 @@ func (e *SQLiteEngine) Exec(query string, args ...interface{}) error {
 func (e *SQLiteEngine) ExecMany(query string, argsList ...[]interface{}) error {
 	tx, err := e.db.Begin()
 	if err != nil {
-		return fmt.Errorf("db: begin tx: %w", err)
+		return eris.Wrap(err, "db: begin tx")
 	}
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("db: prepare: %w", err)
+		return eris.Wrap(err, "db: prepare")
 	}
 	defer stmt.Close()
 
 	for _, args := range argsList {
 		_, err := stmt.Exec(args...)
 		if err != nil {
-			return fmt.Errorf("db: exec many: %w", err)
+			return eris.Wrap(err, "db: exec many")
 		}
 	}
 
@@ -75,13 +75,13 @@ func (e *SQLiteEngine) QueryRow(query string, args ...interface{}) *sql.Row {
 func (e *SQLiteEngine) QueryAll(query string, args ...interface{}) ([]map[string]interface{}, error) {
 	rows, err := e.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("db: query: %w", err)
+		return nil, eris.Wrap(err, "db: query")
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		return nil, fmt.Errorf("db: columns: %w", err)
+		return nil, eris.Wrap(err, "db: columns")
 	}
 
 	var results []map[string]interface{}
@@ -92,7 +92,7 @@ func (e *SQLiteEngine) QueryAll(query string, args ...interface{}) ([]map[string
 			valuePtrs[i] = &values[i]
 		}
 		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, fmt.Errorf("db: scan: %w", err)
+			return nil, eris.Wrap(err, "db: scan")
 		}
 		row := make(map[string]interface{})
 		for i, col := range columns {

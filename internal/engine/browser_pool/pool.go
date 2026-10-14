@@ -2,10 +2,10 @@ package browser_pool
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/chromedp/chromedp"
+	"github.com/rotisserie/eris"
 )
 
 // BrowserInstance wraps a context and cancel function for a managed browser session.
@@ -68,7 +68,7 @@ func (p *Pool) createInstance(ctx context.Context) (*BrowserInstance, error) {
 	if err := chromedp.Run(browserCtx); err != nil {
 		cancel()
 		browserCancel()
-		return nil, fmt.Errorf("browser_pool: create instance: %w", err)
+		return nil, eris.Wrap(err, "browser_pool: create instance")
 	}
 
 	return &BrowserInstance{

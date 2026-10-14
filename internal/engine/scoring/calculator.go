@@ -1,8 +1,8 @@
 package scoring
 
 import (
-	"fmt"
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // ConfidenceCalculator computes the confidence score of an identification.
@@ -16,7 +16,7 @@ func NewConfidenceCalculator() *ConfidenceCalculator {
 // Calculate computes the confidence score based on the provided factors.
 func (cc *ConfidenceCalculator) Calculate(factors []types.Factor) (*types.ConfidenceResult, error) {
 	if len(factors) == 0 {
-		return nil, fmt.Errorf("scoring: no factors provided")
+		return nil, eris.New("scoring: no factors provided")
 	}
 
 	score := 1.0
@@ -31,7 +31,7 @@ func (cc *ConfidenceCalculator) Calculate(factors []types.Factor) (*types.Confid
 			score += factor.Value
 			details[factor.Name] = factor.Value
 		default:
-			return nil, fmt.Errorf("scoring: unknown factor type: %s", factor.FactorType)
+			return nil, eris.Errorf("scoring: unknown factor type: %s", factor.FactorType)
 		}
 	}
 

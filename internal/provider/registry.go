@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // RegistryProvider probes public username registries.
@@ -36,7 +37,7 @@ func (p *RegistryProvider) CheckUsername(ctx context.Context, username string) (
 
 	resp, err := PerformRequest(ctx, p.client, url)
 	if err != nil {
-		return nil, fmt.Errorf("provider: registry request failed: %w", err)
+		return nil, eris.Wrap(err, "provider: registry request failed")
 	}
 	defer resp.Body.Close()
 
@@ -45,7 +46,7 @@ func (p *RegistryProvider) CheckUsername(ctx context.Context, username string) (
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("provider: registry unexpected status: %d", resp.StatusCode)
+		return nil, eris.Errorf("provider: registry unexpected status: %d", resp.StatusCode)
 	}
 
 	usernameCopy := username

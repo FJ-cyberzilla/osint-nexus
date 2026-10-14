@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // InstagramProvider probes the Instagram platform.
@@ -45,7 +46,7 @@ func (p *InstagramProvider) CheckUsername(ctx context.Context, username string) 
 
 	resp, err := PerformRequest(ctx, p.client, url)
 	if err != nil {
-		return nil, fmt.Errorf("provider: instagram request failed: %w", err)
+		return nil, eris.Wrap(err, "provider: instagram request failed")
 	}
 	defer resp.Body.Close()
 
@@ -54,7 +55,7 @@ func (p *InstagramProvider) CheckUsername(ctx context.Context, username string) 
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("provider: instagram unexpected status: %d", resp.StatusCode)
+		return nil, eris.Errorf("provider: instagram unexpected status: %d", resp.StatusCode)
 	}
 
 	usernameCopy := username

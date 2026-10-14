@@ -2,9 +2,10 @@ package telemetry
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
+
+	"github.com/rotisserie/eris"
 )
 
 // DefaultNetworkTimeout is the default duration for network probes.
@@ -37,7 +38,7 @@ func (np *NetworkProbe) Check(ctx context.Context) error {
 
 	conn, err := dialer.DialContext(ctx, "tcp", np.target)
 	if err != nil {
-		return fmt.Errorf("telemetry: network probe to %s: %w", np.target, err)
+		return eris.Wrapf(err, "telemetry: network probe to %s", np.target)
 	}
 	defer conn.Close()
 
@@ -59,7 +60,7 @@ func NewReadinessProbe(checkFunc func(ctx context.Context) error) *ReadinessProb
 // Check executes the readiness check function.
 func (rp *ReadinessProbe) Check(ctx context.Context) error {
 	if err := rp.checkFunc(ctx); err != nil {
-		return fmt.Errorf("telemetry: readiness probe: %w", err)
+		return eris.Wrap(err, "telemetry: readiness probe")
 	}
 	return nil
 }

@@ -1,11 +1,11 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/rotisserie/eris"
 	"github.com/spf13/viper"
 )
 
@@ -131,7 +131,7 @@ func LoadConfig(configPath string) (*Config, error) {
 
 		var cfg Config
 		if err := v.Unmarshal(&cfg); err != nil {
-			loadErr = fmt.Errorf("config: unmarshal: %w", err)
+			loadErr = eris.Wrap(err, "config: unmarshal")
 			return
 		}
 
@@ -143,7 +143,7 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, loadErr
 	}
 	if instance == nil {
-		return nil, fmt.Errorf("config: instance not initialized")
+		return nil, eris.New("config: instance not initialized")
 	}
 
 	return instance, nil

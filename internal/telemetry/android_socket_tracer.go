@@ -2,10 +2,10 @@ package telemetry
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/cilium/ebpf"
+	"github.com/rotisserie/eris"
 )
 
 // AndroidSocketTracer implements EBPFMonitor by reading system-provided BPF maps.
@@ -22,7 +22,7 @@ func NewAndroidSocketTracer(mapPath string) (*AndroidSocketTracer, error) {
 
 	bpfMap, err := ebpf.LoadPinnedMap(mapPath, nil)
 	if err != nil {
-		return nil, fmt.Errorf("telemetry: failed to load pinned BPF map: %w", err)
+		return nil, eris.Wrap(err, "telemetry: failed to load pinned BPF map")
 	}
 
 	return &AndroidSocketTracer{
@@ -63,7 +63,7 @@ func (ast *AndroidSocketTracer) PollRecords(ctx context.Context) ([]SocketTraffi
 	}
 
 	if err := iter.Err(); err != nil {
-		return nil, fmt.Errorf("telemetry: failed to iterate BPF map: %w", err)
+		return nil, eris.Wrap(err, "telemetry: failed to iterate BPF map")
 	}
 
 	return records, nil

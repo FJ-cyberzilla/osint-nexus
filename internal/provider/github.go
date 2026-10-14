@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // GitHubProvider probes GitHub.
@@ -37,12 +38,12 @@ func (p *GitHubProvider) CheckUsername(ctx context.Context, username string) (*t
 	url := fmt.Sprintf("https://github.com/%s", username)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("github: create request: %w", err)
+		return nil, eris.Wrap(err, "github: create request")
 	}
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("github: execute request: %w", err)
+		return nil, eris.Wrap(err, "github: execute request")
 	}
 	defer resp.Body.Close()
 
