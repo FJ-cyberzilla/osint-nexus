@@ -93,6 +93,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 	g.SetLimit(o.maxConcurrency)
 
 	var completed atomic.Int64
+	var failedCount atomic.Int64
 
 	for i, p := range providers {
 		i := i // capture loop variable
@@ -109,7 +110,10 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 			progressChan <- float64(completed.Load()) / float64(len(providers))
 
 			if err != nil {
-				return eris.Wrapf(err, "engine: provider %s failed", p.Name())
+				failedCount.Add(1)
+				// Non-fatal provider error (e.g. offline/network failure)
+				errChan <- eris.Wrapf(err, "engine: provider %s failed", p.Name())
+				return nil
 			}
 
 			if res != nil {

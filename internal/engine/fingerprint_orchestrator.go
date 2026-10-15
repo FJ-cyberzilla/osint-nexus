@@ -2,11 +2,11 @@ package engine
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/engine/strategies"
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // FingerprintOrchestrator manages the execution of fingerprinting strategies.
@@ -48,7 +48,7 @@ func (fo *FingerprintOrchestrator) Run(ctx context.Context, data types.Fingerpri
 
 			res, err := strat.Extract(ctx, data)
 			if err != nil {
-				errChan <- fmt.Errorf("engine: strategy %s failed: %w", strat.Name(), err)
+				errChan <- eris.Wrapf(err, "engine: strategy %s failed", strat.Name())
 				return
 			}
 			resultChan <- res
@@ -65,7 +65,7 @@ func (fo *FingerprintOrchestrator) Run(ctx context.Context, data types.Fingerpri
 	}
 
 	if len(errChan) > 0 {
-		return results, fmt.Errorf("engine: one or more strategies failed")
+		return results, eris.New("engine: one or more strategies failed")
 	}
 
 	return results, nil

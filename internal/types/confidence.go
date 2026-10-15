@@ -1,7 +1,7 @@
 package types
 
 import (
-	"fmt"
+	"github.com/rotisserie/eris"
 )
 
 type FactorType string
@@ -19,16 +19,16 @@ type Factor struct {
 
 func NewFactor(name string, value float64, factorType FactorType) (*Factor, error) {
 	if name == "" {
-		return nil, fmt.Errorf("types: factor name must be a non-empty string")
+		return nil, eris.New("types: factor name must be a non-empty string")
 	}
 	if factorType != FactorTypeMultiplier && factorType != FactorTypeBonus {
-		return nil, fmt.Errorf("types: factor type must be 'multiplier' or 'bonus'")
+		return nil, eris.New("types: factor type must be 'multiplier' or 'bonus'")
 	}
 	if factorType == FactorTypeMultiplier && (value < 0.0 || value > 1.0) {
-		return nil, fmt.Errorf("types: multiplier '%s' must be between 0.0 and 1.0, got %f", name, value)
+		return nil, eris.Errorf("types: multiplier '%s' must be between 0.0 and 1.0, got %f", name, value)
 	}
 	if factorType == FactorTypeBonus && value < 0.0 {
-		return nil, fmt.Errorf("types: bonus '%s' must be non-negative, got %f", name, value)
+		return nil, eris.Errorf("types: bonus '%s' must be non-negative, got %f", name, value)
 	}
 
 	return &Factor{

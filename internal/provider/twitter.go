@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // TwitterProvider probes the Twitter/X platform.
@@ -35,7 +36,7 @@ func (p *TwitterProvider) CheckUsername(ctx context.Context, username string) (*
 
 	resp, err := PerformRequest(ctx, p.client, url)
 	if err != nil {
-		return nil, fmt.Errorf("provider: twitter request failed: %w", err)
+		return nil, eris.Wrap(err, "provider: twitter request failed")
 	}
 	defer resp.Body.Close()
 
@@ -44,7 +45,7 @@ func (p *TwitterProvider) CheckUsername(ctx context.Context, username string) (*
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("provider: twitter unexpected status: %d", resp.StatusCode)
+		return nil, eris.Errorf("provider: twitter unexpected status: %d", resp.StatusCode)
 	}
 
 	usernameCopy := username

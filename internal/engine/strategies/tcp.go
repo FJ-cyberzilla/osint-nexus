@@ -2,9 +2,9 @@ package strategies
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 )
 
 // TCPPayload implements types.FingerprintPayload for TCP fingerprinting.
@@ -41,7 +41,7 @@ func (s *TCPStrategy) Name() string {
 func (s *TCPStrategy) Extract(ctx context.Context, data types.FingerprintData) (types.FingerprintResult, error) {
 	payload, ok := data.Payload.(TCPPayload)
 	if !ok {
-		return types.FingerprintResult{}, fmt.Errorf("tcp_strategy: invalid payload type: %T", data.Payload)
+		return types.FingerprintResult{}, eris.Errorf("tcp_strategy: invalid payload type: %T", data.Payload)
 	}
 
 	inferredOS, confidence := s.detectOS(payload.TTL, payload.TCPOptions)

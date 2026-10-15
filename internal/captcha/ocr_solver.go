@@ -2,7 +2,8 @@ package captcha
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/rotisserie/eris"
 )
 
 // OcrSolver implements a solver that simulates OCR-based challenge extraction.
@@ -20,12 +21,12 @@ func NewOcrSolver(apiKey string) *OcrSolver {
 // Solve simulates an API call to an OCR service.
 func (s *OcrSolver) Solve(ctx context.Context, challengeType ChallengeType, challengeData []byte) (string, error) {
 	if s.apiKey == "" {
-		return "", fmt.Errorf("captcha: OcrSolver: missing API key")
+		return "", eris.New("captcha: OcrSolver: missing API key")
 	}
 
 	// Simulate the OCR processing logic
 	if len(challengeData) == 0 {
-		return "", fmt.Errorf("captcha: OcrSolver: challenge data is empty")
+		return "", eris.New("captcha: OcrSolver: challenge data is empty")
 	}
 
 	return "SIMULATED_OCR_SOLUTION", nil

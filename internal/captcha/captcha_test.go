@@ -14,6 +14,19 @@ func (ts *TestSolver) Solve(ctx context.Context, challengeType ChallengeType, ch
 	return ts.solveFunc(ctx, challengeType, challengeData)
 }
 
+// NoOpSolver provides a non-functional solver implementation for testing and development.
+type NoOpSolver struct{}
+
+// NewNoOpSolver creates a new NoOpSolver instance.
+func NewNoOpSolver() *NoOpSolver {
+	return &NoOpSolver{}
+}
+
+// Solve returns an error indicating that this solver is not functional, as it is designed for no-operation scenarios.
+func (s *NoOpSolver) Solve(ctx context.Context, challengeType ChallengeType, challengeData []byte) (string, error) {
+	return "", errors.New("captcha: NoOpSolver: cannot solve challenges, this is a no-operation implementation")
+}
+
 func TestChainedSolver_Solve(t *testing.T) {
 	ctx := context.Background()
 	challengeType := TypeTurnstile

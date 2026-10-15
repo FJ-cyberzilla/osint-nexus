@@ -2,11 +2,11 @@ package extractor
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 	"golang.org/x/net/html"
 )
 
@@ -20,7 +20,7 @@ type EmailExtractor struct {
 func NewEmailExtractor() (*EmailExtractor, error) {
 	pattern, err := regexp.Compile(`(?i)[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}`)
 	if err != nil {
-		return nil, fmt.Errorf("email_extractor: compile regex: %w", err)
+		return nil, eris.Wrap(err, "email_extractor: compile regex")
 	}
 
 	return &EmailExtractor{

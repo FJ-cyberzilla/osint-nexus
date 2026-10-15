@@ -2,10 +2,10 @@ package extractor
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 	"golang.org/x/net/html"
 )
 
@@ -58,7 +58,7 @@ func (o *Orchestrator) Extract(ctx context.Context, rawHTML string) (*types.Extr
 	for _, e := range o.extractors {
 		pivots, err := e.Extract(ctx, rawHTML)
 		if err != nil {
-			return nil, fmt.Errorf("extractor_orchestrator: %w", err)
+			return nil, eris.Wrap(err, "extractor_orchestrator")
 		}
 
 		if pivots.Emails != nil {

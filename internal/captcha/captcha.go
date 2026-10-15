@@ -2,7 +2,8 @@ package captcha
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/rotisserie/eris"
 )
 
 // ChallengeType defines the supported CAPTCHA challenge types.
@@ -46,7 +47,7 @@ func (cs *ChainedSolver) Solve(ctx context.Context, challengeType ChallengeType,
 		if err == nil {
 			return solution, nil
 		}
-		lastErr = fmt.Errorf("captcha: chained solver: %w", err)
+		lastErr = eris.Wrap(err, "captcha: chained solver")
 	}
-	return "", fmt.Errorf("captcha: all solvers failed: %w", lastErr)
+	return "", eris.Wrap(lastErr, "captcha: all solvers failed")
 }

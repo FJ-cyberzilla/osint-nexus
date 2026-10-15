@@ -2,10 +2,10 @@ package extractor
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 
 	"github.com/FJ-cyberzilla/osint-nexus/internal/types"
+	"github.com/rotisserie/eris"
 	"golang.org/x/net/html"
 )
 
@@ -19,7 +19,7 @@ type PGPExtractor struct {
 func NewPGPExtractor() (*PGPExtractor, error) {
 	pgpPattern, err := regexp.Compile(`-----BEGIN PGP PUBLIC KEY BLOCK-----[\s\S]*?-----END PGP PUBLIC KEY BLOCK-----`)
 	if err != nil {
-		return nil, fmt.Errorf("pgp_extractor: compile pgp regex: %w", err)
+		return nil, eris.Wrap(err, "pgp_extractor: compile pgp regex")
 	}
 
 	return &PGPExtractor{

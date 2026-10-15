@@ -2,6 +2,8 @@ package dorking
 
 import (
 	"fmt"
+
+	"github.com/rotisserie/eris"
 )
 
 // Dorker defines the contract for generating search queries.
@@ -22,7 +24,7 @@ func NewSimpleDorker(baseQuery string) *SimpleDorker {
 // Generate creates a search query.
 func (d *SimpleDorker) Generate(target string, context string) (string, error) {
 	if target == "" || context == "" {
-		return "", fmt.Errorf("dorking: empty target or context")
+		return "", eris.New("dorking: empty target or context")
 	}
 	return fmt.Sprintf("%s site:%s", context, target), nil
 }
