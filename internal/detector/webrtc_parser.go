@@ -118,11 +118,11 @@ func ParseIceCandidate(raw string) (*types.IceCandidate, error) {
 			candidate.RelAddr = relIP
 
 		case "rport":
-			relPort, err := parseUintRange(val, 1, 65535)
+			relPort, err := parseIntRange(val, 1, 65535)
 			if err != nil {
 				return nil, eris.Wrapf(err, "detector: rport %q", val)
 			}
-			candidate.RelPort = int(relPort)
+			candidate.RelPort = relPort
 
 		case "tcptype":
 			// RFC 6544: active | passive | so
