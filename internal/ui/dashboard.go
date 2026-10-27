@@ -151,6 +151,12 @@ type SessionMsg struct {
 	DeviceType string
 	LastSeen   time.Time
 }
+type OmniMasqueradeStatusMsg struct {
+	ActiveWorkers int
+	EngineState   string
+	TotalScanned  int
+	Confidence    float64
+}
 type ErrorMsg string
 type AdvisoryMsg string
 
@@ -183,6 +189,7 @@ type Model struct {
 	graphEdges    []string
 	fingerbank    *FingerbankFindingsMsg
 	fbStatus      *FingerbankStatusMsg
+	omniStatus    *OmniMasqueradeStatusMsg
 	dorks         []DorkResult
 	timezone      string
 	deviceFingerprint DeviceFingerprint
@@ -410,6 +417,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case DorkMsg:
 		m.dorks = append(m.dorks, msg...)
 		m = m.notifyTab("Results")
+	case OmniMasqueradeStatusMsg:
+		m.omniStatus = &msg
 	case TimezoneMsg:
 		m.timezone = string(msg)
 	case DeviceFingerprintMsg:

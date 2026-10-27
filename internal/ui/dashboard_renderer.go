@@ -6,84 +6,60 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// ViewRendering encapsulates tab-specific rendering logic.
+// ViewRendering encapsulates tab-specific rendering logic using modular panels and system status components.
 type ViewRendering struct {
 	m *Model
 }
 
 func (vr *ViewRendering) Overview() []string {
-	metrics := []string{
-		fmt.Sprintf("Device Type: %s", vr.m.deviceType),
-		fmt.Sprintf("Timezone:    %s", vr.m.timezone),
-		fmt.Sprintf("Fingerprint: JA3:%s | JA3S:%s", vr.m.deviceFingerprint.JA3, vr.m.deviceFingerprint.JA3S),
-		fmt.Sprintf("User Agent:  %s", vr.m.deviceFingerprint.UserAgent),
-		fmt.Sprintf("Telemetry:   [Sockets: %d | Sent: %d B | Rcvd: %d B | Lat: %v]",
-			vr.m.telemetry.ActiveSockets, vr.m.telemetry.BytesSent, vr.m.telemetry.BytesReceived, vr.m.telemetry.Latency),
-	}
-	if len(vr.m.sessions) > 0 {
-		metrics = append(metrics, fmt.Sprintf("Active Sessions: %d", len(vr.m.sessions)))
-	}
-	if vr.m.fbStatus != nil {
-		status := "Disabled"
-		if vr.m.fbStatus.Enabled {
-			status = fmt.Sprintf("Enabled (Usage: %d)", vr.m.fbStatus.Usage)
-		}
-		metrics = append(metrics, fmt.Sprintf("Fingerbank:  %s", status))
-	}
-	content := []string{styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, metrics...))}
+	var content []string
 
-	if len(vr.m.sessions) > 0 {
-		var sessionBody []string
-		sessionBody = append(sessionBody, "Session Inventory:")
-		for _, s := range vr.m.sessions {
-			sessionBody = append(sessionBody, fmt.Sprintf("  * %s [%s] (Last Seen: %s)", 
-				s.SessionID[:8], s.DeviceType, s.LastSeen.Format("15:04:05")))
-		}
-		content = append(content, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, sessionBody...)))
-	}
+	// 1. Omni-Masquerade Central Nerve Status Panel
+	content = append(content, RenderOmniMasqueradePanel(vr.m))
 
-	if len(vr.m.relations) > 0 || len(vr.m.shadowUsers) > 0 || len(vr.m.emails) > 0 || len(vr.m.socialMedia) > 0 || len(vr.m.dorks) > 0 {
-		var infoBody []string
-		if len(vr.m.relations) > 0 {
-			infoBody = append(infoBody, "Relations:")
-			for _, r := range vr.m.relations {
-				infoBody = append(infoBody, "  * "+r)
-			}
-		}
-		if len(vr.m.emails) > 0 {
-			infoBody = append(infoBody, "Emails:")
-			for _, e := range vr.m.emails {
-				infoBody = append(infoBody, "  * "+e)
-			}
-		}
-		if len(vr.m.socialMedia) > 0 {
-			infoBody = append(infoBody, "Social Media:")
-			for _, sm := range vr.m.socialMedia {
-				infoBody = append(infoBody, "  * "+sm)
-			}
-		}
-		if len(vr.m.dorks) > 0 {
-			infoBody = append(infoBody, "Dork Results:")
-			for _, d := range vr.m.dorks {
-				infoBody = append(infoBody, fmt.Sprintf("  * Query: %s -> %s", d.Query, d.URL))
-			}
-		}
-		if len(vr.m.shadowUsers) > 0 {
-			infoBody = append(infoBody, styleUnknown.Render("Shadow Users:"))
-			for _, s := range vr.m.shadowUsers {
-				infoBody = append(infoBody, styleUnknown.Render("  * "+s))
-			}
-		}
-		content = append(content, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))
+	// 2. App Status & Engine Indicators (Local System & Runtime)
+	content = append(content, RenderSysStatus(vr.m)...)
+
+	// 3. Final Findings Summary (if operation finished) or Target Intelligence
+	if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." || vr.m.status == "Operation finished. Reconnaissance completed successfully." {
+		content = append(content, RenderFinalFindingsPanel(vr.m))
 	} else {
-		if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
-			content = append(content, styleBox.Render(fmt.Sprintf("Secondary Pivots & Entities:\n  No secondary emails, social accounts, relations, or dorks found for target '%s'.", vr.m.targetUser)))
+		if len(vr.m.relations) > 0 || len(vr.m.shadowUsers) > 0 || len(vr.m.emails) > 0 || len(vr.m.socialMedia) > 0 || len(vr.m.dorks) > 0 {
+			var infoBody []string
+			if len(vr.m.emails) > 0 {
+				infoBody = append(infoBody, "Emails Discovered:")
+				for _, e := range vr.m.emails {
+					infoBody = append(infoBody, "  * "+e)
+				}
+			}
+			if len(vr.m.socialMedia) > 0 {
+				infoBody = append(infoBody, "Social Media Links:")
+				for _, sm := range vr.m.socialMedia {
+					infoBody = append(infoBody, "  * "+sm)
+				}
+			}
+			if len(vr.m.dorks) > 0 {
+				infoBody = append(infoBody, "Dork Intelligence:")
+				for _, d := range vr.m.dorks {
+					infoBody = append(infoBody, fmt.Sprintf("  * Query: %s -> %s", d.Query, d.URL))
+				}
+			}
+			content = append(content, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))
+		} else {
+			content = append(content, styleBox.Render(fmt.Sprintf("Target Intelligence & Reconnaissance:\n  Executing probes for target '%s'...", vr.m.targetUser)))
 		}
 	}
+
 	return content
 }
 
 func (vr *ViewRendering) Results() []string {
+	var content []string
+
+	if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." || vr.m.status == "Operation finished. Reconnaissance completed successfully." {
+		content = append(content, RenderFinalFindingsPanel(vr.m))
+	}
+
 	if len(vr.m.results) > 0 {
 		var resultsBody []string
 		resultsBody = append(resultsBody, fmt.Sprintf("Platform Probes & Results (Target: %s):", vr.m.targetUser))
@@ -96,18 +72,22 @@ func (vr *ViewRendering) Results() []string {
 				resultsBody = append(resultsBody, styleMissing.Render(fmt.Sprintf("  ✗ %s: Not Found (404 / Inactive)", res.Platform)))
 			}
 		}
-		return []string{styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, resultsBody...))}
+		content = append(content, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, resultsBody...)))
 	}
 
-	if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
-		return []string{styleBox.Render(fmt.Sprintf("Scan Results Panel (Target: %s):\n  Scan completed: 0 matching accounts found.\n  (All checked platforms returned Not Found / 404 or zero active profiles).", vr.m.targetUser))}
+	if len(vr.m.dorks) > 0 {
+		content = append(content, RenderDorkPanel(vr.m))
 	}
-	return []string{styleBox.Render(fmt.Sprintf("Scan Results Panel (Target: %s):\n  Scanning platforms... (Progress: %.0f%%)", vr.m.targetUser, vr.m.percent*100))}
+
+	if len(content) == 0 {
+		return []string{styleBox.Render(fmt.Sprintf("Scan Results Panel (Target: %s):\n  Scanning platforms... (Progress: %.0f%%)", vr.m.targetUser, vr.m.percent*100))}
+	}
+	return content
 }
 
 func (vr *ViewRendering) Graph() []string {
 	if len(vr.m.graphNodes) > 0 || len(vr.m.graphEdges) > 0 {
-		graphBody := []string{"Relationship Graph:"}
+		graphBody := []string{"Relationship Graph & Intelligence Map:"}
 		for _, node := range vr.m.graphNodes {
 			graphBody = append(graphBody, styleFound.Render("  • "+node))
 		}
@@ -246,7 +226,7 @@ func (vr *ViewRendering) Alerts() []string {
 	}
 	if len(vr.m.anomalyAlerts) == 0 && len(vr.m.advisories) == 0 && len(vr.m.errors) == 0 {
 		if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
-			alertBody = append(alertBody, styleBox.Render(fmt.Sprintf("  No security anomalies, advisories, or system errors reported for target '%s'.", vr.m.targetUser)))
+			alertBody = append(alertBody, styleBox.Render(fmt.Sprintf("  No security anomalies, advisories, or system errors recorded for target '%s'.", vr.m.targetUser)))
 		} else {
 			alertBody = append(alertBody, styleBox.Render(fmt.Sprintf("  Monitoring alerts and telemetry for target '%s'...", vr.m.targetUser)))
 		}

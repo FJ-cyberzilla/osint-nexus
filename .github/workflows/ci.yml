@@ -20,11 +20,14 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - name: Build
-      run: go build -v ./cmd/nexus-cli/main.go
+    - name: Install and Build via Makefile
+      run: make install
 
-    - name: Test
-      run: go test -v ./...
+    - name: Run Tests via Makefile
+      run: make test
+
+    - name: Run Linter via Makefile
+      run: make lint
 
     - name: Run Gosec Security Scanner
       run: |

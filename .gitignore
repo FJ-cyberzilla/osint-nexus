@@ -40,9 +40,19 @@ data/nexus.db-wal
 gha-creds-*.json
 GEMINI.md
 docs/TODO.md
+
 # Runtime & Binaries
 nexus
 main
 
-# Artifacts
+# Artifacts & Coverage
 artifacts/
+logs/
+*.out
+*.html
+c.out
+artifacts/c.out
+logs/c.out
+coverage.out
+artifacts/coverage.out
+artifacts/coverage.html

@@ -206,9 +206,11 @@ test: banner ## Run unit test suite with coverage reporting
 			[ $$i -ge 500 ] && break; \
 		done; \
 	) & \
+	mkdir -p artifacts logs; \
 	SPIN_PID=$$!; \
 	set +e; \
-	go test -v -timeout 60s -cover -coverprofile=coverage.out ./... > "$$LOG" 2>&1; \
+	go test -v -timeout 60s -cover -coverprofile=artifacts/c.out ./... > "$$LOG" 2>&1; \
+	cp artifacts/c.out artifacts/coverage.out; \
 	TEST_EXIT=$$?; \
 	set -e; \
 	kill $$SPIN_PID 2>/dev/null || true; \
@@ -237,8 +239,10 @@ test: banner ## Run unit test suite with coverage reporting
 # ==============================================================================
 coverage: test ## Generate HTML coverage report
 	@printf "\n$(GEAR) $(C_PURPLE)$(BOLD)[COVERAGE]$(RESET) Generating coverage report...\n"
-	@go tool cover -html=coverage.out -o coverage.html
-	@printf "  $(END_BRANCH) Report: $(C_CYAN)coverage.html$(RESET)\n\n"
+	@mkdir -p artifacts logs
+	@go tool cover -html=artifacts/c.out -o artifacts/coverage.html
+	@cp artifacts/c.out logs/c.out 2>/dev/null || true
+	@printf "  $(END_BRANCH) Report: $(C_CYAN)artifacts/coverage.html$(RESET)\n\n"
 
 # ==============================================================================
 # Benchmarks
@@ -333,7 +337,8 @@ clean: banner ## Purge build artifacts, logs, temp files
 	printf "$(GEAR) $(C_PURPLE)$(BOLD)[CLEAN]$(RESET) Purging generated artifacts...\n"; \
 	if [ -d "$(BUILD_DIR)" ]; then rm -rf $(BUILD_DIR); printf "  $(BRANCH) Removed $(C_CYAN)$(BUILD_DIR)/$(RESET)\n"; fi; \
 	if [ -d "$(LOG_DIR)" ]; then rm -rf $(LOG_DIR)/*; printf "  $(BRANCH) Flushed $(C_CYAN)$(LOG_DIR)/$(RESET)\n"; fi; \
-	rm -f data/nexus.db data/nexus.db-shm data/nexus.db-wal coverage.out coverage.html; \
+	if [ -d "artifacts" ]; then rm -rf artifacts/*; printf "  $(BRANCH) Flushed $(C_CYAN)artifacts/$(RESET)\n"; fi; \
+	rm -f data/nexus.db data/nexus.db-shm data/nexus.db-wal; \
 	printf "  $(BRANCH) Removed database & coverage artifacts\n"; \
 	TMP_COUNT=$$(find . -name "*.tmp" -type f 2>/dev/null | wc -l | tr -d ' '); \
 	find . -name "*.tmp" -type f -delete 2>/dev/null || true; \
