@@ -20,7 +20,13 @@ func (vr *ViewRendering) Overview() []string {
 	// 2. App Status & Engine Indicators (Local System & Runtime)
 	content = append(content, RenderSysStatus(vr.m)...)
 
-	// 3. Final Findings Summary (if operation finished) or Target Intelligence
+	// 3. Target Username Footprint & Fingerprint Relation Map
+	content = append(content, RenderFootprintFingerprintRelationMap(vr.m))
+
+	// 4. Unified System Telemetry, Errors, Issues & Fallback States
+	content = append(content, RenderUnifiedErrorsAndAdvisories(vr.m))
+
+	// 5. Final Findings Summary (if operation finished) or Target Intelligence
 	if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." || vr.m.status == "Operation finished. Reconnaissance completed successfully." {
 		content = append(content, RenderFinalFindingsPanel(vr.m))
 	} else {
