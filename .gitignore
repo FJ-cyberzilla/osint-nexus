@@ -56,3 +56,9 @@ logs/c.out
 coverage.out
 artifacts/coverage.out
 artifacts/coverage.html
+
+# Local Test Exclusion (kept locally, ignored by git/cloners)
+*_test.go
+tests/
+testdata/
+
