@@ -48,3 +48,39 @@ func WarmupNetwork(ctx context.Context, checkAddress string) (*NetworkStatus, er
 		CheckedAt:    time.Now(),
 	}, nil
 }
+
+// DetectHoneypot analyzes response body byte slices for known honeypot markers or canary tokens.
+func DetectHoneypot(body []byte) bool {
+	if len(body) == 0 {
+		return false
+	}
+	content := string(body)
+	honeypotSignatures := []string{
+		"canary_token",
+		"honeypot-detected",
+		"trap_door_active",
+		"spider_trap",
+		"bot_detection_wall",
+	}
+
+	for _, sig := range honeypotSignatures {
+		if stringContains(content, sig) {
+			return true
+		}
+	}
+	return false
+}
+
+func stringContains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || searchString(s, substr))
+}
+
+func searchString(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
