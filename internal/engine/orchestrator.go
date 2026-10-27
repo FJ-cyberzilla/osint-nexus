@@ -78,7 +78,7 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 
 	resultChan := make(chan *types.IdentityProfile, len(providers))
 	providerResultChan := make(chan ProviderResult, len(providers))
-	errChan := make(chan error, len(providers))
+	errChan := make(chan error, len(providers)+2)
 	progressChan := make(chan float64, len(providers))
 
 	session := &ScanSession{
