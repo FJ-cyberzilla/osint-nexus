@@ -326,10 +326,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.GotoTop()
 				m.unread[m.tabs[m.activeTab]] = false
 			}
-		case "pgup":
-			m.viewport.ViewDown()
-		case "pgdown":
-			m.viewport.ViewUp()
+		case "up", "k":
+			m.viewport.LineUp(1)
+		case "down", "j":
+			m.viewport.LineDown(1)
+		case "pgup", "ctrl+u":
+			m.viewport.HalfPageUp()
+		case "pgdown", "ctrl+d":
+			m.viewport.HalfPageDown()
+		case "home", "g":
+			m.viewport.GotoTop()
+		case "end", "G":
+			m.viewport.GotoBottom()
 		case "enter":
 			// Placeholder for "select/initiate" action
 			m.status = fmt.Sprintf("Selected: %s", m.tabs[m.activeTab])
@@ -355,6 +363,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Data updates & Notifications
 	case ResultItem:
 		m.results = append(m.results, msg)
+		if msg.Found {
+			m.liveStatus = fmt.Sprintf("Found active profile on %s", msg.Platform)
+		} else if msg.Error != "" {
+			m.liveStatus = fmt.Sprintf("Probe error on %s: %s", msg.Platform, msg.Error)
+		} else {
+			m.liveStatus = fmt.Sprintf("Checked %s (Not Found)", msg.Platform)
+		}
 		m = m.notifyTab("Results")
 	case TelemetryMsg:
 		m.telemetry = TelemetryData(msg)

@@ -1,140 +1,48 @@
-# OSINT Nexus User Guide
+# OSINT-Nexus & Omni-Masquerade OS User Guide
 _Maintained by_ **[FJ-cyberzilla](https://github.com/FJ-cyberzilla)**  
 > _Powered by_ **FJ™ Cybertronic Systems**
-**Version: 4.1.1**
+**Version: 1.0.0**
 
-Welcome to the OSINT Nexus user guide. This document provides detailed instructions on installing, configuring, and effectively using the OSINT Nexus reconnaissance system.
-
+Welcome to the OSINT-Nexus & Omni-Masquerade OS user guide. This document provides detailed instructions on installing, configuring, and effectively using the industrial reconnaissance and intelligence database generation engine.
 
 ## 1. Introduction
-OSINT Nexus is a professional-grade OSINT tool built for adaptive, high-performance username reconnaissance. It is designed to be modular, stealthy, and highly resilient.
+OSINT-Nexus and Omni-Masquerade OS are high-accuracy, low-level OSINT and network reconnaissance engines built natively in Go (`go1.23+`). The system handles deep packet inspection, raw socket manipulation, custom TLS fingerprinting (JA3/JA4), DNS record traversal, multi-source pivot extraction, and real-time intelligence database generation from minimal username seed clues.
 
 ## 2. Prerequisites
-- **Environment Management**: `uv` (strongly recommended).
-- **OS**: Optimized for Unix-based systems (specifically Android/Termux, Linux, macOS).
+- **Go**: Go `1.23+` installed on your system.
+- **Build Tools**: `make`, standard C compiler (if required by network/socket bindings).
+- **OS**: Optimized for Linux, macOS, and Android (Termux).
 
 ## 3. Installation & Setup
 
-1.  **Clone the Repository**:
-    ```bash
-    git clone <repository-url>
-    cd osint-nexus
-    ```
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/FJ-cyberzilla/osint-nexus.git
+   cd osint-nexus
+   ```
 
-2.  **Install Dependencies**:
-    The project uses a `Makefile` to simplify workflows.
-    ```bash
-    make install
-    ```
-    This command will sync the environment using `uv`, ensuring all dependencies are installed and the virtual environment is ready.
+2. **Build the Binary**:
+   ```bash
+   make build
+   ```
+   This compiles the `nexus-cli` binary into `./bin/nexus-cli`.
 
-## 4. Operational Workflow
+## 4. Omni-Masquerade OS & Control Modules
+Omni-Masquerade OS transforms a small username clue into a comprehensive real-world OSINT database using four modular control sub-components:
+- **`temp` (`internal/engine/omni_masquerade/temp.go`)**: Manages ephemeral session scratchpads, cache files, and temporary browser profile directories.
+- **`score` (`internal/engine/omni_masquerade/score.go`)**: Computes weighted confidence scores, false positive filtering, and metadata credibility evaluation.
+- **`resolve` (`internal/engine/omni_masquerade/resolve.go`)**: Canonicalizes handles, standardizes username formatting, and deduplicates pivot lists.
+- **`helper` (`internal/engine/omni_masquerade/helper.go`)**: Manages execution logging, progress reporting, and configuration validation.
 
-The `make` interface is the recommended way to interact with OSINT Nexus, but you can also use the `nexus-cli` for more granular control.
+## 5. Advanced Evasion & Transport Layers
+- **Behavioral Emulation (`behavior.go`)**: Stochastically distributed request jitter and human-like typing/cursor delays to defeat bot detection heuristics.
+- **Canvas & WebGL Entropy Injection (`entropy.go`)**: Imperceptible micro-noise injection into HTMLCanvasElement rendering data and WebGL contexts to defeat device fingerprint tracking.
+- **HTTP/3 & QUIC Masquerade (`http3.go`)**: QUIC/UDP transport routing and secure request dispatching under TLS 1.3.
+- **TCP Socket Tuning (`tcp.go`)**: Raw socket options for per-profile IP TTL, window size, and keep-alive configuration.
 
-### CLI Probing
-For manual reconnaissance tasks, use `nexus-cli`:
-```bash
-./nexus-cli probe dns google.com
-```
-See `docs/CLI_COMMANDS.md` for a complete reference of available CLI commands.
-
-### Scanning a Target
-To initiate a full-scale reconnaissance scan for a specific username:
-```bash
-make run
-```
-*You will be prompted to enter the username.*
-
-### Network & Provider Health
-Before running large scans, check if the providers are reachable:
-```bash
-make health
-```
-
-### Inspecting Results
-To query the local database for previously stored results:
-```bash
-make db-info
-```
-
-## 5. Intelligence Harvesting and IOC Extraction
-OSINT Nexus employs a robust identification and harvesting system for various indicators of compromise (IOCs).
-
-### Automated IOC Extraction
-The system utilizes a high-performance, strictly-typed regex engine for identifier harvesting:
-- **Supported IOCs**: IPv4, Domain names, SHA256 hashes, MD5 hashes, and Email addresses.
-- **Reliability**: Based on a pre-compiled `IOCRegexRegistry` for deterministic and fast extraction, preventing hallucinations or false positives common with LLM-based approaches.
-- **Type Safety**: All extracted data is strictly typed using `ExtractedIOC` and `IOCType` definitions, ensuring data integrity across the reconnaissance pipeline.
-
-### Fingerbank Device Profiling
-OSINT Nexus integrates with Fingerbank to provide advanced device profiling during reconnaissance.
-...
-
-### How it works
-During the scanning process, the system automatically collects available network patterns (DHCP, User-Agents, MAC address) and interrogates the Fingerbank API to infer device metadata, such as:
-- Hardware Manufacturer and Model
-- Operating System details
-- Confidence score (0-100)
-- Known CVE vulnerabilities
-
-These results are automatically displayed in the UI dashboard within the "Device Profile" panel upon completion of the scan.
-
-### Configuration
-Ensure your Fingerbank API key is set in the environment variables (e.g., `FINGERBANK_API_KEY`) for full access to CVE vulnerability reports.
-
-## 6. Secure Configuration
-OSINT Nexus manages sensitive credentials, such as API keys, securely:
-
-- **Credential Storage**: Sensitive keys are stored in a local `.env` file, which is automatically added to `.gitignore` to prevent accidental commitment to version control.
-- **Secure Input**: When required, the CLI will display an interactive modal to input API keys securely. The input is masked during entry.
-- **Fallback Modes**: If a required API key is missing (e.g., for Fingerbank device profiling), the application will automatically enter a fallback mode, disabling the feature while allowing other scanning activities to continue gracefully.
-
-## 7. Development & Maintenance
-The following commands are available for maintainers and contributors:
-...
-
-*   **Testing**: Run the full suite with `make test`.
-*   **Code Quality**: Run linting with `make lint`.
-*   **Code Formatting**: Run formatter with `make format`.
-*   **Cleanup**: To remove caches, build artifacts, and logs:
-    ```bash
-    make clean
-    ```
-
-## 7. Testing and Optimization
-
-To ensure system reliability, the test suite is designed for parallel execution with isolated database handling.
-
-### 7.1 Running Tests
-We use `pytest-xdist` to parallelize test execution across CPU cores, which is essential for performance.
-
-```bash
-# Run tests using all available CPU cores
-uv run pytest -n auto
-```
-
-### 7.2 Code Coverage
-We use `pytest-cov` to monitor code coverage.
-
-```bash
-# Run tests and generate coverage reports
-uv run pytest -n auto --cov=osint_nexus --cov-report=xml
-```
-
-### 7.3 Continuous Integration (CI)
-Our CI pipeline (GitHub Actions) automatically runs these tests on every pull request. The workflow is configured to handle:
-- Parallel test execution.
-- Isolated database management via Docker containers.
-- Code coverage reporting to Codecov.
-
-## 8. Troubleshooting Test Infrastructure
-
-If tests are failing or acting inconsistently:
-1.  **Docker Status**: Ensure Docker is running, as it is required for containerized database isolation (`docker info`).
-2.  **Concurrency Issues**: If tests fail intermittently in parallel mode, verify that your local environment has sufficient resources (vCPUs/RAM).
-3.  **Database Locking**: If database errors occur, run `make clean` to remove any stale artifacts or database lock files (`postgres_container.lock`) in the temporary directory.
-4.  **Worker Isolation**: In parallel mode (`-n auto`), each worker process (`gw0`, `gw1`, etc.) creates its own temporary database. Ensure these processes have the necessary permissions to create databases on the PostgreSQL instance.
+## 6. Operational Workflow & Testing
+- **TUI Command Center**: Launch via `./bin/nexus-cli` or `make run`.
+- **Testing**: Run all unit tests across the codebase via `make test`.
 
 ---
-*For further assistance, report issues on the project's issue tracker.*
+*Developed by FJ™ Cybertronic Systems.*

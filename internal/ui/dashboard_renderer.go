@@ -75,6 +75,10 @@ func (vr *ViewRendering) Overview() []string {
 			}
 		}
 		content = append(content, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, infoBody...)))
+	} else {
+		if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
+			content = append(content, styleBox.Render(fmt.Sprintf("Secondary Pivots & Entities:\n  No secondary emails, social accounts, relations, or dorks found for target '%s'.", vr.m.targetUser)))
+		}
 	}
 	return content
 }
@@ -82,18 +86,23 @@ func (vr *ViewRendering) Overview() []string {
 func (vr *ViewRendering) Results() []string {
 	if len(vr.m.results) > 0 {
 		var resultsBody []string
+		resultsBody = append(resultsBody, fmt.Sprintf("Platform Probes & Results (Target: %s):", vr.m.targetUser))
 		for _, res := range vr.m.results {
 			if res.Found {
-				resultsBody = append(resultsBody, styleFound.Render(fmt.Sprintf("  ✓ %s", res.Platform)))
+				resultsBody = append(resultsBody, styleFound.Render(fmt.Sprintf("  ✓ %s: Found (Account Active)", res.Platform)))
 			} else if res.Error != "" {
-				resultsBody = append(resultsBody, styleUnknown.Render(fmt.Sprintf("  ? %s (Uncertain: %s)", res.Platform, res.Error)))
+				resultsBody = append(resultsBody, styleUnknown.Render(fmt.Sprintf("  ? %s: Error (%s)", res.Platform, res.Error)))
 			} else {
-				resultsBody = append(resultsBody, styleMissing.Render(fmt.Sprintf("  ✗ %s (Not Found)", res.Platform)))
+				resultsBody = append(resultsBody, styleMissing.Render(fmt.Sprintf("  ✗ %s: Not Found (404 / Inactive)", res.Platform)))
 			}
 		}
 		return []string{styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, resultsBody...))}
 	}
-	return []string{"\n  Awaiting scan results...\n"}
+
+	if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
+		return []string{styleBox.Render(fmt.Sprintf("Scan Results Panel (Target: %s):\n  Scan completed: 0 matching accounts found.\n  (All checked platforms returned Not Found / 404 or zero active profiles).", vr.m.targetUser))}
+	}
+	return []string{styleBox.Render(fmt.Sprintf("Scan Results Panel (Target: %s):\n  Scanning platforms... (Progress: %.0f%%)", vr.m.targetUser, vr.m.percent*100))}
 }
 
 func (vr *ViewRendering) Graph() []string {
@@ -107,11 +116,15 @@ func (vr *ViewRendering) Graph() []string {
 		}
 		return []string{styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, graphBody...))}
 	}
-	return []string{"\n  Awaiting graph data...\n"}
+	if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
+		return []string{styleBox.Render(fmt.Sprintf("Relationship Graph Panel:\n  No relationship graph nodes or edges generated for target '%s'.", vr.m.targetUser))}
+	}
+	return []string{styleBox.Render(fmt.Sprintf("Relationship Graph Panel:\n  Awaiting graph data for target '%s'...", vr.m.targetUser))}
 }
 
 func (vr *ViewRendering) Analysis() []string {
 	var analysisBody []string
+	analysisBody = append(analysisBody, "Analysis & Pivoting Panel:")
 	if len(vr.m.relations) > 0 {
 		analysisBody = append(analysisBody, "Relations:")
 		for _, r := range vr.m.relations {
@@ -147,11 +160,19 @@ func (vr *ViewRendering) Analysis() []string {
 		}
 		analysisBody = append(analysisBody, styleBlue.Render(cBar))
 	}
+	if len(vr.m.relations) == 0 && len(vr.m.stylometry) == 0 && len(vr.m.heatmap) == 0 && len(vr.m.charts) == 0 {
+		if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
+			analysisBody = append(analysisBody, fmt.Sprintf("  No analysis metrics, heatmap, charts, or relations generated for target '%s'.", vr.m.targetUser))
+		} else {
+			analysisBody = append(analysisBody, fmt.Sprintf("  Awaiting analysis data for target '%s'...", vr.m.targetUser))
+		}
+	}
 	return []string{styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, analysisBody...))}
 }
 
 func (vr *ViewRendering) Network() []string {
 	var networkBody []string
+	networkBody = append(networkBody, "Network & Fingerbank Panel:")
 	if vr.m.fingerbank != nil {
 		fbBody := []string{
 			"Fingerbank Findings:",
@@ -178,11 +199,19 @@ func (vr *ViewRendering) Network() []string {
 		}
 		networkBody = append(networkBody, styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, dnsBody...)))
 	}
-	return networkBody
+	if vr.m.fingerbank == nil && len(vr.m.dnsLeaks) == 0 {
+		if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
+			networkBody = append(networkBody, fmt.Sprintf("  No Fingerbank hardware findings or DNS leaks recorded for target '%s'.", vr.m.targetUser))
+		} else {
+			networkBody = append(networkBody, fmt.Sprintf("  Awaiting network probes for target '%s'...", vr.m.targetUser))
+		}
+	}
+	return []string{styleBox.Render(lipgloss.JoinVertical(lipgloss.Left, networkBody...))}
 }
 
 func (vr *ViewRendering) Alerts() []string {
 	var alertBody []string
+	alertBody = append(alertBody, "Security Alerts & System Messages Panel:")
 	if len(vr.m.anomalyAlerts) > 0 {
 		var anomalyBody []string
 		anomalyBody = append(anomalyBody, "Anomaly Detection Alerts:")
@@ -214,6 +243,13 @@ func (vr *ViewRendering) Alerts() []string {
 			Padding(1, 2).
 			Margin(1, 0)
 		alertBody = append(alertBody, errStyle.Render(lipgloss.JoinVertical(lipgloss.Left, append([]string{"!! SYSTEM ALERTS !!"}, vr.m.errors...)...)))
+	}
+	if len(vr.m.anomalyAlerts) == 0 && len(vr.m.advisories) == 0 && len(vr.m.errors) == 0 {
+		if vr.m.percent >= 1.0 || vr.m.status == "Scan completed." {
+			alertBody = append(alertBody, styleBox.Render(fmt.Sprintf("  No security anomalies, advisories, or system errors reported for target '%s'.", vr.m.targetUser)))
+		} else {
+			alertBody = append(alertBody, styleBox.Render(fmt.Sprintf("  Monitoring alerts and telemetry for target '%s'...", vr.m.targetUser)))
+		}
 	}
 	return alertBody
 }

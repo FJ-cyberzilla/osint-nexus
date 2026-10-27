@@ -1,201 +1,22 @@
-classDiagram
-    direction TB
-    %% Branded Component Map
-    %% Author: FJ-cyberzilla
-    %% Org: FJ™ Cybertronic Systems
-    
-    class OSINTApp {
-        +compose()
-        +on_scan_update()
-        +update_dashboard()
-        +update_advanced_intel()
-    }
-    
-    class IntelligenceDashboard {
-        +update_data()
-    }
-    
-    class TelemetryPanel {
-        +update_telemetry()
-    }
-    
-    class RelationshipPanel {
-        +update_relationships()
-    }
-    
-    class HeatmapPanel {
-        +update_heatmap()
-    }
-    
-    OSINTApp --> IntelligenceDashboard
-    OSINTApp --> TelemetryPanel
-    OSINTApp --> RelationshipPanel
-    OSINTApp --> HeatmapPanel
-    
-    class AdvancedReportGenerator {
-        +generate(username)
-    }
-    
-    class ScanOrchestrator {
-        +run_scan()
-        +abort()
-    }
-    
-    class HealthTracker {
-        +check_status()
-        +auto_heal()
-    }
-    
-    class DeviceInferenceService {
-        +infer_context()
-        +profile_device()
-    }
+graph TD
+    subgraph CLI / Entrypoint
+        A[cmd/nexus-cli/main.go] --> B[internal/cli/commands/root.go]
+    end
 
-    class FingerbankClient {
-        +interrogate(payload)
-        +devices
-        +oui
-        +static
-        +users
-    }
+    subgraph TUI Command Center
+        B --> C[internal/ui/dashboard.go]
+        C --> D[internal/ui/dashboard_renderer.go]
+    end
 
-    class DevicesClient {
-        +get_device(id)
-        +get_vulnerabilities(id)
-    }
+    subgraph OSINT Engine & Providers
+        C --> E[pkg/osint/agent.go]
+        E --> F[internal/engine/orchestrator.go]
+        F --> G[internal/provider/registry.go]
+        F --> H[internal/provider/*.go]
+    end
 
-    class OuiClient {
-        +get_device_id(oui)
-    }
-
-    class StaticDataClient {
-        +download_db()
-    }
-
-    DeviceInferenceService --> FingerbankClient
-    FingerbankClient --> DevicesClient
-    FingerbankClient --> OuiClient
-    FingerbankClient --> StaticDataClient
-    
-    class CredentialManager {
-        +get_credential(key)
-        +set_credential(key, value)
-    }
-
-    class ApiKeyModal {
-        +on_save()
-    }
-    
-    OSINTApp --> ApiKeyModal
-    ApiKeyModal --> CredentialManager
-
-    class PassiveFingerprintingEngine {
-        +fingerprint_http()
-        +fingerprint_tls()
-        +fingerprint_tcp()
-        +fingerprint_dns()
-        +fingerprint_ntp()
-    }
-    
-    class DatabaseManager {
-        +save_result()
-        +save_batch()
-        +get_cached()
-        +set_cached()
-        +search()
-    }
-    
-    class CaptchaRegistry {
-        +solve()
-        +register_solver()
-    }
-    
-    class BrowserPool {
-        +get_instance()
-        +recycle()
-    }
-    
-    class BrowserEngine {
-        <<interface>>
-        +run_navigation(url)
-    }
-    
-    class PyQtBrowserEngine {
-        +run_navigation(url)
-    }
-    
-    class PlaywrightBrowserEngine {
-        +run_navigation(url)
-    }
-    
-    class TelemetryBridge {
-        +collect_probes()
-        +report()
-    }
-    
-    class DetectionEngine {
-        +analyze_entropy()
-    }
-    
-    class ExporterEngine {
-        +export_stix()
-    }
-    
-    class CI_CD_Pipeline {
-        <<workflow>>
-        +checkout()
-        +setup_uv()
-        +run_parallel_tests()
-        +report_coverage()
-        +security_scan()
-    }
-
-    class ComplianceEngine {
-        +sanitize(data)
-    }
-
-    class OSINTAgent {
-        +execute_mission()
-        +correlate_targets()
-    }
-
-    OSINTAgent --> ScanOrchestrator
-    OSINTAgent --> AdvancedReportGenerator
-    AdvancedReportGenerator --> DatabaseManager
-    class Extractor {
-        <<interface>>
-        +Extract(ctx, rawHTML)
-    }
-
-    class Orchestrator {
-        -extractors[] Extractor
-        +Extract(ctx, rawHTML)
-    }
-
-    class EmailExtractor {
-        +Extract(ctx, rawHTML)
-    }
-
-    class SocialExtractor {
-        +Extract(ctx, rawHTML)
-    }
-
-    class MetaExtractor {
-        +Extract(ctx, rawHTML)
-    }
-
-    class PGPExtractor {
-        +Extract(ctx, rawHTML)
-    }
-
-    Orchestrator --> Extractor
-    Extractor <|-- EmailExtractor
-    Extractor <|-- SocialExtractor
-    Extractor <|-- MetaExtractor
-    Extractor <|-- PGPExtractor
-    
-    ScanOrchestrator --> Orchestrator
-    
-    Provider <|-- GithubProvider
-    Provider <|-- GenericProvider
-    Provider <|-- AparatProvider
+    subgraph Detectors & Extractors
+        F --> I[internal/detector/*.go]
+        F --> J[internal/extractor/*.go]
+        F --> K[internal/telemetry/*.go]
+    end

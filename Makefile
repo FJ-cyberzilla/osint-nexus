@@ -297,32 +297,16 @@ check: fmt vet lint test ## Run all quality gates
 # ==============================================================================
 # Run
 # ==============================================================================
-run: ## Run engine (Usage: make run ARGS="-d")
+run: ## Run engine (Usage: make run)
 	@printf "$(GEAR) $(C_PURPLE)$(BOLD)[EXEC]$(RESET) Spawning application instance...\n"
 	@if [ ! -f "$(BINARY)" ]; then \
 		printf "  $(WARN_SYM) $(C_YELLOW)Binary missing — building first$(RESET)\n"; \
 		$(MAKE) build; \
 	fi
 	@args="$(ARGS)"; \
-	if [ -z "$$args" ]; then args="-d"; fi; \
 	printf "  $(BRANCH) $(C_WHITE)Arguments: $(C_CYAN)$$args$(RESET)\n"; \
 	printf "  $(END_BRANCH) $(C_GRAY)──────────────────────────────$(RESET)\n\n"; \
 	$(BINARY) $$args
-
-# ==============================================================================
-# Diagnosis
-# ==============================================================================
-diagnosis: banner ## Execute runtime diagnostics
-	@$(TIMER_START) \
-	printf "$(GEAR) $(C_PURPLE)$(BOLD)[DIAGNOSIS]$(RESET) Querying system state...\n"; \
-	if [ ! -f "$(BINARY)" ]; then $(MAKE) build; fi; \
-	if $(BINARY) status; then \
-		printf "  $(END_BRANCH) Status: [$(CHECK) $(C_GREEN)Diagnostics Completed$(RESET)]\n"; \
-	else \
-		printf "  $(END_BRANCH) Status: [$(CROSS) $(C_RED)Diagnostics Error$(RESET)]\n"; \
-		exit 1; \
-	fi; \
-	$(TIMER_END)
 
 # ==============================================================================
 # About / Version / Stats

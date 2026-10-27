@@ -44,12 +44,20 @@ const (
 	ScanStateError
 )
 
+// ProviderResult represents the outcome of checking a single provider.
+type ProviderResult struct {
+	Platform string
+	Found    bool
+	Error    error
+}
+
 // ScanSession manages the lifecycle of a single scan.
 type ScanSession struct {
-	State        atomic.Int32
-	ResultChan   <-chan *types.IdentityProfile `json:"-" yaml:"-"`
-	ErrChan      <-chan error                  `json:"-" yaml:"-"`
-	ProgressChan <-chan float64                `json:"-" yaml:"-"`
+	State              atomic.Int32
+	ResultChan         <-chan *types.IdentityProfile `json:"-" yaml:"-"`
+	ProviderResultChan <-chan ProviderResult         `json:"-" yaml:"-"`
+	ErrChan            <-chan error                  `json:"-" yaml:"-"`
+	ProgressChan       <-chan float64                `json:"-" yaml:"-"`
 }
 
 // setState safely updates the scan state.
@@ -69,19 +77,22 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 	}
 
 	resultChan := make(chan *types.IdentityProfile, len(providers))
+	providerResultChan := make(chan ProviderResult, len(providers))
 	errChan := make(chan error, len(providers))
 	progressChan := make(chan float64, len(providers))
 
 	session := &ScanSession{
-		ResultChan:   resultChan,
-		ErrChan:      errChan,
-		ProgressChan: progressChan,
+		ResultChan:         resultChan,
+		ProviderResultChan: providerResultChan,
+		ErrChan:            errChan,
+		ProgressChan:       progressChan,
 	}
 	session.setState(ScanStateInitiated)
 
 	go func() {
 	defer func() {
 		close(resultChan)
+		close(providerResultChan)
 		close(errChan)
 		close(progressChan)
 	}()
@@ -109,16 +120,31 @@ func (o *Orchestrator) RunScan(ctx context.Context, username string, providers [
 			completed.Add(1)
 			progressChan <- float64(completed.Load()) / float64(len(providers))
 
+			platformName := p.Name()
 			if err != nil {
 				failedCount.Add(1)
+				providerResultChan <- ProviderResult{
+					Platform: platformName,
+					Found:    false,
+					Error:    err,
+				}
 				// Non-fatal provider error (e.g. offline/network failure)
-				errChan <- eris.Wrapf(err, "engine: provider %s failed", p.Name())
+				errChan <- eris.Wrapf(err, "engine: provider %s failed", platformName)
 				return nil
 			}
 
 			if res != nil {
 				results[i] = res
 				resultChan <- res
+				providerResultChan <- ProviderResult{
+					Platform: platformName,
+					Found:    true,
+				}
+			} else {
+				providerResultChan <- ProviderResult{
+					Platform: platformName,
+					Found:    false,
+				}
 			}
 			return nil
 		})

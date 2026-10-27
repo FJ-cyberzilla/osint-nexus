@@ -1,6 +1,3 @@
 # OSINT-Nexus Project Management
 
-This document serves as the central index for all project management activities.
-
-- [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) - Architectural roadmap and strategic goals.
-- Task backlog is managed within [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md).
+Project management, milestones, and issues are tracked via GitHub Projects and Issues, ensuring alignment with the Go development lifecycle and release roadmap.

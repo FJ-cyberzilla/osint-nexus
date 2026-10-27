@@ -1,15 +1,9 @@
-# Security Policy
+# OSINT-Nexus Security Policy
 
-## Reporting a Vulnerability
-Please report security vulnerabilities by opening a GitHub Issue with the "security" label. Do not disclose vulnerabilities in public comments.
+## Reporting Vulnerabilities
+If you discover a security vulnerability within `osint-nexus`, please report it via private disclosure rather than public issue trackers.
 
-## Disclosure
-We appreciate responsible disclosure and will address reported issues promptly.
-
-## Security Hardening & Best Practices
-The project enforces strict security standards, including:
-
-- **Cryptographic Integrity:** Use of `crypto/rand` for all random number generation, replacing weak `math/rand` to prevent predictability attacks (G404/CWE-338).
-- **Context Management:** Strict adherence to context lifecycle management. All browser-based and network probes utilize combined cancellation functions to prevent resource leaks and context shadowing (G118/CWE-400).
-- **Resource Integrity:** Mandatory error handling for all resource cleanup operations (`defer Close()`), including explicit error checks and return paths for database and network body closures to prevent silent failures (G104/CWE-703).
-- **Access Control:** Application directories created with restricted permissions (`0750`) to ensure system integrity and prevent unauthorized access (G301/CWE-276).
+## Code Security Standards
+- **Zero Secrets in Repository**: Never commit API keys, credentials, or `.env` files.
+- **Error Handling**: No `panic()` calls in library packages (`pkg/`, `internal/`). All errors must be wrapped with contextual information using `github.com/rotisserie/eris`.
+- **Context Propagation**: Enforce `context.Context` on all network and API calls to prevent resource leaks and guarantee deterministic timeouts.

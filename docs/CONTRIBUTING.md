@@ -1,16 +1,9 @@
 # Contributing to OSINT-Nexus
 
-We welcome contributions! Please follow these guidelines:
+Thank you for contributing to `osint-nexus`. Please follow these engineering standards and contribution guidelines:
 
 ## Development Workflow
-- **Branching:** Use descriptive branch names (e.g., `feature/my-feature`, `fix/my-fix`).
-- **Pull Requests:** Ensure all tests pass.
-- **Error Handling:** Strictly use `github.com/rotisserie/eris` for wrapping errors to provide actionable context.
-- **Tests:** Add industrial-level unit tests for new features using `go test`.
-
-## Getting Started
-1. Fork the repository.
-2. Create a branch (`git checkout -b feature/my-feature`).
-3. Make your changes.
-4. Run tests: `go test ./...`
-5. Push your branch and open a PR.
+1. **Fork & Branch**: Create a feature branch from `main`.
+2. **Go Standards**: Write production-grade Go code (`go1.23+`) adhering to the rules in `GEMINI.md`.
+3. **Testing**: Add comprehensive unit tests for all new features or bug fixes.
+4. **Verification**: Run `make test` to ensure all tests pass successfully.

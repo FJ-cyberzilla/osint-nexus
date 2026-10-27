@@ -49,3 +49,29 @@ func TestPool(t *testing.T) {
 	}
 	pool.Put(instance2)
 }
+
+func TestWaitForCloudflareTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err := WaitForCloudflare(ctx, 10*time.Millisecond)
+	if err == nil {
+		t.Error("expected error due to context timeout, got nil")
+	}
+}
+
+func TestRunWorkerPoolEmpty(t *testing.T) {
+	pool := NewPool(1)
+	defer pool.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	errs := pool.RunWorkerPool(ctx, []string{}, 2, func(tabCtx context.Context, url string) error {
+		return nil
+	})
+
+	if len(errs) != 0 {
+		t.Errorf("expected 0 errors for empty url list, got %d", len(errs))
+	}
+}

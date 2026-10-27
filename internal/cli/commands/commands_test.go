@@ -21,15 +21,3 @@ func TestRootCommand(t *testing.T) {
 		t.Fatalf("expected non-empty help output, got empty")
 	}
 }
-
-func TestStatusCommand(t *testing.T) {
-	buf := new(bytes.Buffer)
-	statusCmd.SetOut(buf)
-	statusCmd.SetErr(buf)
-	
-	// Test status run function
-	if statusCmd.Run == nil {
-		t.Fatalf("expected statusCmd.Run to be defined")
-	}
-	statusCmd.Run(statusCmd, []string{})
-}

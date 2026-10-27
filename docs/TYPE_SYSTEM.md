@@ -1,23 +1,21 @@
-# Type Safety Guidelines
+# OSINT-Nexus Go Type System & Architecture Standards
 
-## Fingerprint Architecture
+## 1. Statically Typed Domain Models
+All core domain data structures are defined with strict static types in Go, avoiding generic `map[string]any` or `interface{}` unless handling un-schematized JSON payloads.
 
-The system utilizes a structured registry pattern for fingerprinting strategies.
+- **Explicit Struct Tags**: Every struct field intended for persistence or transmission includes explicit `json:"field_name"` and `yaml:"field_name"` struct tags using `snake_case`.
+- **Optional Fields**: Optional struct fields use pointers (`*string`, `*int`) to distinguish between explicit zero-values and absent (`nil`) values.
 
-- **`FingerprintStrategy` Protocol**: All strategies MUST implement the `FingerprintStrategy[T_Data, T_Result]` protocol, where `T_Data` and `T_Result` are bound to `JSONValue` and `JSONObject` respectively.
-- **Heterogeneous Registration**: The `FingerprintStrategyRegistry` stores strategies as `FingerprintStrategy[Any, Any]` to support different input/output types while ensuring safe type handling at the boundary.
-- **Implementation Standards**:
-    - Strategies MUST define `name: str`.
-    - Strategies MUST implement `extract(self, data: JSONValue) -> JSONObject`.
-    - All implementations MUST be decorated with `@beartype` to enforce runtime type checking.
+## 2. Core Domain Interfaces (`internal/types`)
+- **`Provider`**: Interface defining provider contracts:
+  ```go
+  type Provider interface {
+      Name() string
+      CheckUsername(ctx context.Context, username string) (*IdentityProfile, error)
+  }
+  ```
+- **`IdentityProfile`**: Primary structure encapsulating discovered accounts, emails, social media references, and confidence scoring.
 
-## Protocol Bridging
-
-When third-party libraries (e.g., `curl_cffi`, `httpx`) do not directly implement required internal interfaces (e.g., `SessionProtocol`):
-
-- **Use Wrappers**: Implement a wrapper class (e.g., `SessionWrapper`) that delegates calls to the underlying implementation while adhering to the internal `Protocol` definition.
-- **Standardize Interface**: Ensure the wrapper exposes all required methods in the `Protocol` (e.g., both `close` and `aclose` for asynchronous sessions).
-
-## Explicit Modeling
-
-- **Prefer DataClasses/Pydantic**: Replace unstructured `dict` types with formal models for complex data structures to improve type safety and maintainability.
+## 3. Concurrency & Context Propagation
+- All network operations, HTTP requests, and engine worker pools enforce `context.Context` parameters for deterministic timeouts and cascading cancellation.
+- Zero-allocation byte slicing (`[]byte`) is utilized for raw packet and string processing on hot paths.

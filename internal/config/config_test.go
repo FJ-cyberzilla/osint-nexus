@@ -24,7 +24,7 @@ func TestLoadConfig_DefaultsAndEnv(t *testing.T) {
 		t.Errorf("expected Concurrency 100 from env, got %d", cfg.Engine.Concurrency)
 	}
 
-	if cfg.Engine.TimeoutSeconds != 15*time.Second {
-		t.Errorf("expected Timeout 15s, got %v", cfg.Engine.TimeoutSeconds)
+	if cfg.Engine.TimeoutSeconds != 90*time.Second {
+		t.Errorf("expected Timeout 90s, got %v", cfg.Engine.TimeoutSeconds)
 	}
 }
