@@ -8,6 +8,11 @@ updates:
     labels:
       - "dependencies"
       - "go"
+      - "security"
+    ignore:
+      # Ignore specific packages if needed, or leave open for all security updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
