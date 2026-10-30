@@ -47,7 +47,7 @@ func ParseIceCandidate(raw string) (*types.IceCandidate, error) {
 			"detector: invalid foundation %q (length must be 1..32)", foundation)
 	}
 
-	component, err := parseUintRange(tokens[1], 1, 256)
+	component, err := parseIntRange(tokens[1], 1, 256)
 	if err != nil {
 		return nil, eris.Wrapf(err, "detector: component %q", tokens[1])
 	}
@@ -69,7 +69,7 @@ func ParseIceCandidate(raw string) (*types.IceCandidate, error) {
 		return nil, eris.Wrapf(err, "detector: address %q", tokens[4])
 	}
 
-	port, err := parseUintRange(tokens[5], 1, 65535)
+	port, err := parseIntRange(tokens[5], 1, 65535)
 	if err != nil {
 		return nil, eris.Wrapf(err, "detector: port %q", tokens[5])
 	}
@@ -86,12 +86,12 @@ func ParseIceCandidate(raw string) (*types.IceCandidate, error) {
 
 	candidate := &types.IceCandidate{
 		Foundation: foundation,
-		Component:  int(component),
+		Component:  component,
 		Protocol:   transport,
 		Priority:   uint32(priority),
 		Address:    addr,
 		Hostname:   hostname, // "" when Address is a literal IP
-		Port:       int(port),
+		Port:       port,
 		Type:       candType,
 	}
 
@@ -167,6 +167,22 @@ func ParseIceCandidates(rawLines []string) ([]*types.IceCandidate, []error) {
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
+
+// parseIntRange parses a base-10 signed integer and enforces [min, max].
+func parseIntRange(s string, min, max int) (int, error) {
+	if s == "" {
+		return 0, eris.New("empty numeric value")
+	}
+	v, err := strconv.ParseInt(s, 10, strconv.IntSize)
+	if err != nil {
+		return 0, eris.Wrapf(err, "not a valid integer")
+	}
+	iv := int(v)
+	if iv < min || iv > max {
+		return 0, eris.Errorf("value %d out of range [%d, %d]", iv, min, max)
+	}
+	return iv, nil
+}
 
 // parseUintRange parses a base-10 unsigned integer and enforces [min, max].
 // It rejects signs, whitespace, and overflow beyond max.
