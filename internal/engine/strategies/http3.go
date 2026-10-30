@@ -22,7 +22,7 @@ func NewHTTP3MasqueradeClient(timeout time.Duration, tlsCfg *tls.Config) *HTTP3M
 	}
 	if tlsCfg == nil {
 		tlsCfg = &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: false,
 			MinVersion:         tls.VersionTLS13,
 		}
 	}
