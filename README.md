@@ -1,4 +1,5 @@
-# OSINT-Nexus & Omni-Masquerade OS
+# OSINT-Nexus
+## Omni-Masquerade OS
 
 * A high-performance reconnaissance engine & intelligence database generator
 
