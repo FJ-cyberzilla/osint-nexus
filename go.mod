@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/chromedp/cdproto v0.157.8
+	github.com/chromedp/cdproto v0.159.0
 	github.com/chromedp/chromedp v0.21.0
 	github.com/cilium/ebpf v0.22.0
 	github.com/google/uuid v1.6.0
