@@ -28,7 +28,7 @@ func RenderOmniMasqueradePanel(m *Model) string {
 func RenderFinalFindingsPanel(m *Model) string {
 	var body []string
 	body = append(body, styleTitle.Render(fmt.Sprintf("Operation Finished — Final Findings for Target: '%s'", m.targetUser)))
-	
+
 	foundCount := 0
 	for _, r := range m.results {
 		if r.Found {

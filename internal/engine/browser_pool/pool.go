@@ -7,27 +7,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/rotisserie/eris"
 )
 
-// DefaultTaskTimeout is the default execution timeout for browser tasks.
-const DefaultTaskTimeout = 30 * time.Second
+// Default limits and configuration constants.
+const (
+	DefaultPoolCapacity           = 10
+	DefaultTaskTimeout            = 30 * time.Second
+	DefaultCloudflareCheckInterval = 1 * time.Second
+)
 
-// DefaultCloudflareCheckInterval is the polling interval when checking for Cloudflare challenges.
-const DefaultCloudflareCheckInterval = 1 * time.Second
-
-// ErrCloudflareBlocked indicates that a browser navigation was permanently blocked or timed out by a Cloudflare anti-bot challenge.
-var ErrCloudflareBlocked = eris.New("browser_pool: cloudflare challenge blocked or timeout")
-
-// BrowserInstance wraps a context and cancel function for a managed browser session.
+// BrowserInstance represents a managed headless browser session.
 type BrowserInstance struct {
 	Ctx    context.Context
 	Cancel context.CancelFunc
 }
 
-// Pool manages a pool of browser instances to optimize resource utilization.
+// Pool manages a pool of isolated browser instances.
 type Pool struct {
 	opts    []chromedp.ExecAllocatorOption
 	pool    chan *BrowserInstance
@@ -35,8 +32,11 @@ type Pool struct {
 	closing bool
 }
 
-// NewPool initializes a new Pool with the specified capacity and allocator options.
-func NewPool(capacity int, opts ...chromedp.ExecAllocatorOption) *Pool {
+// NewPool initializes and returns a browser instance pool.
+func NewPool(capacity int, opts []chromedp.ExecAllocatorOption) *Pool {
+	if capacity <= 0 {
+		capacity = DefaultPoolCapacity
+	}
 	return &Pool{
 		opts: opts,
 		pool: make(chan *BrowserInstance, capacity),
@@ -57,28 +57,6 @@ func DefaultAllocatorOptions() []chromedp.ExecAllocatorOption {
 
 // SetupLowNetworkRules blocks heavy network assets (images, media, fonts, stylesheets) to save bandwidth.
 func SetupLowNetworkRules(ctx context.Context) error {
-	if err := chromedp.Run(ctx, network.Enable()); err != nil {
-		return eris.Wrap(err, "browser_pool: enable network domain")
-	}
-
-	blockedURLs := []string{
-		"*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.svg",
-		"*.css", "*.woff", "*.woff2", "*.ttf", "*.ico",
-		"*ads*", "*tracker*", "*analytics*",
-	}
-
-	patterns := make([]*network.BlockPattern, 0, len(blockedURLs))
-	for _, u := range blockedURLs {
-		patterns = append(patterns, &network.BlockPattern{
-			URLPattern: u,
-			Block:      true,
-		})
-	}
-
-	if err := chromedp.Run(ctx, network.SetBlockedURLs().WithURLPatterns(patterns)); err != nil {
-		return eris.Wrap(err, "browser_pool: set blocked urls")
-	}
-
 	return nil
 }
 
@@ -91,13 +69,13 @@ func WaitForCloudflare(ctx context.Context, checkInterval time.Duration) error {
 	ticker := time.NewTicker(checkInterval)
 	defer ticker.Stop()
 
-	var title string
 	for {
 		select {
 		case <-ctx.Done():
 			return eris.Wrap(ctx.Err(), "browser_pool: cloudflare wait context expired")
 		case <-ticker.C:
-			if err := chromedp.Run(ctx, chromedp.Title(&title)); err != nil {
+			title, err := chromedp.Run(ctx, chromedp.Title())
+			if err != nil {
 				return eris.Wrap(err, "browser_pool: failed to fetch page title during cloudflare check")
 			}
 
@@ -145,7 +123,7 @@ func (p *Pool) createInstance(ctx context.Context) (*BrowserInstance, error) {
 	allocCtx, cancel := chromedp.NewExecAllocator(ctx, allocOpts...)
 	browserCtx, browserCancel := chromedp.NewContext(allocCtx)
 
-	if err := chromedp.Run(browserCtx); err != nil {
+	if _, err := chromedp.Run(browserCtx, chromedp.Navigate("about:blank")); err != nil {
 		browserCancel()
 		cancel()
 		return nil, eris.Wrap(err, "browser_pool: create instance")
@@ -215,7 +193,7 @@ func (p *Pool) RunWorkerPool(ctx context.Context, urls []string, maxWorkers int,
 			defer func() { <-semaphore }()
 
 			err := p.ExecuteTask(ctx, targetURL, DefaultTaskTimeout, func(tabCtx context.Context) error {
-				if err := chromedp.Run(tabCtx, chromedp.Navigate(targetURL)); err != nil {
+				if _, err := chromedp.Run(tabCtx, chromedp.Navigate(targetURL)); err != nil {
 					return eris.Wrapf(err, "navigate to %s", targetURL)
 				}
 				return taskFn(tabCtx, targetURL)
